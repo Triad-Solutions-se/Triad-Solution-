@@ -40,7 +40,12 @@ export function Sidebar({
       {/* Logo */}
       <div className="px-5 py-5 flex items-center justify-between gap-3 border-b border-white/5">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl brand-gradient shadow-lg shadow-teal-500/20" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/admin/logos/Logo_White_Icon.png"
+            alt="Triad"
+            className="h-9 w-9 object-contain"
+          />
           <div>
             <div className="font-heading font-bold tracking-tight text-base">Triad</div>
             <div className="text-[10px] uppercase tracking-widest text-[var(--muted)]">Admin</div>
