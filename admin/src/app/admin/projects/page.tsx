@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { fmtDate } from "@/lib/date";
 import { PageHeader } from "@/components/PageHeader";
 import { Chip } from "@/components/Chip";
 import { SortSelect } from "@/components/SortSelect";
@@ -131,7 +132,7 @@ function ProjectCard({ project: p }: { project: Project }) {
       <footer className="flex items-center justify-between border-t border-white/5 pt-3 text-xs text-[var(--muted)]">
         <span>{p.owner?.display_name ?? "Okänd ägare"}</span>
         <span>
-          {fmt(p.start_date)} → {fmt(p.end_date)}
+          {fmtDate(p.start_date)} → {fmtDate(p.end_date)}
         </span>
       </footer>
     </Link>
@@ -140,10 +141,6 @@ function ProjectCard({ project: p }: { project: Project }) {
 
 function Dot({ color }: { color: string }) {
   return <span className={`mr-1 inline-block h-1.5 w-1.5 rounded-full ${color}`} />;
-}
-
-function fmt(d: string | null) {
-  return d ? new Date(d).toLocaleDateString("sv-SE", { day: "numeric", month: "short" }) : "—";
 }
 
 function statusTone(s: string | null): any {

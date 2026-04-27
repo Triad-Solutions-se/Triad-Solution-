@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { fmtDateTime } from "@/lib/date";
 import { PageHeader } from "@/components/PageHeader";
 import { Chip } from "@/components/Chip";
 import { SortSelect } from "@/components/SortSelect";
@@ -70,7 +71,7 @@ export default async function MeetingsPage({
                     <div className="font-medium">{m.name}</div>
                     {m.agenda && <div className="text-xs text-[var(--muted)] mt-0.5 line-clamp-1">{m.agenda}</div>}
                   </td>
-                  <td className="p-3 text-[var(--muted)]">{m.date ? new Date(m.date).toLocaleString("sv-SE") : "—"}</td>
+                  <td className="p-3 text-[var(--muted)]">{fmtDateTime(m.date)}</td>
                   <td className="p-3">{m.type && <Chip tone={typeTone(m.type)}>{m.type}</Chip>}</td>
                   <td className="p-3 text-[var(--muted)]">{(m.participants ?? []).join(", ") || "—"}</td>
                   <td className="p-3">{m.status && <Chip tone={m.status === "done" ? "green" : m.status === "planned" ? "yellow" : "red"}>{m.status}</Chip>}</td>

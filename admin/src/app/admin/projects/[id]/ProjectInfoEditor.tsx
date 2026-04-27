@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Pencil, Check, X } from "lucide-react";
+import { fmtDate } from "@/lib/date";
 
 type Profile = { id: string; display_name: string | null; email: string | null };
 type Customer = { id: string; name: string };
@@ -211,10 +212,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <div className="mt-1">{children}</div>
     </label>
   );
-}
-
-function fmtDate(d: string | null) {
-  return d ? new Date(d).toLocaleDateString("sv-SE") : "—";
 }
 
 function statusLabel(s: string | null) {
