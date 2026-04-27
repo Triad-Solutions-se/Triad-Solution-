@@ -106,10 +106,10 @@ export function ProjectTimeline({
             t.status !== "done" && t.due_at && new Date(t.due_at).getTime() < now;
           const barColor = overdue ? "bg-rose-400" : STATUS_COLOR[t.status] ?? "bg-white/30";
 
-          // Position the trailing date label so it doesn't get clipped at the
-          // right edge: anchor it to the end of the bar but flip to inside
-          // when the bar reaches the right side.
-          const flipLabel = left + width > 88;
+          // For narrow bars there isn't room for both labels — hide both
+          // when the bar is tiny, show only the start when it's medium.
+          const showBothLabels = width >= 18;
+          const showStartOnly = !showBothLabels && width >= 9;
 
           return (
             <div key={t.id} className="contents">
@@ -119,7 +119,7 @@ export function ProjectTimeline({
               >
                 {t.title}
               </div>
-              <div className="relative h-7 self-center">
+              <div className="relative h-8 self-center">
                 <div className="absolute inset-x-0 top-1/2 h-px bg-white/[0.04]" />
 
                 {/* Faint grid ticks aligned with axis */}
@@ -141,31 +141,27 @@ export function ProjectTimeline({
                     title={fmtDate(startTs)}
                   />
                 ) : (
-                  <>
-                    <div
-                      className={`absolute top-1/2 -translate-y-1/2 h-3.5 rounded-sm ${barColor}`}
-                      style={{ left: `${left}%`, width: `${width}%` }}
-                      title={`${fmtDate(startTs)} → ${fmtDate(endTs!)}`}
-                    />
-                    {/* Start label, just above the bar's left edge */}
-                    <span
-                      className="absolute text-[10px] text-[var(--muted)] whitespace-nowrap"
-                      style={{ left: `${left}%`, top: "-2px", transform: "translateX(0)" }}
-                    >
-                      {fmtShort(startTs)}
-                    </span>
-                    {/* End label, just below the bar's right edge */}
-                    <span
-                      className="absolute text-[10px] text-[var(--muted)] whitespace-nowrap"
-                      style={{
-                        left: `${left + width}%`,
-                        bottom: "-2px",
-                        transform: flipLabel ? "translateX(-100%)" : "translateX(0)",
-                      }}
-                    >
-                      {fmtShort(endTs!)}
-                    </span>
-                  </>
+                  <div
+                    className={`absolute top-1/2 -translate-y-1/2 h-6 rounded-md flex items-center justify-between gap-2 px-2 overflow-hidden ${barColor}`}
+                    style={{ left: `${left}%`, width: `${width}%` }}
+                    title={`${fmtDate(startTs)} → ${fmtDate(endTs!)}`}
+                  >
+                    {showBothLabels && (
+                      <>
+                        <span className="text-[10px] font-medium text-black/80 whitespace-nowrap">
+                          {fmtShort(startTs)}
+                        </span>
+                        <span className="text-[10px] font-medium text-black/80 whitespace-nowrap">
+                          {fmtShort(endTs!)}
+                        </span>
+                      </>
+                    )}
+                    {showStartOnly && (
+                      <span className="text-[10px] font-medium text-black/80 whitespace-nowrap">
+                        {fmtShort(startTs)}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
