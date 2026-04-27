@@ -32,7 +32,7 @@ export default async function ProjectDashboardPage({
     supabase
       .from("tasks")
       .select(
-        "id,title,description,status,priority,due_at,created_at,completed_at," +
+        "id,title,description,status,priority,start_at,due_at,created_at,completed_at," +
           "assignee:profiles!tasks_assignee_id_fkey(id,display_name)," +
           "project:projects(id,name)",
       )
@@ -82,7 +82,7 @@ export default async function ProjectDashboardPage({
     title: t.title,
     status: t.status,
     priority: t.priority ?? null,
-    start: t.created_at,
+    start: t.start_at ?? t.created_at,
     end: t.completed_at ?? t.due_at ?? null,
     due_at: t.due_at,
   }));

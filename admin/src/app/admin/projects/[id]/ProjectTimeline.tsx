@@ -33,8 +33,8 @@ export function ProjectTimeline({
     );
   }
 
-  // Compute the date range across the project. Use project start/end as anchors
-  // when present so the chart always reflects the planned span.
+  // Compute overall date range across the project (use project start/end as
+  // anchors when present so the chart always reflects the planned span).
   const dates: number[] = [];
   if (startDate) dates.push(new Date(startDate).getTime());
   if (endDate) dates.push(new Date(endDate).getTime());
@@ -46,103 +46,150 @@ export function ProjectTimeline({
   let min = Math.min(...dates);
   let max = Math.max(...dates);
   if (min === max) {
-    min = min - MS_DAY * 3;
-    max = max + MS_DAY * 3;
+    min -= MS_DAY * 3;
+    max += MS_DAY * 3;
   } else {
     const pad = (max - min) * 0.05;
     min -= pad;
     max += pad;
   }
-
   const range = max - min;
   const now = Date.now();
   const nowPct = now >= min && now <= max ? ((now - min) / range) * 100 : null;
 
-  const months = generateMonths(min, max);
+  const ticks = generateTicks(min, max);
 
   return (
     <div className="overflow-x-auto scroll-x-hint -mx-2 px-2">
-      <div className="min-w-[640px] space-y-3">
-        {/* Axis */}
-        <div className="relative h-7 border-b border-white/10">
-          <div className="absolute inset-x-0 top-1/2 h-px bg-white/5" />
-          {months.map((m) => {
-            const left = ((m.timestamp - min) / range) * 100;
+      {/*
+       * One CSS grid drives the alignment: a fixed-width title column on the
+       * left and a flexible track column on the right. The axis row, every
+       * task row, and the today-marker all live in the same grid so ticks
+       * line up with bar starts/ends down to the pixel.
+       */}
+      <div className="min-w-[700px] grid grid-cols-[180px_1fr] gap-x-3 relative">
+        {/* Axis label cells */}
+        <div />
+        <div className="relative h-9 border-b border-white/10">
+          {ticks.map((t, i) => {
+            const left = ((t.timestamp - min) / range) * 100;
             return (
               <div
-                key={m.timestamp}
-                className="absolute top-0 -translate-x-1/2 text-[10px] text-[var(--muted)] uppercase tracking-wider"
+                key={i}
+                className="absolute top-0 bottom-0 -translate-x-1/2 flex flex-col items-center justify-end"
                 style={{ left: `${left}%` }}
               >
-                <span className="absolute left-1/2 top-4 h-2 w-px -translate-x-1/2 bg-white/10" />
-                {m.label}
+                <span className="text-[10px] text-[var(--muted)] whitespace-nowrap">
+                  {t.label}
+                </span>
+                <span className="mt-1 h-2 w-px bg-white/15" />
               </div>
             );
           })}
-          {nowPct != null && (
-            <div
-              className="absolute top-0 bottom-0 w-px bg-rose-400/60"
-              style={{ left: `${nowPct}%` }}
-              aria-label="Idag"
-            />
-          )}
         </div>
 
-        {/* Bars */}
-        <ul className="space-y-2">
-          {tasks.map((t) => {
-            const start = new Date(t.start).getTime();
-            const end = t.end
-              ? new Date(t.end).getTime()
-              : t.due_at
-              ? new Date(t.due_at).getTime()
-              : start + MS_DAY;
-            const lo = Math.min(start, end);
-            const hi = Math.max(start, end);
-            const left = ((lo - min) / range) * 100;
-            const width = Math.max(((hi - lo) / range) * 100, 1.2);
+        {/* Bar rows */}
+        {tasks.map((t) => {
+          const startTs = new Date(t.start).getTime();
+          const endTs = t.end
+            ? new Date(t.end).getTime()
+            : t.due_at
+            ? new Date(t.due_at).getTime()
+            : null;
+          const isMilestone = endTs == null;
+          const lo = Math.min(startTs, endTs ?? startTs);
+          const hi = Math.max(startTs, endTs ?? startTs);
+          const left = ((lo - min) / range) * 100;
+          const width = isMilestone ? 0 : Math.max(((hi - lo) / range) * 100, 0.6);
 
-            const overdue =
-              t.status !== "done" && t.due_at && new Date(t.due_at).getTime() < now;
-            const barColor = overdue ? "bg-rose-400" : STATUS_COLOR[t.status] ?? "bg-white/30";
-            const isMilestone = !t.end && !t.due_at;
+          const overdue =
+            t.status !== "done" && t.due_at && new Date(t.due_at).getTime() < now;
+          const barColor = overdue ? "bg-rose-400" : STATUS_COLOR[t.status] ?? "bg-white/30";
 
-            return (
-              <li key={t.id} className="grid grid-cols-[180px_1fr] gap-3 items-center">
-                <div className="text-xs truncate" title={t.title}>
-                  {t.title}
-                </div>
-                <div className="relative h-5 rounded bg-white/[0.03]">
-                  <div
-                    className={`absolute top-1/2 -translate-y-1/2 h-3 rounded-sm ${barColor} ${
-                      isMilestone ? "w-2 rounded-full" : ""
-                    }`}
-                    style={{
-                      left: `${left}%`,
-                      width: isMilestone ? "8px" : `${width}%`,
-                    }}
-                    title={`${fmt(start)} → ${fmt(end)}`}
-                  />
-                  {nowPct != null && (
+          // Position the trailing date label so it doesn't get clipped at the
+          // right edge: anchor it to the end of the bar but flip to inside
+          // when the bar reaches the right side.
+          const flipLabel = left + width > 88;
+
+          return (
+            <div key={t.id} className="contents">
+              <div
+                className="text-xs py-1.5 truncate self-center"
+                title={t.title}
+              >
+                {t.title}
+              </div>
+              <div className="relative h-7 self-center">
+                <div className="absolute inset-x-0 top-1/2 h-px bg-white/[0.04]" />
+
+                {/* Faint grid ticks aligned with axis */}
+                {ticks.map((tk, i) => {
+                  const tl = ((tk.timestamp - min) / range) * 100;
+                  return (
                     <div
-                      className="absolute top-0 bottom-0 w-px bg-rose-400/40"
-                      style={{ left: `${nowPct}%` }}
+                      key={i}
+                      className="absolute top-0 bottom-0 w-px bg-white/[0.04]"
+                      style={{ left: `${tl}%` }}
                     />
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+                  );
+                })}
 
-        {/* Legend */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-3 border-t border-white/5 text-[11px] text-[var(--muted)]">
-          <Legend color="bg-white/30" label="Ej startad" />
-          <Legend color="bg-amber-400" label="Pågår" />
-          <Legend color="bg-[var(--triad-teal)]" label="Klar" />
-          <Legend color="bg-rose-400" label="Försenad" />
-          {nowPct != null && <Legend color="bg-rose-400/60" label="Idag" line />}
-        </div>
+                {isMilestone ? (
+                  <div
+                    className={`absolute top-1/2 -translate-y-1/2 h-3 w-3 rounded-full ring-2 ring-black/40 ${barColor}`}
+                    style={{ left: `calc(${left}% - 6px)` }}
+                    title={fmtDate(startTs)}
+                  />
+                ) : (
+                  <>
+                    <div
+                      className={`absolute top-1/2 -translate-y-1/2 h-3.5 rounded-sm ${barColor}`}
+                      style={{ left: `${left}%`, width: `${width}%` }}
+                      title={`${fmtDate(startTs)} → ${fmtDate(endTs!)}`}
+                    />
+                    {/* Start label, just above the bar's left edge */}
+                    <span
+                      className="absolute text-[10px] text-[var(--muted)] whitespace-nowrap"
+                      style={{ left: `${left}%`, top: "-2px", transform: "translateX(0)" }}
+                    >
+                      {fmtShort(startTs)}
+                    </span>
+                    {/* End label, just below the bar's right edge */}
+                    <span
+                      className="absolute text-[10px] text-[var(--muted)] whitespace-nowrap"
+                      style={{
+                        left: `${left + width}%`,
+                        bottom: "-2px",
+                        transform: flipLabel ? "translateX(-100%)" : "translateX(0)",
+                      }}
+                    >
+                      {fmtShort(endTs!)}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Today marker — single absolute line spanning every grid row that
+            sits inside the track column (column 2 starts at 180px + 12px gap). */}
+        {nowPct != null && (
+          <div
+            className="pointer-events-none absolute top-0 bottom-0 w-px bg-rose-400/60"
+            style={{ left: `calc(180px + 0.75rem + (100% - 180px - 0.75rem) * ${nowPct} / 100)` }}
+            aria-label="Idag"
+          />
+        )}
+      </div>
+
+      {/* Legend */}
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 pt-3 border-t border-white/5 text-[11px] text-[var(--muted)]">
+        <Legend color="bg-white/30" label="Ej startad" />
+        <Legend color="bg-amber-400" label="Pågår" />
+        <Legend color="bg-[var(--triad-teal)]" label="Klar" />
+        <Legend color="bg-rose-400" label="Försenad" />
+        {nowPct != null && <Legend color="bg-rose-400/60" label="Idag" line />}
       </div>
     </div>
   );
@@ -157,29 +204,105 @@ function Legend({ color, label, line }: { color: string; label: string; line?: b
   );
 }
 
-function fmt(t: number) {
+function fmtDate(t: number) {
+  return new Date(t).toLocaleDateString("sv-SE", { day: "numeric", month: "short", year: "numeric" });
+}
+function fmtShort(t: number) {
   return new Date(t).toLocaleDateString("sv-SE", { day: "numeric", month: "short" });
 }
 
-function generateMonths(min: number, max: number) {
+/**
+ * Pick reasonable date ticks for the visible range. Granularity adapts so we
+ * roughly aim for 5–8 ticks across the chart:
+ *   < 30 days  → daily ticks every few days
+ *   < 4 months → weekly ticks (Mondays)
+ *   < 2 years  → monthly ticks (1st of month)
+ *   else       → quarterly ticks
+ */
+function generateTicks(min: number, max: number): { timestamp: number; label: string }[] {
+  const days = (max - min) / MS_DAY;
   const out: { timestamp: number; label: string }[] = [];
-  const start = new Date(min);
-  start.setDate(1);
-  start.setHours(0, 0, 0, 0);
-  const cursor = new Date(start);
-  while (cursor.getTime() <= max) {
-    if (cursor.getTime() >= min) {
-      out.push({
-        timestamp: cursor.getTime(),
-        label: cursor.toLocaleDateString("sv-SE", { month: "short" }),
-      });
+
+  if (days < 30) {
+    const step = Math.max(1, Math.ceil(days / 7));
+    const cursor = startOfDay(new Date(min));
+    while (cursor.getTime() <= max) {
+      if (cursor.getTime() >= min) {
+        out.push({
+          timestamp: cursor.getTime(),
+          label: cursor.toLocaleDateString("sv-SE", { day: "numeric", month: "short" }),
+        });
+      }
+      cursor.setDate(cursor.getDate() + step);
     }
-    cursor.setMonth(cursor.getMonth() + 1);
+  } else if (days < 120) {
+    const cursor = mondayOf(new Date(min));
+    const step = days < 60 ? 1 : 2; // every week or every other week
+    while (cursor.getTime() <= max) {
+      if (cursor.getTime() >= min) {
+        out.push({
+          timestamp: cursor.getTime(),
+          label: cursor.toLocaleDateString("sv-SE", { day: "numeric", month: "short" }),
+        });
+      }
+      cursor.setDate(cursor.getDate() + 7 * step);
+    }
+  } else if (days < 365 * 2) {
+    const cursor = firstOfMonth(new Date(min));
+    const step = days < 240 ? 1 : 2;
+    while (cursor.getTime() <= max) {
+      if (cursor.getTime() >= min) {
+        const showYear = cursor.getMonth() === 0 || out.length === 0;
+        out.push({
+          timestamp: cursor.getTime(),
+          label: cursor.toLocaleDateString("sv-SE", {
+            month: "short",
+            ...(showYear ? { year: "2-digit" } : {}),
+          }),
+        });
+      }
+      cursor.setMonth(cursor.getMonth() + step);
+    }
+  } else {
+    const cursor = firstOfQuarter(new Date(min));
+    while (cursor.getTime() <= max) {
+      if (cursor.getTime() >= min) {
+        out.push({
+          timestamp: cursor.getTime(),
+          label:
+            "Q" + (Math.floor(cursor.getMonth() / 3) + 1) + " " + String(cursor.getFullYear()).slice(2),
+        });
+      }
+      cursor.setMonth(cursor.getMonth() + 3);
+    }
   }
-  // If too many months, downsample to ~6 labels.
-  if (out.length > 6) {
-    const step = Math.ceil(out.length / 6);
-    return out.filter((_, i) => i % step === 0);
+
+  // Cap to at most 10 ticks so we don't crowd the axis.
+  if (out.length > 10) {
+    const skip = Math.ceil(out.length / 8);
+    return out.filter((_, i) => i % skip === 0);
   }
   return out;
+}
+
+function startOfDay(d: Date) {
+  const c = new Date(d);
+  c.setHours(0, 0, 0, 0);
+  return c;
+}
+function mondayOf(d: Date) {
+  const c = startOfDay(d);
+  const wd = c.getDay() || 7; // Sunday → 7
+  c.setDate(c.getDate() - (wd - 1));
+  return c;
+}
+function firstOfMonth(d: Date) {
+  const c = startOfDay(d);
+  c.setDate(1);
+  return c;
+}
+function firstOfQuarter(d: Date) {
+  const c = firstOfMonth(d);
+  c.setMonth(Math.floor(c.getMonth() / 3) * 3);
+  return c;
 }

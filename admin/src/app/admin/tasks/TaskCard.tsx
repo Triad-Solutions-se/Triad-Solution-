@@ -10,6 +10,7 @@ export type Task = {
   title: string;
   status: string;
   priority: string | null;
+  start_at: string | null;
   due_at: string | null;
   description: string | null;
   project?: { id: string; name: string } | null;
@@ -137,6 +138,7 @@ export function TaskCard({ task }: { task: Task }) {
             title: task.title,
             description: task.description,
             priority: task.priority ?? "medium",
+            start_at: task.start_at,
             due_at: task.due_at,
             status: task.status,
             assignee_id: task.assignee?.id ?? null,

@@ -33,7 +33,7 @@ export default async function TasksPage({
   let q = supabase
     .from("tasks")
     .select(
-      "id,title,description,status,priority,due_at,created_at,assignee:profiles!tasks_assignee_id_fkey(id,display_name),project:projects(id,name)",
+      "id,title,description,status,priority,start_at,due_at,created_at,assignee:profiles!tasks_assignee_id_fkey(id,display_name),project:projects(id,name)",
     );
 
   if (sort === "due_desc") q = q.order("due_at", { ascending: false, nullsFirst: false });

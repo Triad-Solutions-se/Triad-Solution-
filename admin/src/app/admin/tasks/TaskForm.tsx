@@ -8,6 +8,7 @@ export type TaskInput = {
   title: string;
   description: string | null;
   priority: string;
+  start_at: string | null;
   due_at: string | null;
   status: string;
   assignee_id: string | null;
@@ -33,6 +34,9 @@ export function TaskFormModal({
   const [description, setDescription] = useState(initial?.description ?? "");
   const [priority, setPriority] = useState(initial?.priority ?? "medium");
   const [status, setStatus] = useState(initial?.status ?? "not_started");
+  const [start, setStart] = useState(
+    initial?.start_at ? initial.start_at.slice(0, 10) : "",
+  );
   const [due, setDue] = useState(
     initial?.due_at ? initial.due_at.slice(0, 10) : "",
   );
@@ -65,6 +69,7 @@ export function TaskFormModal({
       description: description?.trim() || null,
       priority,
       status,
+      start_at: start ? new Date(start).toISOString() : null,
       due_at: due ? new Date(due).toISOString() : null,
       assignee_id: assigneeId || null,
       project_id: projectId || null,
@@ -153,6 +158,15 @@ export function TaskFormModal({
                 </option>
               ))}
             </select>
+          </Field>
+
+          <Field label="Startdatum">
+            <input
+              type="date"
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+              className="w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
+            />
           </Field>
 
           <Field label="Deadline">

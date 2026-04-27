@@ -11,6 +11,7 @@ export type ProjectTask = {
   description: string | null;
   status: string;
   priority: string | null;
+  start_at: string | null;
   due_at: string | null;
   created_at: string;
   completed_at: string | null;
@@ -43,6 +44,7 @@ export function ProjectTaskList({
     title: "",
     description: "",
     priority: "medium",
+    start_at: "",
     due_at: "",
     assignee_id: "",
   });
@@ -56,6 +58,7 @@ export function ProjectTaskList({
       description: f.description || null,
       priority: f.priority,
       status: "not_started",
+      start_at: f.start_at ? new Date(f.start_at).toISOString() : null,
       due_at: f.due_at ? new Date(f.due_at).toISOString() : null,
       assignee_id: f.assignee_id || null,
       project_id: projectId,
@@ -65,7 +68,7 @@ export function ProjectTaskList({
       alert(error.message);
       return;
     }
-    setF({ title: "", description: "", priority: "medium", due_at: "", assignee_id: "" });
+    setF({ title: "", description: "", priority: "medium", start_at: "", due_at: "", assignee_id: "" });
     setAdding(false);
     router.refresh();
   }
@@ -102,7 +105,27 @@ export function ProjectTaskList({
             placeholder="Beskrivning (valfri)"
             className="w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm resize-y"
           />
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-[10px] text-[var(--muted)] uppercase tracking-wider">
+              Start
+              <input
+                type="date"
+                value={f.start_at}
+                onChange={(e) => setF((p) => ({ ...p, start_at: e.target.value }))}
+                className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-2 py-2 text-xs text-white"
+              />
+            </label>
+            <label className="text-[10px] text-[var(--muted)] uppercase tracking-wider">
+              Deadline
+              <input
+                type="date"
+                value={f.due_at}
+                onChange={(e) => setF((p) => ({ ...p, due_at: e.target.value }))}
+                className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-2 py-2 text-xs text-white"
+              />
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
             <select
               value={f.priority}
               onChange={(e) => setF((p) => ({ ...p, priority: e.target.value }))}
@@ -112,12 +135,6 @@ export function ProjectTaskList({
               <option value="medium">Medel</option>
               <option value="high">Hög</option>
             </select>
-            <input
-              type="date"
-              value={f.due_at}
-              onChange={(e) => setF((p) => ({ ...p, due_at: e.target.value }))}
-              className="rounded-btn bg-black/30 border border-white/10 px-2 py-2 text-xs text-white"
-            />
             <select
               value={f.assignee_id}
               onChange={(e) => setF((p) => ({ ...p, assignee_id: e.target.value }))}
@@ -188,6 +205,7 @@ function taskToCardTask(t: ProjectTask): Task {
     title: t.title,
     status: t.status,
     priority: t.priority,
+    start_at: t.start_at,
     due_at: t.due_at,
     description: t.description,
     project: t.project ?? null,
