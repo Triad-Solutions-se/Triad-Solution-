@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Repeat } from "lucide-react";
+import { Modal } from "@/components/Modal";
 
 type Profile = { id: string; display_name: string | null; email: string | null };
 
@@ -81,16 +82,12 @@ export function NewRecurringButton({ profiles }: { profiles: Profile[] }) {
         <Repeat size={16} />
         Återkommande
       </button>
-      {open && (
-        <div
-          className="fixed inset-0 bg-black/60 grid place-items-center z-50 p-4"
-          onClick={() => setOpen(false)}
+      <Modal open={open} onClose={() => setOpen(false)}>
+        <form
+          onClick={(e) => e.stopPropagation()}
+          onSubmit={submit}
+          className="w-full max-w-lg glass rounded-modal p-6 space-y-3 max-h-[90vh] overflow-auto"
         >
-          <form
-            onClick={(e) => e.stopPropagation()}
-            onSubmit={submit}
-            className="w-full max-w-lg glass rounded-modal p-6 space-y-3 max-h-[90vh] overflow-auto"
-          >
             <h3 className="font-heading text-lg font-semibold">Ny återkommande betalning</h3>
             <input
               autoFocus
@@ -186,9 +183,8 @@ export function NewRecurringButton({ profiles }: { profiles: Profile[] }) {
                 {saving ? "Sparar…" : "Spara"}
               </button>
             </div>
-          </form>
-        </div>
-      )}
+        </form>
+      </Modal>
     </>
   );
 }
