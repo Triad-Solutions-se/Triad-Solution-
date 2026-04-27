@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { FileText } from "lucide-react";
+import { Modal } from "@/components/Modal";
 
 export function NewInvoiceButton() {
   const supabase = createClient();
@@ -80,16 +81,12 @@ export function NewInvoiceButton() {
         <FileText size={16} />
         Ny faktura
       </button>
-      {open && (
-        <div
-          className="fixed inset-0 bg-black/60 grid place-items-center z-50 p-4"
-          onClick={() => setOpen(false)}
+      <Modal open={open} onClose={() => setOpen(false)}>
+        <form
+          onClick={(e) => e.stopPropagation()}
+          onSubmit={submit}
+          className="w-full max-w-lg glass rounded-modal p-6 space-y-3 max-h-[90vh] overflow-auto"
         >
-          <form
-            onClick={(e) => e.stopPropagation()}
-            onSubmit={submit}
-            className="w-full max-w-lg glass rounded-modal p-6 space-y-3 max-h-[90vh] overflow-auto"
-          >
             <h3 className="font-heading text-lg font-semibold">Ny faktura</h3>
             <input
               autoFocus
@@ -169,9 +166,8 @@ export function NewInvoiceButton() {
                 {saving ? "Sparar…" : "Spara"}
               </button>
             </div>
-          </form>
-        </div>
-      )}
+        </form>
+      </Modal>
     </>
   );
 }

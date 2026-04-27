@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Upload, Download, Trash2, Image as ImageIcon, FileText, File as FileIcon } from "lucide-react";
+import { Modal } from "@/components/Modal";
 
 export type ProjectFile = {
   id: string;
@@ -130,16 +131,12 @@ export function ProjectFilesManager({
         </div>
       )}
 
-      {open && (
-        <div
-          className="fixed inset-0 bg-black/60 grid place-items-center z-50 p-4"
-          onClick={() => setOpen(false)}
+      <Modal open={open} onClose={() => setOpen(false)}>
+        <form
+          onClick={(e) => e.stopPropagation()}
+          onSubmit={upload}
+          className="w-full max-w-lg glass rounded-modal p-6 space-y-3 max-h-[90vh] overflow-auto"
         >
-          <form
-            onClick={(e) => e.stopPropagation()}
-            onSubmit={upload}
-            className="w-full max-w-lg glass rounded-modal p-6 space-y-3 max-h-[90vh] overflow-auto"
-          >
             <h3 className="font-heading text-lg font-semibold">Ladda upp till projektet</h3>
             <div className="grid grid-cols-2 gap-3">
               <label className="text-xs text-[var(--muted)]">
@@ -186,9 +183,8 @@ export function ProjectFilesManager({
                 {saving ? "Laddar upp…" : "Ladda upp"}
               </button>
             </div>
-          </form>
-        </div>
-      )}
+        </form>
+      </Modal>
     </div>
   );
 }
