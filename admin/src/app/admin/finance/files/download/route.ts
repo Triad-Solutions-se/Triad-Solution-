@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const ALLOWED_BUCKETS = new Set(["finance", "brand-assets"]);
+const ALLOWED_BUCKETS = new Set(["finance", "brand-assets", "project-files"]);
 
 export async function GET(req: NextRequest) {
   const path = req.nextUrl.searchParams.get("path");

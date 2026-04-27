@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/PageHeader";
 import { Chip } from "@/components/Chip";
@@ -82,7 +83,10 @@ function ProjectCard({ project: p }: { project: Project }) {
   const pct = total ? Math.round((done / total) * 100) : 0;
 
   return (
-    <article className="glass rounded-card p-5 flex flex-col gap-4 hover:border-white/15 transition-colors">
+    <Link
+      href={`/admin/projects/${p.id}`}
+      className="glass rounded-card p-5 flex flex-col gap-4 hover:border-white/15 hover:bg-white/[0.02] transition-colors block"
+    >
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="font-heading font-semibold text-base leading-tight">{p.name}</h3>
@@ -130,7 +134,7 @@ function ProjectCard({ project: p }: { project: Project }) {
           {fmt(p.start_date)} → {fmt(p.end_date)}
         </span>
       </footer>
-    </article>
+    </Link>
   );
 }
 
