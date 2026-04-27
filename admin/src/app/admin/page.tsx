@@ -13,8 +13,8 @@ type TaskRow = {
   status: string;
   priority: string | null;
   due_at: string | null;
-  assignee_id: string | null;
-  assignee?: { display_name: string | null } | null;
+  assignee_ids: string[];
+  assignees?: Array<{ display_name: string | null }>;
 };
 
 type MeetingRow = { id: string; name: string; date: string | null; type: string | null };
@@ -26,21 +26,18 @@ export default async function OverviewPage() {
   } = await supabase.auth.getUser();
   const nowIso = new Date().toISOString();
 
-  const [tasksOpen, tasksMine, projects, meetings, customers] = await Promise.all([
+  const [tasksOpen, tasksMine, projects, meetings, customers, profilesData] = await Promise.all([
     supabase
       .from("tasks")
-      .select(
-        "id,title,status,priority,due_at,assignee_id,assignee:profiles!tasks_assignee_id_fkey(display_name)",
-        { count: "exact" },
-      )
+      .select("id,title,status,priority,due_at,assignee_ids", { count: "exact" })
       .neq("status", "done")
       .order("due_at", { ascending: true, nullsFirst: false })
       .limit(8),
     user
       ? supabase
           .from("tasks")
-          .select("id,title,status,priority,due_at,assignee_id", { count: "exact" })
-          .eq("assignee_id", user.id)
+          .select("id,title,status,priority,due_at,assignee_ids", { count: "exact" })
+          .contains("assignee_ids", [user.id])
           .neq("status", "done")
           .order("due_at", { ascending: true, nullsFirst: false })
           .limit(10)
@@ -53,10 +50,22 @@ export default async function OverviewPage() {
       .order("date_time", { ascending: true })
       .limit(6),
     supabase.from("customers").select("id,name,status", { count: "exact" }).limit(6),
+    supabase.from("profiles").select("id,display_name"),
   ]);
 
-  const openTasks = (tasksOpen.data ?? []) as unknown as TaskRow[];
-  const myTasks = (tasksMine.data ?? []) as unknown as TaskRow[];
+  const profileById = new Map<string, { display_name: string | null }>(
+    ((profilesData.data ?? []) as Array<{ id: string; display_name: string | null }>).map((p) => [p.id, p]),
+  );
+  const hydrate = (rows: any[]): TaskRow[] =>
+    rows.map((t) => ({
+      ...t,
+      assignees: ((t.assignee_ids ?? []) as string[])
+        .map((aid) => profileById.get(aid))
+        .filter(Boolean) as Array<{ display_name: string | null }>,
+    }));
+
+  const openTasks = hydrate(tasksOpen.data ?? []);
+  const myTasks = hydrate(tasksMine.data ?? []);
   const upcomingMeetings = (meetings.data ?? []) as unknown as MeetingRow[];
 
   return (
@@ -122,15 +131,40 @@ export default async function OverviewPage() {
           </div>
           <ul className="divide-y divide-white/5">
             {openTasks.map((t) => {
-              const name = t.assignee?.display_name ?? "T";
-              const initials = name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
+              const assignees = t.assignees ?? [];
               return (
                 <li key={t.id} className="py-2.5 flex flex-col gap-1 text-sm group hover:bg-white/[0.02] -mx-5 px-5">
                   <span className="truncate font-medium">{t.title}</span>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="h-5 w-5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] flex items-center justify-center font-semibold shrink-0">
-                      {initials}
-                    </span>
+                    {assignees.length > 0 ? (
+                      <span className="inline-flex items-center -space-x-1.5">
+                        {assignees.slice(0, 3).map((a, i) => {
+                          const name = a.display_name ?? "?";
+                          const initials = name
+                            .split(" ")
+                            .map((w: string) => w[0])
+                            .join("")
+                            .toUpperCase()
+                            .slice(0, 2);
+                          return (
+                            <span
+                              key={i}
+                              title={name}
+                              className="h-5 w-5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] flex items-center justify-center font-semibold shrink-0 ring-2 ring-[var(--surface)]"
+                            >
+                              {initials}
+                            </span>
+                          );
+                        })}
+                      </span>
+                    ) : (
+                      <span
+                        title="Ingen tilldelad"
+                        className="h-5 w-5 rounded-full bg-white/10 text-[var(--muted)] text-[10px] flex items-center justify-center font-semibold shrink-0"
+                      >
+                        T
+                      </span>
+                    )}
                     {t.priority && (
                       <Chip tone={t.priority === "high" ? "red" : t.priority === "medium" ? "yellow" : "gray"}>
                         {t.priority === "high" ? "Hög" : t.priority === "medium" ? "Medel" : "Låg"}
