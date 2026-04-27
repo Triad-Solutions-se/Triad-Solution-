@@ -4,18 +4,37 @@ import { fmtDate, fmtDateTime } from "@/lib/date";
 import { PageHeader } from "@/components/PageHeader";
 import { Chip } from "@/components/Chip";
 import { CheckCircle2, CheckSquare, FolderKanban, Calendar, Users, ChevronRight } from "lucide-react";
+import { DashboardTaskRow } from "./DashboardTaskRow";
+import type { Task as TaskCardTask } from "./tasks/TaskCard";
 
 export const dynamic = "force-dynamic";
 
 type TaskRow = {
   id: string;
   title: string;
+  description: string | null;
   status: string;
   priority: string | null;
+  start_at: string | null;
   due_at: string | null;
   assignee_ids: string[];
-  assignees?: Array<{ display_name: string | null }>;
+  project: { id: string; name: string } | null;
+  assignees?: Array<{ id: string; display_name: string | null }>;
 };
+
+function toCardTask(t: TaskRow): TaskCardTask {
+  return {
+    id: t.id,
+    title: t.title,
+    status: t.status,
+    priority: t.priority,
+    start_at: t.start_at,
+    due_at: t.due_at,
+    description: t.description,
+    project: t.project ?? null,
+    assignees: t.assignees ?? [],
+  };
+}
 
 type MeetingRow = { id: string; name: string; date: string | null; type: string | null };
 
@@ -26,17 +45,19 @@ export default async function OverviewPage() {
   } = await supabase.auth.getUser();
   const nowIso = new Date().toISOString();
 
+  const taskFields =
+    "id,title,description,status,priority,start_at,due_at,assignee_ids,project:projects(id,name)";
   const [tasksOpen, tasksMine, projects, meetings, customers, profilesData] = await Promise.all([
     supabase
       .from("tasks")
-      .select("id,title,status,priority,due_at,assignee_ids", { count: "exact" })
+      .select(taskFields, { count: "exact" })
       .neq("status", "done")
       .order("due_at", { ascending: true, nullsFirst: false })
       .limit(8),
     user
       ? supabase
           .from("tasks")
-          .select("id,title,status,priority,due_at,assignee_ids", { count: "exact" })
+          .select(taskFields, { count: "exact" })
           .contains("assignee_ids", [user.id])
           .neq("status", "done")
           .order("due_at", { ascending: true, nullsFirst: false })
@@ -53,7 +74,7 @@ export default async function OverviewPage() {
     supabase.from("profiles").select("id,display_name"),
   ]);
 
-  const profileById = new Map<string, { display_name: string | null }>(
+  const profileById = new Map<string, { id: string; display_name: string | null }>(
     ((profilesData.data ?? []) as Array<{ id: string; display_name: string | null }>).map((p) => [p.id, p]),
   );
   const hydrate = (rows: any[]): TaskRow[] =>
@@ -61,7 +82,7 @@ export default async function OverviewPage() {
       ...t,
       assignees: ((t.assignee_ids ?? []) as string[])
         .map((aid) => profileById.get(aid))
-        .filter(Boolean) as Array<{ display_name: string | null }>,
+        .filter(Boolean) as Array<{ id: string; display_name: string | null }>,
     }));
 
   const openTasks = hydrate(tasksOpen.data ?? []);
@@ -97,25 +118,30 @@ export default async function OverviewPage() {
           ) : (
             <ul className="divide-y divide-white/5">
               {myTasks.map((t) => (
-                <li key={t.id} className="py-2.5 text-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate flex-1 min-w-0">{t.title}</span>
-                    {t.priority && (
-                      <Chip tone={t.priority === "high" ? "red" : t.priority === "medium" ? "yellow" : "gray"}>
-                        {t.priority === "high" ? "Hög" : t.priority === "medium" ? "Medel" : "Låg"}
-                      </Chip>
-                    )}
-                  </div>
-                  {t.due_at && (
-                    <div
-                      className={`text-[11px] mt-0.5 ${
-                        new Date(t.due_at) < new Date() ? "text-rose-300" : "text-[var(--muted)]"
-                      }`}
-                    >
-                      {new Date(t.due_at) < new Date() && "⚠ "}
-                      {fmtDate(t.due_at)}
+                <li key={t.id}>
+                  <DashboardTaskRow
+                    task={toCardTask(t)}
+                    className="py-2.5 -mx-5 px-5 text-sm hover:bg-white/[0.03] transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate flex-1 min-w-0">{t.title}</span>
+                      {t.priority && (
+                        <Chip tone={t.priority === "high" ? "red" : t.priority === "medium" ? "yellow" : "gray"}>
+                          {t.priority === "high" ? "Hög" : t.priority === "medium" ? "Medel" : "Låg"}
+                        </Chip>
+                      )}
                     </div>
-                  )}
+                    {t.due_at && (
+                      <div
+                        className={`text-[11px] mt-0.5 ${
+                          new Date(t.due_at) < new Date() ? "text-rose-300" : "text-[var(--muted)]"
+                        }`}
+                      >
+                        {new Date(t.due_at) < new Date() && "⚠ "}
+                        {fmtDate(t.due_at)}
+                      </div>
+                    )}
+                  </DashboardTaskRow>
                 </li>
               ))}
             </ul>
@@ -133,10 +159,14 @@ export default async function OverviewPage() {
             {openTasks.map((t) => {
               const assignees = t.assignees ?? [];
               return (
-                <li key={t.id} className="py-2.5 flex flex-col gap-1 text-sm group hover:bg-white/[0.02] -mx-5 px-5">
-                  <span className="truncate font-medium">{t.title}</span>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {assignees.length > 0 ? (
+                <li key={t.id}>
+                  <DashboardTaskRow
+                    task={toCardTask(t)}
+                    className="py-2.5 flex flex-col gap-1 text-sm group hover:bg-white/[0.03] -mx-5 px-5 transition-colors"
+                  >
+                    <span className="truncate font-medium">{t.title}</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {assignees.length > 0 ? (
                       <span className="inline-flex items-center -space-x-1.5">
                         {assignees.slice(0, 3).map((a, i) => {
                           const name = a.display_name ?? "?";
@@ -172,6 +202,7 @@ export default async function OverviewPage() {
                     )}
                     <Chip tone={statusTone(t.status)}>{t.status}</Chip>
                   </div>
+                  </DashboardTaskRow>
                 </li>
               );
             })}

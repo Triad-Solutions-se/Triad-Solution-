@@ -5,6 +5,16 @@ export const metadata: Metadata = {
   title: "Triad Admin",
   description: "Internt nav för Triad Solutions",
   robots: { index: false, follow: false },
+  icons: {
+    icon: "/admin/logos/Logo_Color_Icon.png",
+    shortcut: "/admin/logos/Logo_Color_Icon.png",
+    apple: "/admin/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Triad Admin",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export const viewport: Viewport = {
