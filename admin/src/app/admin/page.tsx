@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { fmtDate, fmtDateTime } from "@/lib/date";
 import { PageHeader } from "@/components/PageHeader";
 import { Chip } from "@/components/Chip";
 import { CheckCircle2, CheckSquare, FolderKanban, Calendar, Users, ChevronRight } from "lucide-react";
@@ -103,7 +104,7 @@ export default async function OverviewPage() {
                       }`}
                     >
                       {new Date(t.due_at) < new Date() && "⚠ "}
-                      {new Date(t.due_at).toLocaleDateString("sv-SE", { day: "numeric", month: "short" })}
+                      {fmtDate(t.due_at)}
                     </div>
                   )}
                 </li>
@@ -160,7 +161,7 @@ export default async function OverviewPage() {
                 <div>
                   <div className="font-medium">{m.name}</div>
                   <div className="text-xs text-[var(--muted)]">
-                    {m.date ? new Date(m.date).toLocaleString("sv-SE") : "Ingen tid"} · {m.type ?? "—"}
+                    {m.date ? fmtDateTime(m.date) : "Ingen tid"} · {m.type ?? "—"}
                   </div>
                 </div>
               </li>

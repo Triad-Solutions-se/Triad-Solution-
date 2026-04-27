@@ -2,6 +2,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { fmtDate } from "@/lib/date";
 import { Chip } from "@/components/Chip";
 import { TaskFormModal } from "./TaskForm";
 
@@ -148,7 +149,7 @@ export function TaskCard({ task }: { task: Task }) {
                   }`}
                 >
                   {overdue && "⚠ "}
-                  {new Date(task.due_at).toLocaleDateString("sv-SE", { day: "numeric", month: "short" })}
+                  {fmtDate(task.due_at)}
                 </span>
               )}
             </div>

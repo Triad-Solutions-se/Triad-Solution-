@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { fmtDate } from "@/lib/date";
 import { PageHeader } from "@/components/PageHeader";
 import { Chip } from "@/components/Chip";
 import { FolderArchive } from "lucide-react";
@@ -102,7 +103,7 @@ export default async function FinancePage() {
                 </td>
                 <td className="p-3 text-[var(--muted)]">{r.category ?? "—"}</td>
                 <td className="p-3 text-[var(--muted)]">
-                  {r.due_date ? new Date(r.due_date).toLocaleDateString("sv-SE") : "—"}
+                  {fmtDate(r.due_date)}
                 </td>
                 <td className="p-3 font-mono">{SEK(Number(r.amount_sek || 0))}</td>
                 <td className="p-3">
@@ -150,7 +151,7 @@ export default async function FinancePage() {
                 </td>
                 <td className="p-3 text-[var(--muted)]">{FREQUENCY_LABEL[r.frequency] ?? r.frequency}</td>
                 <td className="p-3 text-[var(--muted)]">
-                  {r.next_due_date ? new Date(r.next_due_date).toLocaleDateString("sv-SE") : "—"}
+                  {fmtDate(r.next_due_date)}
                 </td>
                 <td className="p-3 font-mono">{SEK(Number(r.amount_sek || 0))}</td>
                 <td className="p-3">
@@ -187,10 +188,10 @@ export default async function FinancePage() {
                 <td className="p-3 font-mono">{r.number}</td>
                 <td className="p-3 text-[var(--muted)]">{r.customer_name ?? "—"}</td>
                 <td className="p-3 text-[var(--muted)]">
-                  {r.issued_at ? new Date(r.issued_at).toLocaleDateString("sv-SE") : "—"}
+                  {fmtDate(r.issued_at)}
                 </td>
                 <td className="p-3 text-[var(--muted)]">
-                  {r.due_date ? new Date(r.due_date).toLocaleDateString("sv-SE") : "—"}
+                  {fmtDate(r.due_date)}
                 </td>
                 <td className="p-3 font-mono">{SEK(Number(r.amount_sek || 0))}</td>
                 <td className="p-3">
@@ -238,7 +239,7 @@ export default async function FinancePage() {
                 <td className="p-3">{r.description}</td>
                 <td className="p-3 text-[var(--muted)]">{r.source ?? "—"}</td>
                 <td className="p-3 text-[var(--muted)]">
-                  {r.date ? new Date(r.date).toLocaleDateString("sv-SE") : "—"}
+                  {fmtDate(r.date)}
                 </td>
                 <td className="p-3 font-mono">{SEK(Number(r.amount_sek || 0))}</td>
                 <td className="p-3">
@@ -278,7 +279,7 @@ export default async function FinancePage() {
                 <td className="p-3 text-[var(--muted)]">{r.category ?? "—"}</td>
                 <td className="p-3 text-[var(--muted)]">{r.paid_by ?? "—"}</td>
                 <td className="p-3 text-[var(--muted)]">
-                  {r.date ? new Date(r.date).toLocaleDateString("sv-SE") : "—"}
+                  {fmtDate(r.date)}
                 </td>
                 <td className="p-3 font-mono">{SEK(Number(r.amount_sek || 0))}</td>
                 <td className="p-3">

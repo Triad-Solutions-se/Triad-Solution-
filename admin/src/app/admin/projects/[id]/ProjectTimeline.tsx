@@ -1,3 +1,5 @@
+import { fmtDate } from "@/lib/date";
+
 export type TimelineTask = {
   id: string;
   title: string;
@@ -149,16 +151,16 @@ export function ProjectTimeline({
                     {showBothLabels && (
                       <>
                         <span className="text-[10px] font-medium text-black/80 whitespace-nowrap">
-                          {fmtShort(startTs)}
+                          {fmtDate(startTs)}
                         </span>
                         <span className="text-[10px] font-medium text-black/80 whitespace-nowrap">
-                          {fmtShort(endTs!)}
+                          {fmtDate(endTs!)}
                         </span>
                       </>
                     )}
                     {showStartOnly && (
                       <span className="text-[10px] font-medium text-black/80 whitespace-nowrap">
-                        {fmtShort(startTs)}
+                        {fmtDate(startTs)}
                       </span>
                     )}
                   </div>
@@ -200,12 +202,6 @@ function Legend({ color, label, line }: { color: string; label: string; line?: b
   );
 }
 
-function fmtDate(t: number) {
-  return new Date(t).toLocaleDateString("sv-SE", { day: "numeric", month: "short", year: "numeric" });
-}
-function fmtShort(t: number) {
-  return new Date(t).toLocaleDateString("sv-SE", { day: "numeric", month: "short" });
-}
 
 /**
  * Pick reasonable date ticks for the visible range. Granularity adapts so we
@@ -224,10 +220,7 @@ function generateTicks(min: number, max: number): { timestamp: number; label: st
     const cursor = startOfDay(new Date(min));
     while (cursor.getTime() <= max) {
       if (cursor.getTime() >= min) {
-        out.push({
-          timestamp: cursor.getTime(),
-          label: cursor.toLocaleDateString("sv-SE", { day: "numeric", month: "short" }),
-        });
+        out.push({ timestamp: cursor.getTime(), label: fmtDate(cursor) });
       }
       cursor.setDate(cursor.getDate() + step);
     }
@@ -236,10 +229,7 @@ function generateTicks(min: number, max: number): { timestamp: number; label: st
     const step = days < 60 ? 1 : 2; // every week or every other week
     while (cursor.getTime() <= max) {
       if (cursor.getTime() >= min) {
-        out.push({
-          timestamp: cursor.getTime(),
-          label: cursor.toLocaleDateString("sv-SE", { day: "numeric", month: "short" }),
-        });
+        out.push({ timestamp: cursor.getTime(), label: fmtDate(cursor) });
       }
       cursor.setDate(cursor.getDate() + 7 * step);
     }
@@ -248,14 +238,7 @@ function generateTicks(min: number, max: number): { timestamp: number; label: st
     const step = days < 240 ? 1 : 2;
     while (cursor.getTime() <= max) {
       if (cursor.getTime() >= min) {
-        const showYear = cursor.getMonth() === 0 || out.length === 0;
-        out.push({
-          timestamp: cursor.getTime(),
-          label: cursor.toLocaleDateString("sv-SE", {
-            month: "short",
-            ...(showYear ? { year: "2-digit" } : {}),
-          }),
-        });
+        out.push({ timestamp: cursor.getTime(), label: fmtDate(cursor) });
       }
       cursor.setMonth(cursor.getMonth() + step);
     }

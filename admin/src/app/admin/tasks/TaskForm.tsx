@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Modal } from "@/components/Modal";
 
 export type TaskInput = {
   id?: string;
@@ -103,7 +104,7 @@ export function TaskFormModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 grid place-items-center z-50 p-4" onClick={onClose}>
+    <Modal open={true} onClose={onClose}>
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={save}
@@ -252,7 +253,7 @@ export function TaskFormModal({
           </div>
         </div>
       </form>
-    </div>
+    </Modal>
   );
 }
 
