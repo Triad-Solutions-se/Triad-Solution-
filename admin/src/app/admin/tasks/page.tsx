@@ -33,7 +33,7 @@ export default async function TasksPage({
   let q = supabase
     .from("tasks")
     .select(
-      "id,title,description,status,priority,start_at,due_at,created_at,assignee:profiles!tasks_assignee_id_fkey(id,display_name),project:projects(id,name)",
+      "id,title,description,status,priority,start_at,due_at,created_at,assignee_ids,project:projects(id,name)",
     );
 
   if (sort === "due_desc") q = q.order("due_at", { ascending: false, nullsFirst: false });
@@ -43,9 +43,21 @@ export default async function TasksPage({
   else if (sort === "title") q = q.order("title", { ascending: true });
   else q = q.order("due_at", { ascending: true, nullsFirst: false }).order("priority", { ascending: false });
 
-  const { data: tasks } = await q;
+  const [{ data: tasks }, { data: profilesData }] = await Promise.all([
+    q,
+    supabase.from("profiles").select("id,display_name"),
+  ]);
 
-  const all = (tasks ?? []) as unknown as Task[];
+  const profileById = new Map<string, { id: string; display_name: string | null }>(
+    (profilesData ?? []).map((p: any) => [p.id, p]),
+  );
+
+  const all = (tasks ?? []).map((t: any) => ({
+    ...t,
+    assignees: (t.assignee_ids ?? [])
+      .map((id: string) => profileById.get(id))
+      .filter(Boolean) as Array<{ id: string; display_name: string | null }>,
+  })) as unknown as Task[];
   const groups: Record<string, Task[]> = { not_started: [], in_progress: [], done: [] };
   all.forEach((t) => {
     (groups[t.status] ??= []).push(t);

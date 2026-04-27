@@ -11,7 +11,7 @@ export type TaskInput = {
   start_at: string | null;
   due_at: string | null;
   status: string;
-  assignee_id: string | null;
+  assignee_ids: string[];
   project_id: string | null;
 };
 
@@ -40,7 +40,7 @@ export function TaskFormModal({
   const [due, setDue] = useState(
     initial?.due_at ? initial.due_at.slice(0, 10) : "",
   );
-  const [assigneeId, setAssigneeId] = useState(initial?.assignee_id ?? "");
+  const [assigneeIds, setAssigneeIds] = useState<string[]>(initial?.assignee_ids ?? []);
   const [projectId, setProjectId] = useState(initial?.project_id ?? "");
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -71,7 +71,7 @@ export function TaskFormModal({
       status,
       start_at: start ? new Date(start).toISOString() : null,
       due_at: due ? new Date(due).toISOString() : null,
-      assignee_id: assigneeId || null,
+      assignee_ids: assigneeIds,
       project_id: projectId || null,
       completed_at: status === "done" ? new Date().toISOString() : null,
     };
@@ -145,19 +145,33 @@ export function TaskFormModal({
             </select>
           </Field>
 
-          <Field label="Tilldelad">
-            <select
-              value={assigneeId ?? ""}
-              onChange={(e) => setAssigneeId(e.target.value)}
-              className="w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm text-white"
-            >
-              <option value="">Hela teamet</option>
-              {profiles.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.display_name ?? "Okänd"}
-                </option>
-              ))}
-            </select>
+          <Field label="Tilldelade" className="col-span-2">
+            <div className="flex flex-wrap gap-1.5">
+              {profiles.length === 0 && (
+                <span className="text-xs text-[var(--muted)]">Inga medlemmar.</span>
+              )}
+              {profiles.map((p) => {
+                const selected = assigneeIds.includes(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() =>
+                      setAssigneeIds((curr) =>
+                        selected ? curr.filter((x) => x !== p.id) : [...curr, p.id],
+                      )
+                    }
+                    className={`rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
+                      selected
+                        ? "bg-teal-500/20 border-teal-400/40 text-teal-200"
+                        : "bg-black/30 border-white/10 text-[var(--muted)] hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    {p.display_name ?? "Okänd"}
+                  </button>
+                );
+              })}
+            </div>
           </Field>
 
           <Field label="Startdatum">
@@ -242,9 +256,17 @@ export function TaskFormModal({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <label className="block">
+    <label className={`block ${className ?? ""}`}>
       <span className="text-xs uppercase tracking-wider text-[var(--muted)]">{label}</span>
       <div className="mt-1">{children}</div>
     </label>

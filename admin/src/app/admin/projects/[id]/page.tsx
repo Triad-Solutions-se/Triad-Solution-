@@ -32,8 +32,7 @@ export default async function ProjectDashboardPage({
     supabase
       .from("tasks")
       .select(
-        "id,title,description,status,priority,start_at,due_at,created_at,completed_at," +
-          "assignee:profiles!tasks_assignee_id_fkey(id,display_name)," +
+        "id,title,description,status,priority,start_at,due_at,created_at,completed_at,assignee_ids," +
           "project:projects(id,name)",
       )
       .eq("project_id", id)
@@ -50,13 +49,20 @@ export default async function ProjectDashboardPage({
   const project = projectRes.data as any;
   if (!project) notFound();
 
-  const tasks = (tasksRes.data ?? []) as unknown as ProjectTask[];
-  const files = (filesRes.data ?? []) as ProjectFile[];
   const profiles = (profilesRes.data ?? []) as Array<{
     id: string;
     display_name: string | null;
     email: string | null;
   }>;
+  const profileById = new Map(profiles.map((p) => [p.id, p]));
+
+  const tasks = ((tasksRes.data ?? []) as any[]).map((t) => ({
+    ...t,
+    assignees: ((t.assignee_ids ?? []) as string[])
+      .map((aid) => profileById.get(aid))
+      .filter(Boolean) as Array<{ id: string; display_name: string | null }>,
+  })) as unknown as ProjectTask[];
+  const files = (filesRes.data ?? []) as ProjectFile[];
   const customers = (customersRes.data ?? []) as Array<{ id: string; name: string }>;
 
   // Sign all file paths in batch for inline previews/downloads.

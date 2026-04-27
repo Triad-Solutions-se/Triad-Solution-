@@ -15,7 +15,7 @@ export type ProjectTask = {
   due_at: string | null;
   created_at: string;
   completed_at: string | null;
-  assignee?: { id: string; display_name: string | null } | null;
+  assignees?: Array<{ id: string; display_name: string | null }>;
   project?: { id: string; name: string } | null;
 };
 
@@ -46,8 +46,17 @@ export function ProjectTaskList({
     priority: "medium",
     start_at: "",
     due_at: "",
-    assignee_id: "",
+    assignee_ids: [] as string[],
   });
+
+  function toggleAssignee(id: string) {
+    setF((p) => ({
+      ...p,
+      assignee_ids: p.assignee_ids.includes(id)
+        ? p.assignee_ids.filter((x) => x !== id)
+        : [...p.assignee_ids, id],
+    }));
+  }
 
   async function quickAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -60,7 +69,7 @@ export function ProjectTaskList({
       status: "not_started",
       start_at: f.start_at ? new Date(f.start_at).toISOString() : null,
       due_at: f.due_at ? new Date(f.due_at).toISOString() : null,
-      assignee_id: f.assignee_id || null,
+      assignee_ids: f.assignee_ids,
       project_id: projectId,
     });
     setSaving(false);
@@ -68,7 +77,14 @@ export function ProjectTaskList({
       alert(error.message);
       return;
     }
-    setF({ title: "", description: "", priority: "medium", start_at: "", due_at: "", assignee_id: "" });
+    setF({
+      title: "",
+      description: "",
+      priority: "medium",
+      start_at: "",
+      due_at: "",
+      assignee_ids: [],
+    });
     setAdding(false);
     router.refresh();
   }
@@ -125,28 +141,43 @@ export function ProjectTaskList({
               />
             </label>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div>
             <select
               value={f.priority}
               onChange={(e) => setF((p) => ({ ...p, priority: e.target.value }))}
-              className="rounded-btn bg-black/30 border border-white/10 px-2 py-2 text-xs text-white"
+              className="w-full rounded-btn bg-black/30 border border-white/10 px-2 py-2 text-xs text-white"
             >
-              <option value="low">Låg</option>
-              <option value="medium">Medel</option>
-              <option value="high">Hög</option>
+              <option value="low">Låg prioritet</option>
+              <option value="medium">Medel prioritet</option>
+              <option value="high">Hög prioritet</option>
             </select>
-            <select
-              value={f.assignee_id}
-              onChange={(e) => setF((p) => ({ ...p, assignee_id: e.target.value }))}
-              className="rounded-btn bg-black/30 border border-white/10 px-2 py-2 text-xs text-white"
-            >
-              <option value="">Tilldela…</option>
-              {profiles.map((pr) => (
-                <option key={pr.id} value={pr.id}>
-                  {pr.display_name ?? pr.email ?? pr.id.slice(0, 8)}
-                </option>
-              ))}
-            </select>
+          </div>
+          <div>
+            <div className="text-[10px] text-[var(--muted)] uppercase tracking-wider mb-1.5">
+              Tilldelade
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {profiles.length === 0 && (
+                <span className="text-xs text-[var(--muted)]">Inga medlemmar.</span>
+              )}
+              {profiles.map((pr) => {
+                const selected = f.assignee_ids.includes(pr.id);
+                return (
+                  <button
+                    key={pr.id}
+                    type="button"
+                    onClick={() => toggleAssignee(pr.id)}
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium border transition-colors ${
+                      selected
+                        ? "bg-teal-500/20 border-teal-400/40 text-teal-200"
+                        : "bg-black/30 border-white/10 text-[var(--muted)] hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    {pr.display_name ?? pr.email ?? pr.id.slice(0, 8)}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <div className="flex justify-end gap-2">
             <button
@@ -209,6 +240,6 @@ function taskToCardTask(t: ProjectTask): Task {
     due_at: t.due_at,
     description: t.description,
     project: t.project ?? null,
-    assignee: t.assignee ?? null,
+    assignees: t.assignees ?? [],
   };
 }

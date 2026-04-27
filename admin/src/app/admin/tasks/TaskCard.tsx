@@ -14,7 +14,7 @@ export type Task = {
   due_at: string | null;
   description: string | null;
   project?: { id: string; name: string } | null;
-  assignee?: { id: string; display_name: string | null } | null;
+  assignees?: Array<{ id: string; display_name: string | null }>;
 };
 
 const priorityBorder: Record<string, string> = {
@@ -58,11 +58,7 @@ export function TaskCard({ task }: { task: Task }) {
   }
 
   const overdue = task.due_at && !done && new Date(task.due_at) < new Date();
-  const assigneeName = task.assignee?.display_name ?? null;
-  const initials = assigneeName
-    ? assigneeName.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
-    : "T";
-  const avatarCls = assigneeName ? avatarColor(assigneeName) : "bg-white/10 text-[var(--muted)]";
+  const assignees = task.assignees ?? [];
 
   return (
     <>
@@ -111,9 +107,40 @@ export function TaskCard({ task }: { task: Task }) {
                 </Chip>
               )}
               {task.project?.name && <Chip tone="teal">{task.project.name}</Chip>}
-              <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold shrink-0 ${avatarCls}`}>
-                {initials}
-              </span>
+              {assignees.length > 0 ? (
+                <span className="inline-flex items-center -space-x-1.5 shrink-0">
+                  {assignees.slice(0, 3).map((a) => {
+                    const name = a.display_name ?? "?";
+                    const initials = name
+                      .split(" ")
+                      .map((w) => w[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2);
+                    return (
+                      <span
+                        key={a.id}
+                        title={name}
+                        className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold ring-2 ring-[var(--surface)] ${avatarColor(name)}`}
+                      >
+                        {initials}
+                      </span>
+                    );
+                  })}
+                  {assignees.length > 3 && (
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold ring-2 ring-[var(--surface)] bg-white/10 text-[var(--muted)]">
+                      +{assignees.length - 3}
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <span
+                  className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold shrink-0 bg-white/10 text-[var(--muted)]"
+                  title="Ingen tilldelad"
+                >
+                  T
+                </span>
+              )}
               {task.due_at && (
                 <span
                   className={`text-[11px] ${
@@ -141,7 +168,7 @@ export function TaskCard({ task }: { task: Task }) {
             start_at: task.start_at,
             due_at: task.due_at,
             status: task.status,
-            assignee_id: task.assignee?.id ?? null,
+            assignee_ids: assignees.map((a) => a.id),
             project_id: task.project?.id ?? null,
           }}
         />
