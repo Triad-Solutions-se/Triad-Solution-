@@ -135,8 +135,6 @@ export default async function OverviewPage() {
                       {t.project && (
                         <Link
                           href={`/admin/projects/${t.project.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          onKeyDown={(e) => e.stopPropagation()}
                           className="inline-flex items-center gap-1 min-w-0 max-w-[55%] hover:text-white transition-colors"
                         >
                           <FolderKanban size={11} className="opacity-70 shrink-0" />

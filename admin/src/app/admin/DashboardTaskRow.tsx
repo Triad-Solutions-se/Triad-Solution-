@@ -21,8 +21,12 @@ export function DashboardTaskRow({
       <div
         role="button"
         tabIndex={0}
-        onClick={() => setOpen(true)}
+        onClick={(e) => {
+          if ((e.target as HTMLElement).closest("a")) return;
+          setOpen(true);
+        }}
         onKeyDown={(e) => {
+          if ((e.target as HTMLElement).closest("a")) return;
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             setOpen(true);
