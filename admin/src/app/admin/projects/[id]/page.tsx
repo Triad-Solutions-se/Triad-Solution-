@@ -23,7 +23,7 @@ export default async function ProjectDashboardPage({
     supabase
       .from("projects")
       .select(
-        "id,name,status,priority,summary,start_date,end_date,owner_id,customer_id,contact_name,contact_email,contact_phone," +
+        "id,name,status,priority,summary,start_date,end_date,owner_id,customer_id,contact_name,contact_email,contact_phone,external_url," +
           "owner:profiles(id,display_name,email)," +
           "customer:customers(id,name,contact_person,email,phone,website)",
       )
@@ -176,6 +176,7 @@ export default async function ProjectDashboardPage({
                 owner_id: project.owner_id,
                 customer_id: project.customer_id,
                 summary: project.summary,
+                external_url: project.external_url,
               }}
               owner={project.owner}
               profiles={profiles}

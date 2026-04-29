@@ -124,23 +124,38 @@ export default async function OverviewPage() {
                     className="py-2.5 -mx-5 px-5 text-sm hover:bg-white/[0.03] transition-colors"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="truncate flex-1 min-w-0">{t.title}</span>
+                      <span className="truncate flex-1 min-w-0 font-medium">{t.title}</span>
                       {t.priority && (
                         <Chip tone={t.priority === "high" ? "red" : t.priority === "medium" ? "yellow" : "gray"}>
                           {t.priority === "high" ? "Hög" : t.priority === "medium" ? "Medel" : "Låg"}
                         </Chip>
                       )}
                     </div>
-                    {t.due_at && (
-                      <div
-                        className={`text-[11px] mt-0.5 ${
-                          new Date(t.due_at) < new Date() ? "text-rose-300" : "text-[var(--muted)]"
-                        }`}
-                      >
-                        {new Date(t.due_at) < new Date() && "⚠ "}
-                        {fmtDate(t.due_at)}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap text-[11px] text-[var(--muted)]">
+                      {t.project && (
+                        <Link
+                          href={`/admin/projects/${t.project.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 min-w-0 max-w-[55%] hover:text-white transition-colors"
+                        >
+                          <FolderKanban size={11} className="opacity-70 shrink-0" />
+                          <span className="truncate underline-offset-2 hover:underline">{t.project.name}</span>
+                        </Link>
+                      )}
+                      <Chip tone={statusTone(t.status)}>{t.status}</Chip>
+                      {t.due_at && (
+                        <span
+                          className={`inline-flex items-center gap-1 ${
+                            new Date(t.due_at) < new Date() ? "text-rose-300" : ""
+                          }`}
+                        >
+                          <Calendar size={11} className="opacity-70" />
+                          {new Date(t.due_at) < new Date() && "⚠ "}
+                          {fmtDate(t.due_at)}
+                        </span>
+                      )}
+                    </div>
                   </DashboardTaskRow>
                 </li>
               ))}

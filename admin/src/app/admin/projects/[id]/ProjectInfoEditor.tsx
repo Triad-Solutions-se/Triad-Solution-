@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Pencil, Check, X } from "lucide-react";
+import { Pencil, Check, X, ExternalLink } from "lucide-react";
 import { fmtDate } from "@/lib/date";
 
 type Profile = { id: string; display_name: string | null; email: string | null };
@@ -17,6 +17,7 @@ type ProjectInfo = {
   owner_id: string | null;
   customer_id: string | null;
   summary: string | null;
+  external_url: string | null;
 };
 
 const STATUSES = [
@@ -52,6 +53,7 @@ export function ProjectInfoEditor({
     owner_id: project.owner_id ?? "",
     customer_id: project.customer_id ?? "",
     summary: project.summary ?? "",
+    external_url: project.external_url ?? "",
   });
 
   async function save() {
@@ -66,6 +68,7 @@ export function ProjectInfoEditor({
         owner_id: f.owner_id || null,
         customer_id: f.customer_id || null,
         summary: f.summary || null,
+        external_url: f.external_url.trim() ? normalizeUrl(f.external_url.trim()) : null,
       })
       .eq("id", project.id);
     setSaving(false);
@@ -86,6 +89,21 @@ export function ProjectInfoEditor({
         <Row label="Startdatum">{fmtDate(project.start_date)}</Row>
         <Row label="Slutdatum">{fmtDate(project.end_date)}</Row>
         <Row label="Ansvarig">{ownerName}</Row>
+        <Row label="Länk">
+          {project.external_url ? (
+            <a
+              href={project.external_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[var(--triad-teal)] hover:underline max-w-full"
+            >
+              <span className="truncate">{prettyUrl(project.external_url)}</span>
+              <ExternalLink size={11} className="opacity-70 shrink-0" />
+            </a>
+          ) : (
+            "—"
+          )}
+        </Row>
         <button
           onClick={() => setEditing(true)}
           className="mt-2 w-full rounded-btn border border-white/10 hover:bg-white/5 px-3 py-2 text-xs font-medium text-[var(--muted)] hover:text-white inline-flex items-center justify-center gap-2"
@@ -169,6 +187,16 @@ export function ProjectInfoEditor({
           ))}
         </select>
       </Field>
+      <Field label="Länk">
+        <input
+          type="url"
+          inputMode="url"
+          placeholder="https://…"
+          value={f.external_url}
+          onChange={(e) => setF((p) => ({ ...p, external_url: e.target.value }))}
+          className="w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm text-white"
+        />
+      </Field>
       <Field label="Sammanfattning">
         <textarea
           value={f.summary}
@@ -214,6 +242,18 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function normalizeUrl(raw: string) {
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://${raw}`;
+}
+function prettyUrl(raw: string) {
+  try {
+    const u = new URL(raw);
+    return u.host + (u.pathname === "/" ? "" : u.pathname);
+  } catch {
+    return raw;
+  }
+}
 function statusLabel(s: string | null) {
   return STATUSES.find((x) => x.value === s)?.label ?? s ?? "—";
 }
