@@ -71,7 +71,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const slug = clipString(body.app_slug, 64);
+  // Slugs are stored lowercase (see NewAppButton); match case-insensitively
+  // so beacons like "Smashboard" still resolve.
+  const slug = clipString(body.app_slug, 64)?.toLowerCase() ?? null;
   const path = clipString(body.path, 512);
   if (!slug || !path) {
     return NextResponse.json(
