@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, CheckSquare, FolderKanban, Calendar, Users, FileText,
-  Wallet, Palette, BookTemplate, LogOut, X,
+  Wallet, Palette, BookTemplate, BarChart3, LogOut, X,
 } from "lucide-react";
 
 const nav = [
@@ -14,6 +14,7 @@ const nav = [
   { href: "/admin/customers", label: "Kunder", icon: Users },
   { href: "/admin/documents", label: "Dokument", icon: FileText },
   { href: "/admin/finance", label: "Ekonomi", icon: Wallet },
+  { href: "/admin/analytics", label: "Analys", icon: BarChart3 },
   { href: "/admin/brand", label: "Grafisk Profil", icon: Palette },
   { href: "/admin/templates", label: "Mallar", icon: BookTemplate },
 ];
