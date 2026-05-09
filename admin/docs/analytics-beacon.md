@@ -45,7 +45,9 @@ Paste this into a Claude Code session opened inside the target app:
 >   `https://<admin-host>/api/analytics/track` with a JSON body containing
 >   `app_slug` (use `"<slug>"`), `path` (current pathname + search), `referrer`
 >   (`document.referrer || null`), and `session_id` (a short random string
->   stored in `sessionStorage` under `triad_sid`, generated on first hit).
+>   stored in `localStorage` under `triad_sid`, generated on first hit). Using
+>   `localStorage` (not `sessionStorage`) so the visitor ID persists across
+>   tabs and sessions for stickier unique-visitor counts.
 > - Use `navigator.sendBeacon` when available, fall back to
 >   `fetch(url, { method: "POST", keepalive: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })`.
 > - Skip when `process.env.NODE_ENV !== "production"` and when the page is
@@ -58,8 +60,8 @@ Paste this into a Claude Code session opened inside the target app:
 >
 > Replace `<admin-host>` with the actual admin URL and `<slug>` with the slug
 > registered in Triad admin. Keep the implementation under 50 lines. Do not
-> include user-identifying data in `session_id` — it is just a per-tab
-> identifier for unique-visitor counting.
+> include user-identifying data in `session_id` — it is just an anonymous
+> per-browser identifier for unique-visitor counting.
 
 ## Schema reference
 
