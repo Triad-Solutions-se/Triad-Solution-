@@ -32,7 +32,9 @@ export default async function AnalyticsPage() {
       .order("name"),
     supabase
       .from("analytics_pageviews")
-      .select("app_id,path,referrer,session_id,country,is_bot,created_at")
+      .select(
+        "app_id,path,referrer,session_id,country,region,city,device,browser,os,is_bot,created_at",
+      )
       .gte("created_at", since)
       .eq("is_bot", false)
       .order("created_at", { ascending: false })

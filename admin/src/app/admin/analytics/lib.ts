@@ -4,6 +4,11 @@ export type Row = {
   referrer: string | null;
   session_id: string | null;
   country: string | null;
+  region: string | null;
+  city: string | null;
+  device: string | null;
+  browser: string | null;
+  os: string | null;
   is_bot: boolean | null;
   created_at: string;
 };

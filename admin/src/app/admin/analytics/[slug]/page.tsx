@@ -41,7 +41,9 @@ export default async function AppAnalyticsPage({
   const since = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
   const { data } = await supabase
     .from("analytics_pageviews")
-    .select("app_id,path,referrer,session_id,country,is_bot,created_at")
+    .select(
+      "app_id,path,referrer,session_id,country,region,city,device,browser,os,is_bot,created_at",
+    )
     .eq("app_id", app.id)
     .eq("is_bot", false)
     .gte("created_at", since)
@@ -64,6 +66,14 @@ export default async function AppAnalyticsPage({
   const topPaths = topBy(last7, (r) => r.path, 8);
   const topReferrers = topBy(last7, (r) => normalizeReferrer(r.referrer), 8);
   const topCountries = topBy(last7, (r) => r.country, 8);
+  const topCities = topBy(
+    last7,
+    (r) => (r.city ? `${r.city}${r.country ? ", " + r.country : ""}` : null),
+    8,
+  );
+  const topDevices = topBy(last7, (r) => r.device, 5);
+  const topBrowsers = topBy(last7, (r) => r.browser, 8);
+  const topOS = topBy(last7, (r) => r.os, 8);
 
   return (
     <>
@@ -102,10 +112,18 @@ export default async function AppAnalyticsPage({
         </div>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3 mb-4">
         <TopList title="Toppsidor (7d)" items={topPaths} />
         <TopList title="Referrer (7d)" items={topReferrers} emptyHint="Direkt-trafik visas inte här." />
         <TopList title="Länder (7d)" items={topCountries} />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3 mb-4">
+        <TopList title="Städer (7d)" items={topCities} emptyHint="Stad detekteras endast på Vercel-deploys." />
+        <TopList title="Enheter (7d)" items={topDevices} />
+        <TopList title="Operativsystem (7d)" items={topOS} />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <TopList title="Webbläsare (7d)" items={topBrowsers} />
       </div>
     </>
   );

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { parseUA, decodeEdgeHeader } from "./ua";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -88,7 +89,16 @@ export async function POST(req: NextRequest) {
   const country =
     clipString(req.headers.get("x-vercel-ip-country"), 8) ??
     clipString(req.headers.get("cf-ipcountry"), 8);
+  const region = clipString(
+    req.headers.get("x-vercel-ip-country-region"),
+    16,
+  );
+  const city = clipString(
+    decodeEdgeHeader(req.headers.get("x-vercel-ip-city")),
+    128,
+  );
   const isBot = userAgent ? BOT_RE.test(userAgent) : false;
+  const { device, browser, os } = parseUA(userAgent);
 
   const supabase = createAdminClient();
 
@@ -116,7 +126,12 @@ export async function POST(req: NextRequest) {
     referrer,
     session_id: sessionId,
     country,
+    region,
+    city,
     user_agent: userAgent,
+    device,
+    browser,
+    os,
     is_bot: isBot,
   });
   if (insertErr) {
