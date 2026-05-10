@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Chip } from "@/components/Chip";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, PhoneCall } from "lucide-react";
 import { ProjectInfoEditor } from "./ProjectInfoEditor";
 import { ProjectContactEditor } from "./ProjectContactEditor";
 import { ProjectFilesManager, type ProjectFile } from "./ProjectFilesManager";
@@ -135,6 +135,15 @@ export default async function ProjectDashboardPage({
           {project.summary && (
             <p className="text-sm text-[var(--muted)] mt-2 max-w-3xl leading-relaxed">{project.summary}</p>
           )}
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <Link
+            href={`/admin/projects/${project.id}/leads`}
+            className="inline-flex items-center gap-2 rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold transition-colors shadow-sm shadow-teal-500/20"
+          >
+            <PhoneCall size={14} />
+            Leads
+          </Link>
         </div>
       </header>
 
