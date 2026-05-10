@@ -94,9 +94,9 @@ export default async function AppAnalyticsPage({
 
       <section className="glass rounded-xl border border-white/10 p-5 mb-6">
         <h2 className="font-heading font-semibold mb-4">Besök senaste 14 dagarna</h2>
-        <div className="flex items-end gap-1 h-32">
+        <div className="flex items-stretch gap-1 h-32">
           {series.map((v, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0">
+            <div key={i} className="flex-1 h-full flex flex-col items-center gap-1 min-w-0">
               <div className="flex-1 w-full flex items-end">
                 <div
                   title={`${days[i]}: ${v}`}
