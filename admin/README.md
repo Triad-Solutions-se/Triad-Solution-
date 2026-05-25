@@ -3,7 +3,10 @@
 Invite-only admin at `triadsolutions.se/admin`. Next.js 15 App Router + Supabase SSR + TipTap.
 
 ## Modules
-Översikt · Uppgifter (kanban) · Projekt · Möten (kalender + lista) · Kunder · Dokument (TipTap) · Ekonomi · Grafisk Profil · Mallar.
+Översikt · Uppgifter (kanban) · Projekt · Möten (kalender + lista) · Kunder · Dokument (TipTap) · Ekonomi · Grafisk Profil · Mallar (Dokumentmallar + Offerter).
+
+### Offerter (under Mallar)
+Skapa kundoffert med två fasta priskolumner — `project_price` (engångsavgift) och `monthly_price` (underhåll/månad). Live-uträkning av delsumma, moms och totaler i admin-UI:t. Export till Excel via `/admin/api/offers/[id]/export` — branded layout, live SUM-formler i kalkylbladet, A4 utskriftsklar. Statusflöde: utkast → skickad → accepterad/avslagen/utgången. Schema i `supabase/migrations/0015_offers.sql`; kör den migrationen i Supabase SQL-editorn för att aktivera modulen. Offertnummer auto-genereras per kalenderår (`YYYY-NNN`).
 
 ## Local setup
 ```bash
