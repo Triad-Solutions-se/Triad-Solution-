@@ -8,6 +8,8 @@ import { DateInput } from "@/components/DateInput";
 import { Chip } from "@/components/Chip";
 import { fmtDate } from "@/lib/date";
 
+type ProjectOpt = { id: string; name: string };
+type BankOpt = { id: string; name: string };
 type Expense = {
   id: string;
   description: string;
@@ -17,6 +19,8 @@ type Expense = {
   date: string | null;
   status: string;
   receipt_url: string | null;
+  project_id: string | null;
+  bank_account_id: string | null;
 };
 
 const SEK = (n: number) =>
@@ -29,15 +33,21 @@ const emptyForm = {
   category: "",
   date: "",
   status: "pending",
+  project_id: "",
+  bank_account_id: "",
 };
 
 function ExpenseFormModal({
   open,
   onClose,
+  projects,
+  bankAccounts,
   initial,
 }: {
   open: boolean;
   onClose: () => void;
+  projects: ProjectOpt[];
+  bankAccounts: BankOpt[];
   initial?: Expense | null;
 }) {
   const supabase = createClient();
@@ -55,6 +65,8 @@ function ExpenseFormModal({
           category: initial.category ?? "",
           date: initial.date ?? "",
           status: initial.status ?? "pending",
+          project_id: initial.project_id ?? "",
+          bank_account_id: initial.bank_account_id ?? "",
         }
       : emptyForm,
   );
@@ -80,6 +92,8 @@ function ExpenseFormModal({
         date: f.date || null,
         status: f.status,
         receipt_url,
+        project_id: f.project_id || null,
+        bank_account_id: f.bank_account_id || null,
       };
       const { error } =
         isEdit && initial
@@ -166,6 +180,28 @@ function ExpenseFormModal({
             <option value="pending">Ej återbetald</option>
             <option value="reimbursed">Återbetald</option>
           </select>
+          <select
+            {...bind("project_id")}
+            className="rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
+          >
+            <option value="">Projekt…</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <select
+            {...bind("bank_account_id")}
+            className="rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
+          >
+            <option value="">Bankkonto…</option>
+            {bankAccounts.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
         </div>
         <label className="block text-xs text-[var(--muted)]">
           Kvitto (PDF / bild) {initial?.receipt_url && <span className="text-teal-300">— befintlig fil bifogad</span>}
@@ -211,7 +247,13 @@ function ExpenseFormModal({
   );
 }
 
-export function NewExpenseButton() {
+export function NewExpenseButton({
+  projects,
+  bankAccounts,
+}: {
+  projects: ProjectOpt[];
+  bankAccounts: BankOpt[];
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -222,13 +264,30 @@ export function NewExpenseButton() {
         <Receipt size={16} />
         Nytt utlägg
       </button>
-      {open && <ExpenseFormModal open={open} onClose={() => setOpen(false)} />}
+      {open && (
+        <ExpenseFormModal
+          open={open}
+          onClose={() => setOpen(false)}
+          projects={projects}
+          bankAccounts={bankAccounts}
+        />
+      )}
     </>
   );
 }
 
-export function ExpensesTable({ rows }: { rows: Expense[] }) {
+export function ExpensesTable({
+  rows,
+  projects,
+  bankAccounts,
+}: {
+  rows: Expense[];
+  projects: ProjectOpt[];
+  bankAccounts: BankOpt[];
+}) {
   const [edit, setEdit] = useState<Expense | null>(null);
+  const projectName = (id: string | null) => (id ? projects.find((p) => p.id === id)?.name ?? null : null);
+  const bankName = (id: string | null) => (id ? bankAccounts.find((b) => b.id === id)?.name ?? null : null);
   return (
     <>
       <table className="w-full text-sm min-w-[540px]">
@@ -236,6 +295,8 @@ export function ExpensesTable({ rows }: { rows: Expense[] }) {
           <tr>
             <th className="p-3">Beskrivning</th>
             <th className="p-3">Kategori</th>
+            <th className="p-3">Projekt</th>
+            <th className="p-3">Konto</th>
             <th className="p-3">Betald av</th>
             <th className="p-3">Datum</th>
             <th className="p-3">Belopp</th>
@@ -251,6 +312,8 @@ export function ExpensesTable({ rows }: { rows: Expense[] }) {
             >
               <td className="p-3">{r.description}</td>
               <td className="p-3 text-[var(--muted)]">{r.category ?? "—"}</td>
+              <td className="p-3 text-[var(--muted)]">{projectName(r.project_id) ?? "—"}</td>
+              <td className="p-3 text-[var(--muted)]">{bankName(r.bank_account_id) ?? "—"}</td>
               <td className="p-3 text-[var(--muted)]">{r.paid_by ?? "—"}</td>
               <td className="p-3 text-[var(--muted)]">{fmtDate(r.date)}</td>
               <td className="p-3 font-mono">{SEK(Number(r.amount_sek || 0))}</td>
@@ -263,14 +326,22 @@ export function ExpensesTable({ rows }: { rows: Expense[] }) {
           ))}
           {!rows.length && (
             <tr>
-              <td colSpan={6} className="p-8 text-center text-sm text-[var(--muted)]">
+              <td colSpan={8} className="p-8 text-center text-sm text-[var(--muted)]">
                 Inga utlägg än.
               </td>
             </tr>
           )}
         </tbody>
       </table>
-      {edit && <ExpenseFormModal open={!!edit} onClose={() => setEdit(null)} initial={edit} />}
+      {edit && (
+        <ExpenseFormModal
+          open={!!edit}
+          onClose={() => setEdit(null)}
+          projects={projects}
+          bankAccounts={bankAccounts}
+          initial={edit}
+        />
+      )}
     </>
   );
 }

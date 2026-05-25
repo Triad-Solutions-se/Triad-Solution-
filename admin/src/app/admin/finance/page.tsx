@@ -7,6 +7,13 @@ import { NewRecurringButton, RecurringTable } from "./RecurringSection";
 import { NewInvoiceButton, InvoicesTable } from "./InvoicesSection";
 import { NewExpenseButton, ExpensesTable } from "./ExpensesSection";
 import { NewIncomeButton, IncomeTable } from "./IncomeSection";
+import {
+  BankAccountsGrid,
+  NewBankAccountButton,
+  type BankAccount,
+  type BankAccountWithBalance,
+} from "./BankAccountsSection";
+import { CashflowChart } from "./CashflowChart";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +22,17 @@ const SEK = (n: number) =>
 
 export default async function FinancePage() {
   const supabase = await createClient();
-  const [expenses, income, invoices, payments, recurring, profiles] = await Promise.all([
+  const [
+    expenses,
+    income,
+    invoices,
+    payments,
+    recurring,
+    profiles,
+    bankAccounts,
+    projects,
+    customers,
+  ] = await Promise.all([
     supabase.from("expenses").select("*").order("date", { ascending: false }),
     supabase.from("income").select("*").order("date", { ascending: false }),
     supabase.from("invoices").select("*").order("issued_at", { ascending: false }),
@@ -28,11 +45,24 @@ export default async function FinancePage() {
       .select("*, assignee:profiles!recurring_payments_assignee_id_fkey(id,display_name,email)")
       .order("next_due_date", { ascending: true, nullsFirst: false }),
     supabase.from("profiles").select("id,display_name,email").order("display_name"),
+    supabase.from("bank_accounts").select("*").order("archived").order("name"),
+    supabase.from("projects").select("id,name").order("name"),
+    supabase.from("customers").select("id,name").order("name"),
   ]);
 
-  const totalExp = (expenses.data ?? []).reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
-  const totalInc = (income.data ?? []).reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
-  const totalRecurringMonthly = (recurring.data ?? [])
+  const expensesData = expenses.data ?? [];
+  const incomeData = income.data ?? [];
+  const invoicesData = invoices.data ?? [];
+  const paymentsData = payments.data ?? [];
+  const recurringData = recurring.data ?? [];
+  const profileList = profiles.data ?? [];
+  const bankList = (bankAccounts.data ?? []) as BankAccount[];
+  const projectList = (projects.data ?? []) as { id: string; name: string }[];
+  const customerList = (customers.data ?? []) as { id: string; name: string }[];
+
+  const totalExp = expensesData.reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
+  const totalInc = incomeData.reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
+  const totalRecurringMonthly = recurringData
     .filter((r: any) => r.active)
     .reduce((s: number, r: any) => {
       const amt = Number(r.amount_sek || 0);
@@ -42,13 +72,53 @@ export default async function FinancePage() {
       return s;
     }, 0);
   const net = totalInc - totalExp;
-  const profileList = profiles.data ?? [];
+
+  // Bank balances: starting balance + received income + reimbursed/paid expenses + paid payments
+  const bankWithBalance: BankAccountWithBalance[] = bankList.map((b) => {
+    const start = Number(b.starting_balance || 0);
+    const inflow = incomeData
+      .filter((r: any) => r.bank_account_id === b.id && r.status === "received")
+      .reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
+    const expOut = expensesData
+      .filter((r: any) => r.bank_account_id === b.id && r.status === "reimbursed")
+      .reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
+    const payOut = paymentsData
+      .filter((r: any) => r.bank_account_id === b.id && r.status === "paid")
+      .reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
+    const outflow = expOut + payOut;
+    return {
+      ...b,
+      starting_balance: start,
+      inflow,
+      outflow,
+      currentBalance: start + inflow - outflow,
+    };
+  });
+  const totalCash = bankWithBalance
+    .filter((b) => !b.archived)
+    .reduce((s, b) => s + b.currentBalance, 0);
+
+  // Outstanding receivables: unpaid invoices
+  const outstanding = invoicesData
+    .filter((r: any) => r.status !== "paid" && r.status !== "credited")
+    .reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
+
+  // Cashflow chart: use received income vs reimbursed/paid expenses for actual movement
+  const realizedIncome = incomeData.filter((r: any) => r.status === "received");
+  const realizedExpenses = [
+    ...expensesData
+      .filter((r: any) => r.status === "reimbursed")
+      .map((r: any) => ({ date: r.date, amount_sek: r.amount_sek })),
+    ...paymentsData
+      .filter((r: any) => r.status === "paid")
+      .map((r: any) => ({ date: r.paid_at ?? r.due_date, amount_sek: r.amount_sek })),
+  ];
 
   return (
     <>
       <PageHeader
         title="Ekonomi"
-        subtitle="Betalningar, fakturor, intäkter och utlägg."
+        subtitle="Cashflow, kassa, fakturor, intäkter och utlägg."
         right={
           <div className="flex flex-wrap items-center gap-2">
             <Link
@@ -58,40 +128,94 @@ export default async function FinancePage() {
               <FolderArchive size={16} />
               Månadsarkiv
             </Link>
-            <NewPaymentButton profiles={profileList} />
-            <NewRecurringButton profiles={profileList} />
-            <NewInvoiceButton />
-            <NewIncomeButton />
-            <NewExpenseButton />
+            <NewBankAccountButton />
+            <NewPaymentButton
+              profiles={profileList}
+              projects={projectList}
+              bankAccounts={bankList}
+            />
+            <NewRecurringButton
+              profiles={profileList}
+              projects={projectList}
+              bankAccounts={bankList}
+            />
+            <NewInvoiceButton
+              customers={customerList}
+              projects={projectList}
+              bankAccounts={bankList}
+            />
+            <NewIncomeButton
+              customers={customerList}
+              projects={projectList}
+              bankAccounts={bankList}
+            />
+            <NewExpenseButton projects={projectList} bankAccounts={bankList} />
           </div>
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-8">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 mb-8">
+        <FinanceStat label="Kassa" value={SEK(Math.round(totalCash))} color="teal" />
         <FinanceStat label="Intäkter" value={SEK(totalInc)} color="green" />
         <FinanceStat label="Utlägg" value={SEK(totalExp)} color="red" />
         <FinanceStat label="Netto" value={SEK(net)} color={net >= 0 ? "teal" : "red"} />
-        <FinanceStat label="Återk. /mån" value={SEK(Math.round(totalRecurringMonthly))} color="blue" />
+        <FinanceStat label="Utestående fakturor" value={SEK(outstanding)} color="blue" />
+      </div>
+
+      <Section title="Cashflow">
+        <CashflowChart income={realizedIncome} expenses={realizedExpenses} months={12} />
+      </Section>
+
+      <Section title="Bankkonton & kassa">
+        <BankAccountsGrid accounts={bankWithBalance} />
+      </Section>
+
+      <div className="text-xs text-[var(--muted)] mb-4 -mt-2">
+        Återkommande / mån: <span className="font-mono">{SEK(Math.round(totalRecurringMonthly))}</span>
       </div>
 
       <Section title="Betalningar">
-        <PaymentsTable rows={(payments.data ?? []) as any} profiles={profileList} />
+        <PaymentsTable
+          rows={paymentsData as any}
+          profiles={profileList}
+          projects={projectList}
+          bankAccounts={bankList}
+        />
       </Section>
 
       <Section title="Återkommande betalningar">
-        <RecurringTable rows={(recurring.data ?? []) as any} profiles={profileList} />
+        <RecurringTable
+          rows={recurringData as any}
+          profiles={profileList}
+          projects={projectList}
+          bankAccounts={bankList}
+        />
       </Section>
 
       <Section title="Fakturor">
-        <InvoicesTable rows={(invoices.data ?? []) as any} />
+        <InvoicesTable
+          rows={invoicesData as any}
+          customers={customerList}
+          projects={projectList}
+          bankAccounts={bankList}
+        />
       </Section>
 
       <Section title="Intäkter">
-        <IncomeTable rows={(income.data ?? []) as any} />
+        <IncomeTable
+          rows={incomeData as any}
+          customers={customerList}
+          projects={projectList}
+          bankAccounts={bankList}
+        />
       </Section>
 
       <Section title="Utlägg">
-        <ExpensesTable rows={(expenses.data ?? []) as any} />
+        <ExpensesTable
+          rows={expensesData as any}
+          projects={projectList}
+          bankAccounts={bankList}
+        />
       </Section>
     </>
   );

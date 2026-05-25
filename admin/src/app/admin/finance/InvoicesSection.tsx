@@ -8,10 +8,16 @@ import { DateInput } from "@/components/DateInput";
 import { Chip } from "@/components/Chip";
 import { fmtDate } from "@/lib/date";
 
+type ProjectOpt = { id: string; name: string };
+type CustomerOpt = { id: string; name: string };
+type BankOpt = { id: string; name: string };
 type Invoice = {
   id: string;
   number: string;
   customer_name: string | null;
+  customer_id: string | null;
+  project_id: string | null;
+  bank_account_id: string | null;
   amount_sek: number | string;
   issued_at: string | null;
   due_date: string | null;
@@ -26,6 +32,9 @@ const SEK = (n: number) =>
 const emptyForm = {
   number: "",
   customer_name: "",
+  customer_id: "",
+  project_id: "",
+  bank_account_id: "",
   amount_sek: "",
   issued_at: "",
   due_date: "",
@@ -36,10 +45,16 @@ const emptyForm = {
 function InvoiceFormModal({
   open,
   onClose,
+  customers,
+  projects,
+  bankAccounts,
   initial,
 }: {
   open: boolean;
   onClose: () => void;
+  customers: CustomerOpt[];
+  projects: ProjectOpt[];
+  bankAccounts: BankOpt[];
   initial?: Invoice | null;
 }) {
   const supabase = createClient();
@@ -53,6 +68,9 @@ function InvoiceFormModal({
       ? {
           number: initial.number ?? "",
           customer_name: initial.customer_name ?? "",
+          customer_id: initial.customer_id ?? "",
+          project_id: initial.project_id ?? "",
+          bank_account_id: initial.bank_account_id ?? "",
           amount_sek: String(initial.amount_sek ?? ""),
           issued_at: initial.issued_at ?? "",
           due_date: initial.due_date ?? "",
@@ -78,6 +96,9 @@ function InvoiceFormModal({
       const payload = {
         number: f.number,
         customer_name: f.customer_name || null,
+        customer_id: f.customer_id || null,
+        project_id: f.project_id || null,
+        bank_account_id: f.bank_account_id || null,
         amount_sek: Number(f.amount_sek || 0),
         issued_at: f.issued_at || null,
         due_date: f.due_date || null,
@@ -179,6 +200,39 @@ function InvoiceFormModal({
               className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm text-white"
             />
           </label>
+          <select
+            {...bind("customer_id")}
+            className="rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
+          >
+            <option value="">Kund (länk)…</option>
+            {customers.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <select
+            {...bind("project_id")}
+            className="rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
+          >
+            <option value="">Projekt…</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <select
+            {...bind("bank_account_id")}
+            className="rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm col-span-2"
+          >
+            <option value="">Bankkonto…</option>
+            {bankAccounts.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
         </div>
         <label className="block text-xs text-[var(--muted)]">
           PDF (valfritt) {initial?.pdf_url && <span className="text-teal-300">— befintlig fil bifogad</span>}
@@ -230,7 +284,15 @@ function InvoiceFormModal({
   );
 }
 
-export function NewInvoiceButton() {
+export function NewInvoiceButton({
+  customers,
+  projects,
+  bankAccounts,
+}: {
+  customers: CustomerOpt[];
+  projects: ProjectOpt[];
+  bankAccounts: BankOpt[];
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -241,13 +303,32 @@ export function NewInvoiceButton() {
         <FileText size={16} />
         Ny faktura
       </button>
-      {open && <InvoiceFormModal open={open} onClose={() => setOpen(false)} />}
+      {open && (
+        <InvoiceFormModal
+          open={open}
+          onClose={() => setOpen(false)}
+          customers={customers}
+          projects={projects}
+          bankAccounts={bankAccounts}
+        />
+      )}
     </>
   );
 }
 
-export function InvoicesTable({ rows }: { rows: Invoice[] }) {
+export function InvoicesTable({
+  rows,
+  customers,
+  projects,
+  bankAccounts,
+}: {
+  rows: Invoice[];
+  customers: CustomerOpt[];
+  projects: ProjectOpt[];
+  bankAccounts: BankOpt[];
+}) {
   const [edit, setEdit] = useState<Invoice | null>(null);
+  const projectName = (id: string | null) => (id ? projects.find((p) => p.id === id)?.name ?? null : null);
   return (
     <>
       <table className="w-full text-sm min-w-[540px]">
@@ -255,6 +336,7 @@ export function InvoicesTable({ rows }: { rows: Invoice[] }) {
           <tr>
             <th className="p-3">Fakturanummer</th>
             <th className="p-3">Kund</th>
+            <th className="p-3">Projekt</th>
             <th className="p-3">Utfärdad</th>
             <th className="p-3">Förfaller</th>
             <th className="p-3">Belopp</th>
@@ -269,7 +351,10 @@ export function InvoicesTable({ rows }: { rows: Invoice[] }) {
               className="hover:bg-white/[0.04] cursor-pointer transition-colors"
             >
               <td className="p-3 font-mono">{r.number}</td>
-              <td className="p-3 text-[var(--muted)]">{r.customer_name ?? "—"}</td>
+              <td className="p-3 text-[var(--muted)]">
+                {r.customer_name ?? customers.find((c) => c.id === r.customer_id)?.name ?? "—"}
+              </td>
+              <td className="p-3 text-[var(--muted)]">{projectName(r.project_id) ?? "—"}</td>
               <td className="p-3 text-[var(--muted)]">{fmtDate(r.issued_at)}</td>
               <td className="p-3 text-[var(--muted)]">{fmtDate(r.due_date)}</td>
               <td className="p-3 font-mono">{SEK(Number(r.amount_sek || 0))}</td>
@@ -292,14 +377,23 @@ export function InvoicesTable({ rows }: { rows: Invoice[] }) {
           ))}
           {!rows.length && (
             <tr>
-              <td colSpan={6} className="p-8 text-center text-sm text-[var(--muted)]">
+              <td colSpan={7} className="p-8 text-center text-sm text-[var(--muted)]">
                 Inga fakturor än.
               </td>
             </tr>
           )}
         </tbody>
       </table>
-      {edit && <InvoiceFormModal open={!!edit} onClose={() => setEdit(null)} initial={edit} />}
+      {edit && (
+        <InvoiceFormModal
+          open={!!edit}
+          onClose={() => setEdit(null)}
+          customers={customers}
+          projects={projects}
+          bankAccounts={bankAccounts}
+          initial={edit}
+        />
+      )}
     </>
   );
 }

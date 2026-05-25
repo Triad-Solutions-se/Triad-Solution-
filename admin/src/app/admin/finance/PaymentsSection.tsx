@@ -9,6 +9,8 @@ import { Chip } from "@/components/Chip";
 import { fmtDate } from "@/lib/date";
 
 type Profile = { id: string; display_name: string | null; email: string | null };
+type ProjectOpt = { id: string; name: string };
+type BankOpt = { id: string; name: string };
 type Payment = {
   id: string;
   description: string;
@@ -16,6 +18,8 @@ type Payment = {
   category: string | null;
   assignee_id: string | null;
   assignee?: { id: string; display_name: string | null; email: string | null } | null;
+  bank_account_id: string | null;
+  project_id: string | null;
   due_date: string | null;
   status: string;
   notes: string | null;
@@ -30,6 +34,8 @@ const emptyForm = {
   amount_sek: "",
   category: "",
   assignee_id: "",
+  bank_account_id: "",
+  project_id: "",
   due_date: "",
   status: "pending",
   notes: "",
@@ -39,11 +45,15 @@ function PaymentFormModal({
   open,
   onClose,
   profiles,
+  projects,
+  bankAccounts,
   initial,
 }: {
   open: boolean;
   onClose: () => void;
   profiles: Profile[];
+  projects: ProjectOpt[];
+  bankAccounts: BankOpt[];
   initial?: Payment | null;
 }) {
   const supabase = createClient();
@@ -59,6 +69,8 @@ function PaymentFormModal({
           amount_sek: String(initial.amount_sek ?? ""),
           category: initial.category ?? "",
           assignee_id: initial.assignee_id ?? "",
+          bank_account_id: initial.bank_account_id ?? "",
+          project_id: initial.project_id ?? "",
           due_date: initial.due_date ?? "",
           status: initial.status ?? "pending",
           notes: initial.notes ?? "",
@@ -84,6 +96,8 @@ function PaymentFormModal({
         amount_sek: Number(f.amount_sek || 0),
         category: f.category || null,
         assignee_id: f.assignee_id || null,
+        bank_account_id: f.bank_account_id || null,
+        project_id: f.project_id || null,
         due_date: f.due_date || null,
         status: f.status,
         notes: f.notes || null,
@@ -176,6 +190,28 @@ function PaymentFormModal({
             className="rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm text-white"
           />
           <select
+            {...bind("bank_account_id")}
+            className="rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
+          >
+            <option value="">Bankkonto…</option>
+            {bankAccounts.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+          <select
+            {...bind("project_id")}
+            className="rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
+          >
+            <option value="">Projekt…</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <select
             {...bind("status")}
             className="rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm col-span-2"
           >
@@ -234,7 +270,15 @@ function PaymentFormModal({
   );
 }
 
-export function NewPaymentButton({ profiles }: { profiles: Profile[] }) {
+export function NewPaymentButton({
+  profiles,
+  projects,
+  bankAccounts,
+}: {
+  profiles: Profile[];
+  projects: ProjectOpt[];
+  bankAccounts: BankOpt[];
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -246,7 +290,13 @@ export function NewPaymentButton({ profiles }: { profiles: Profile[] }) {
         Ny betalning
       </button>
       {open && (
-        <PaymentFormModal open={open} onClose={() => setOpen(false)} profiles={profiles} />
+        <PaymentFormModal
+          open={open}
+          onClose={() => setOpen(false)}
+          profiles={profiles}
+          projects={projects}
+          bankAccounts={bankAccounts}
+        />
       )}
     </>
   );
@@ -268,11 +318,17 @@ function InvoiceLink({ path }: { path: string }) {
 export function PaymentsTable({
   rows,
   profiles,
+  projects,
+  bankAccounts,
 }: {
   rows: Payment[];
   profiles: Profile[];
+  projects: ProjectOpt[];
+  bankAccounts: BankOpt[];
 }) {
   const [edit, setEdit] = useState<Payment | null>(null);
+  const projectName = (id: string | null) => (id ? projects.find((p) => p.id === id)?.name ?? null : null);
+  const bankName = (id: string | null) => (id ? bankAccounts.find((b) => b.id === id)?.name ?? null : null);
   return (
     <>
       <table className="w-full text-sm min-w-[640px]">
@@ -280,7 +336,8 @@ export function PaymentsTable({
           <tr>
             <th className="p-3">Beskrivning</th>
             <th className="p-3">Tilldelad</th>
-            <th className="p-3">Kategori</th>
+            <th className="p-3">Projekt</th>
+            <th className="p-3">Konto</th>
             <th className="p-3">Förfaller</th>
             <th className="p-3">Belopp</th>
             <th className="p-3">Faktura</th>
@@ -301,7 +358,8 @@ export function PaymentsTable({
               <td className="p-3 text-[var(--muted)]">
                 {r.assignee?.display_name ?? r.assignee?.email ?? "—"}
               </td>
-              <td className="p-3 text-[var(--muted)]">{r.category ?? "—"}</td>
+              <td className="p-3 text-[var(--muted)]">{projectName(r.project_id) ?? r.category ?? "—"}</td>
+              <td className="p-3 text-[var(--muted)]">{bankName(r.bank_account_id) ?? "—"}</td>
               <td className="p-3 text-[var(--muted)]">{fmtDate(r.due_date)}</td>
               <td className="p-3 font-mono">{SEK(Number(r.amount_sek || 0))}</td>
               <td className="p-3">
@@ -320,7 +378,7 @@ export function PaymentsTable({
           ))}
           {!rows.length && (
             <tr>
-              <td colSpan={7} className="p-8 text-center text-sm text-[var(--muted)]">
+              <td colSpan={8} className="p-8 text-center text-sm text-[var(--muted)]">
                 Inga betalningar än.
               </td>
             </tr>
@@ -332,6 +390,8 @@ export function PaymentsTable({
           open={!!edit}
           onClose={() => setEdit(null)}
           profiles={profiles}
+          projects={projects}
+          bankAccounts={bankAccounts}
           initial={edit}
         />
       )}

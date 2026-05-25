@@ -9,6 +9,8 @@ import { Chip } from "@/components/Chip";
 import { fmtDate } from "@/lib/date";
 
 type Profile = { id: string; display_name: string | null; email: string | null };
+type ProjectOpt = { id: string; name: string };
+type BankOpt = { id: string; name: string };
 type Recurring = {
   id: string;
   description: string;
@@ -16,6 +18,8 @@ type Recurring = {
   category: string | null;
   assignee_id: string | null;
   assignee?: { id: string; display_name: string | null; email: string | null } | null;
+  bank_account_id: string | null;
+  project_id: string | null;
   frequency: string;
   next_due_date: string | null;
   start_date: string | null;
@@ -38,6 +42,8 @@ const emptyForm = {
   amount_sek: "",
   category: "",
   assignee_id: "",
+  bank_account_id: "",
+  project_id: "",
   frequency: "monthly",
   next_due_date: "",
   start_date: "",
@@ -50,11 +56,15 @@ function RecurringFormModal({
   open,
   onClose,
   profiles,
+  projects,
+  bankAccounts,
   initial,
 }: {
   open: boolean;
   onClose: () => void;
   profiles: Profile[];
+  projects: ProjectOpt[];
+  bankAccounts: BankOpt[];
   initial?: Recurring | null;
 }) {
   const supabase = createClient();
@@ -69,6 +79,8 @@ function RecurringFormModal({
           amount_sek: String(initial.amount_sek ?? ""),
           category: initial.category ?? "",
           assignee_id: initial.assignee_id ?? "",
+          bank_account_id: initial.bank_account_id ?? "",
+          project_id: initial.project_id ?? "",
           frequency: initial.frequency ?? "monthly",
           next_due_date: initial.next_due_date ?? "",
           start_date: initial.start_date ?? "",
@@ -88,6 +100,8 @@ function RecurringFormModal({
       amount_sek: Number(f.amount_sek || 0),
       category: f.category || null,
       assignee_id: f.assignee_id || null,
+      bank_account_id: f.bank_account_id || null,
+      project_id: f.project_id || null,
       frequency: f.frequency,
       next_due_date: f.next_due_date || null,
       start_date: f.start_date || null,
@@ -208,6 +222,28 @@ function RecurringFormModal({
               className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm text-white"
             />
           </label>
+          <select
+            {...bind("bank_account_id")}
+            className="rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
+          >
+            <option value="">Bankkonto…</option>
+            {bankAccounts.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+          <select
+            {...bind("project_id")}
+            className="rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
+          >
+            <option value="">Projekt…</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
         </div>
         <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
           <input
@@ -258,7 +294,15 @@ function RecurringFormModal({
   );
 }
 
-export function NewRecurringButton({ profiles }: { profiles: Profile[] }) {
+export function NewRecurringButton({
+  profiles,
+  projects,
+  bankAccounts,
+}: {
+  profiles: Profile[];
+  projects: ProjectOpt[];
+  bankAccounts: BankOpt[];
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -270,7 +314,13 @@ export function NewRecurringButton({ profiles }: { profiles: Profile[] }) {
         Återkommande
       </button>
       {open && (
-        <RecurringFormModal open={open} onClose={() => setOpen(false)} profiles={profiles} />
+        <RecurringFormModal
+          open={open}
+          onClose={() => setOpen(false)}
+          profiles={profiles}
+          projects={projects}
+          bankAccounts={bankAccounts}
+        />
       )}
     </>
   );
@@ -279,9 +329,13 @@ export function NewRecurringButton({ profiles }: { profiles: Profile[] }) {
 export function RecurringTable({
   rows,
   profiles,
+  projects,
+  bankAccounts,
 }: {
   rows: Recurring[];
   profiles: Profile[];
+  projects: ProjectOpt[];
+  bankAccounts: BankOpt[];
 }) {
   const [edit, setEdit] = useState<Recurring | null>(null);
   return (
@@ -333,6 +387,8 @@ export function RecurringTable({
           open={!!edit}
           onClose={() => setEdit(null)}
           profiles={profiles}
+          projects={projects}
+          bankAccounts={bankAccounts}
           initial={edit}
         />
       )}
