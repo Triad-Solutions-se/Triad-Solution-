@@ -1,23 +1,17 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { fmtDate } from "@/lib/date";
 import { PageHeader } from "@/components/PageHeader";
-import { Chip } from "@/components/Chip";
 import { FolderArchive } from "lucide-react";
-import { NewPaymentButton } from "./NewPaymentButton";
-import { NewRecurringButton } from "./NewRecurringButton";
-import { NewInvoiceButton } from "./NewInvoiceButton";
+import { NewPaymentButton, PaymentsTable } from "./PaymentsSection";
+import { NewRecurringButton, RecurringTable } from "./RecurringSection";
+import { NewInvoiceButton, InvoicesTable } from "./InvoicesSection";
+import { NewExpenseButton, ExpensesTable } from "./ExpensesSection";
+import { NewIncomeButton, IncomeTable } from "./IncomeSection";
 
 export const dynamic = "force-dynamic";
 
 const SEK = (n: number) =>
   new Intl.NumberFormat("sv-SE", { style: "currency", currency: "SEK", maximumFractionDigits: 0 }).format(n);
-
-const FREQUENCY_LABEL: Record<string, string> = {
-  monthly: "Månadsvis",
-  quarterly: "Kvartalsvis",
-  yearly: "Årsvis",
-};
 
 export default async function FinancePage() {
   const supabase = await createClient();
@@ -67,6 +61,8 @@ export default async function FinancePage() {
             <NewPaymentButton profiles={profileList} />
             <NewRecurringButton profiles={profileList} />
             <NewInvoiceButton />
+            <NewIncomeButton />
+            <NewExpenseButton />
           </div>
         }
       />
@@ -79,225 +75,23 @@ export default async function FinancePage() {
       </div>
 
       <Section title="Betalningar">
-        <table className="w-full text-sm min-w-[640px]">
-          <thead className="bg-white/[0.03] text-left text-[var(--muted)] text-xs uppercase tracking-wider">
-            <tr>
-              <th className="p-3">Beskrivning</th>
-              <th className="p-3">Tilldelad</th>
-              <th className="p-3">Kategori</th>
-              <th className="p-3">Förfaller</th>
-              <th className="p-3">Belopp</th>
-              <th className="p-3">Faktura</th>
-              <th className="p-3">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {(payments.data ?? []).map((r: any) => (
-              <tr key={r.id} className="hover:bg-white/[0.02]">
-                <td className="p-3">
-                  <div className="font-medium">{r.description}</div>
-                  {r.notes && <div className="text-xs text-[var(--muted)]">{r.notes}</div>}
-                </td>
-                <td className="p-3 text-[var(--muted)]">
-                  {r.assignee?.display_name ?? r.assignee?.email ?? "—"}
-                </td>
-                <td className="p-3 text-[var(--muted)]">{r.category ?? "—"}</td>
-                <td className="p-3 text-[var(--muted)]">
-                  {fmtDate(r.due_date)}
-                </td>
-                <td className="p-3 font-mono">{SEK(Number(r.amount_sek || 0))}</td>
-                <td className="p-3">
-                  {r.invoice_path ? <InvoiceLink path={r.invoice_path} /> : <span className="text-[var(--muted)]">—</span>}
-                </td>
-                <td className="p-3">
-                  <Chip tone={r.status === "paid" ? "green" : r.status === "overdue" ? "red" : "yellow"}>
-                    {r.status === "paid" ? "Betald" : r.status === "overdue" ? "Försenad" : "Väntar"}
-                  </Chip>
-                </td>
-              </tr>
-            ))}
-            {!payments.data?.length && (
-              <tr>
-                <td colSpan={7} className="p-8 text-center text-sm text-[var(--muted)]">
-                  Inga betalningar än.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <PaymentsTable rows={(payments.data ?? []) as any} profiles={profileList} />
       </Section>
 
       <Section title="Återkommande betalningar">
-        <table className="w-full text-sm min-w-[640px]">
-          <thead className="bg-white/[0.03] text-left text-[var(--muted)] text-xs uppercase tracking-wider">
-            <tr>
-              <th className="p-3">Beskrivning</th>
-              <th className="p-3">Tilldelad</th>
-              <th className="p-3">Frekvens</th>
-              <th className="p-3">Nästa förfallodag</th>
-              <th className="p-3">Belopp</th>
-              <th className="p-3">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {(recurring.data ?? []).map((r: any) => (
-              <tr key={r.id} className="hover:bg-white/[0.02]">
-                <td className="p-3">
-                  <div className="font-medium">{r.description}</div>
-                  {r.category && <div className="text-xs text-[var(--muted)]">{r.category}</div>}
-                </td>
-                <td className="p-3 text-[var(--muted)]">
-                  {r.assignee?.display_name ?? r.assignee?.email ?? "—"}
-                </td>
-                <td className="p-3 text-[var(--muted)]">{FREQUENCY_LABEL[r.frequency] ?? r.frequency}</td>
-                <td className="p-3 text-[var(--muted)]">
-                  {fmtDate(r.next_due_date)}
-                </td>
-                <td className="p-3 font-mono">{SEK(Number(r.amount_sek || 0))}</td>
-                <td className="p-3">
-                  <Chip tone={r.active ? "green" : "gray"}>{r.active ? "Aktiv" : "Pausad"}</Chip>
-                </td>
-              </tr>
-            ))}
-            {!recurring.data?.length && (
-              <tr>
-                <td colSpan={6} className="p-8 text-center text-sm text-[var(--muted)]">
-                  Inga återkommande betalningar än.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <RecurringTable rows={(recurring.data ?? []) as any} profiles={profileList} />
       </Section>
 
       <Section title="Fakturor">
-        <table className="w-full text-sm min-w-[540px]">
-          <thead className="bg-white/[0.03] text-left text-[var(--muted)] text-xs uppercase tracking-wider">
-            <tr>
-              <th className="p-3">Fakturanummer</th>
-              <th className="p-3">Kund</th>
-              <th className="p-3">Utfärdad</th>
-              <th className="p-3">Förfaller</th>
-              <th className="p-3">Belopp</th>
-              <th className="p-3">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {(invoices.data ?? []).map((r: any) => (
-              <tr key={r.id}>
-                <td className="p-3 font-mono">{r.number}</td>
-                <td className="p-3 text-[var(--muted)]">{r.customer_name ?? "—"}</td>
-                <td className="p-3 text-[var(--muted)]">
-                  {fmtDate(r.issued_at)}
-                </td>
-                <td className="p-3 text-[var(--muted)]">
-                  {fmtDate(r.due_date)}
-                </td>
-                <td className="p-3 font-mono">{SEK(Number(r.amount_sek || 0))}</td>
-                <td className="p-3">
-                  <Chip
-                    tone={
-                      r.status === "paid"
-                        ? "green"
-                        : r.status === "overdue"
-                        ? "red"
-                        : r.status === "sent"
-                        ? "blue"
-                        : "gray"
-                    }
-                  >
-                    {r.status}
-                  </Chip>
-                </td>
-              </tr>
-            ))}
-            {!invoices.data?.length && (
-              <tr>
-                <td colSpan={6} className="p-8 text-center text-sm text-[var(--muted)]">
-                  Inga fakturor än.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <InvoicesTable rows={(invoices.data ?? []) as any} />
       </Section>
 
       <Section title="Intäkter">
-        <table className="w-full text-sm min-w-[540px]">
-          <thead className="bg-white/[0.03] text-left text-[var(--muted)] text-xs uppercase tracking-wider">
-            <tr>
-              <th className="p-3">Beskrivning</th>
-              <th className="p-3">Källa</th>
-              <th className="p-3">Datum</th>
-              <th className="p-3">Belopp</th>
-              <th className="p-3">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {(income.data ?? []).map((r: any) => (
-              <tr key={r.id}>
-                <td className="p-3">{r.description}</td>
-                <td className="p-3 text-[var(--muted)]">{r.source ?? "—"}</td>
-                <td className="p-3 text-[var(--muted)]">
-                  {fmtDate(r.date)}
-                </td>
-                <td className="p-3 font-mono">{SEK(Number(r.amount_sek || 0))}</td>
-                <td className="p-3">
-                  <Chip tone={r.status === "received" ? "green" : r.status === "pending" ? "yellow" : "red"}>
-                    {r.status}
-                  </Chip>
-                </td>
-              </tr>
-            ))}
-            {!income.data?.length && (
-              <tr>
-                <td colSpan={5} className="p-8 text-center text-sm text-[var(--muted)]">
-                  Inga intäkter än.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <IncomeTable rows={(income.data ?? []) as any} />
       </Section>
 
       <Section title="Utlägg">
-        <table className="w-full text-sm min-w-[540px]">
-          <thead className="bg-white/[0.03] text-left text-[var(--muted)] text-xs uppercase tracking-wider">
-            <tr>
-              <th className="p-3">Beskrivning</th>
-              <th className="p-3">Kategori</th>
-              <th className="p-3">Betald av</th>
-              <th className="p-3">Datum</th>
-              <th className="p-3">Belopp</th>
-              <th className="p-3">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {(expenses.data ?? []).map((r: any) => (
-              <tr key={r.id}>
-                <td className="p-3">{r.description}</td>
-                <td className="p-3 text-[var(--muted)]">{r.category ?? "—"}</td>
-                <td className="p-3 text-[var(--muted)]">{r.paid_by ?? "—"}</td>
-                <td className="p-3 text-[var(--muted)]">
-                  {fmtDate(r.date)}
-                </td>
-                <td className="p-3 font-mono">{SEK(Number(r.amount_sek || 0))}</td>
-                <td className="p-3">
-                  <Chip tone={r.status === "reimbursed" ? "green" : "red"}>
-                    {r.status === "reimbursed" ? "Återbetald" : "Ej återbetald"}
-                  </Chip>
-                </td>
-              </tr>
-            ))}
-            {!expenses.data?.length && (
-              <tr>
-                <td colSpan={6} className="p-8 text-center text-sm text-[var(--muted)]">
-                  Inga utlägg än.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <ExpensesTable rows={(expenses.data ?? []) as any} />
       </Section>
     </>
   );
@@ -339,17 +133,5 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       </header>
       <div className="overflow-x-auto scroll-x-hint">{children}</div>
     </section>
-  );
-}
-
-function InvoiceLink({ path }: { path: string }) {
-  const name = path.split("/").pop() ?? "Faktura";
-  return (
-    <a
-      href={`/admin/finance/files/download?path=${encodeURIComponent(path)}`}
-      className="text-xs text-teal-400 hover:underline"
-    >
-      {name}
-    </a>
   );
 }
