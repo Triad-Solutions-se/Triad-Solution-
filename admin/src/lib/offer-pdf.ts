@@ -52,9 +52,9 @@ function fmtDateSv(d: string | null | undefined): string {
 }
 function fmtMoney(n: number): string {
   return new Intl.NumberFormat("sv-SE", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(n);
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(Math.round(n));
 }
 function clampPct(n: number): number {
   if (!Number.isFinite(n)) return 0;

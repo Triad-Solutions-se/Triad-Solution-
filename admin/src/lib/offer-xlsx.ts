@@ -276,7 +276,9 @@ export async function generateOfferXlsx(offer: OfferData): Promise<Uint8Array> {
   });
   setRowHeight(HDR, 24);
 
-  const numFmt = "#,##0.00";
+  // Visar heltal i offerten (närmaste krona). Excel-cellen har fortfarande
+  // full precision under huven — bara presentationen rundas.
+  const numFmt = "#,##0";
 
   // Rad 1: Engångskostnad
   const R1 = HDR + 1;

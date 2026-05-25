@@ -212,8 +212,8 @@ function fmtMoney(n: number | null | undefined, currency = "SEK") {
   return (
     new Intl.NumberFormat("sv-SE", {
       minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(Number(n)) +
+      maximumFractionDigits: 0,
+    }).format(Math.round(Number(n))) +
     " " +
     currency
   );
