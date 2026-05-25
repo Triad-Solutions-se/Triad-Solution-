@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Chip } from "@/components/Chip";
-import { Download, Save, Trash2, AlertTriangle } from "lucide-react";
+import { Download, FileText, Save, Trash2, AlertTriangle } from "lucide-react";
 
 type Customer = { id: string; name: string };
 
@@ -173,10 +173,16 @@ export function OfferEditor({
           </div>
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <a
+              href={`/admin/api/offers/${offer.id}/pdf`}
+              className="rounded-btn bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-2 text-sm flex items-center gap-2 transition-colors"
+            >
+              <FileText size={14} /> Ladda ner PDF
+            </a>
+            <a
               href={`/admin/api/offers/${offer.id}/export`}
               className="rounded-btn bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-2 text-sm flex items-center gap-2 transition-colors"
             >
-              <Download size={14} /> Exportera Excel
+              <Download size={14} /> Excel
             </a>
             <button
               onClick={save}

@@ -142,12 +142,16 @@ export async function generateOfferXlsx(offer: OfferData): Promise<Uint8Array> {
   });
 
   // Försök läsa logo från admin/public/logos/
+  // Bevarar bildens aspect ratio så den inte sträcks — våra logo-filer är
+  // 1080x1080 (ikon + text staplade i samma frame), så target-höjden styr.
   try {
     const logoPath = path.resolve(process.cwd(), "public", "logos", "Logo_Color_with_text.png");
     const buf = await fs.readFile(logoPath);
-    // exceljs addImage expects an older Buffer typing; cast to satisfy TS.
+    const dims = readPngDimensions(buf);
+    const targetHeight = 80;
+    const width = dims ? Math.round(targetHeight * (dims.width / dims.height)) : targetHeight;
     const logoId = wb.addImage({ buffer: buf as unknown as ArrayBuffer, extension: "png" });
-    ws.addImage(logoId, { tl: { col: 1, row: 0 }, ext: { width: 200, height: 70 } });
+    ws.addImage(logoId, { tl: { col: 1, row: 0 }, ext: { width, height: targetHeight } });
   } catch {
     // Fallback text om logo saknas
     setMerge("B1:D2", "TRIAD SOLUTIONS", {
@@ -568,4 +572,15 @@ export async function generateOfferXlsx(offer: OfferData): Promise<Uint8Array> {
   // between Node/edge Buffer variants, so cast to a runtime-compatible shape.
   const buf = await wb.xlsx.writeBuffer();
   return buf as unknown as Uint8Array;
+}
+
+// Läser bredd/höjd ur en PNG-fils IHDR-chunk (bytes 16–23, big-endian).
+function readPngDimensions(buf: Uint8Array): { width: number; height: number } | null {
+  if (buf.length < 24) return null;
+  // PNG signature: 89 50 4E 47 0D 0A 1A 0A
+  if (buf[0] !== 0x89 || buf[1] !== 0x50 || buf[2] !== 0x4e || buf[3] !== 0x47) return null;
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  const width = dv.getUint32(16, false);
+  const height = dv.getUint32(20, false);
+  return { width, height };
 }
