@@ -1,0 +1,65 @@
+name: Apply Supabase migrations
+
+# Applies any new SQL files in admin/supabase/migrations/ to the live TRIAD
+# database when they land on main. Tracking lives in public.app_migrations
+# (filename -> applied_at); only files not yet recorded are run, each in a
+# single transaction together with its tracking insert so a failure leaves
+# nothing half-applied.
+#
+# Requires repository secret SUPABASE_DB_URL — the Session-mode pooler
+# connection string from Supabase: Project Settings -> Database ->
+# Connection string -> "Session pooler" (port 5432), with the password filled in.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "admin/supabase/migrations/**"
+  workflow_dispatch: {}
+
+# Never run two migration jobs against the same DB at once.
+concurrency:
+  group: supabase-migrations
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply new migrations
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then
+            echo "::error::SUPABASE_DB_URL secret is not set."
+            exit 1
+          fi
+
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -c "
+            create table if not exists public.app_migrations (
+              filename text primary key,
+              applied_at timestamptz not null default now()
+            );
+          "
+
+          applied=0
+          skipped=0
+          for f in admin/supabase/migrations/*.sql; do
+            name=$(basename "$f")
+            exists=$(psql "$SUPABASE_DB_URL" -tAXc \
+              "select 1 from public.app_migrations where filename = '$name'")
+            if [ -n "$exists" ]; then
+              skipped=$((skipped + 1))
+              continue
+            fi
+            echo "==> Applying $name"
+            { cat "$f"; printf '\ninsert into public.app_migrations (filename) values (%s);\n' "'$name'"; } \
+              | psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 --single-transaction
+            applied=$((applied + 1))
+          done
+
+          echo "Done. Applied $applied, skipped $skipped."
