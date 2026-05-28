@@ -4,10 +4,10 @@
 // pdf-lib använder bottom-up y-axel; vi håller intern "cursor" som top-down och
 // konverterar i drawText/drawRect.
 
-import { PDFDocument, PDFFont, PDFImage, PDFPage, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, PDFFont, PDFImage, PDFPage, rgb } from "pdf-lib";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { COMPANY, companyFromLines } from "./company";
+import { CompanyInfo, companyFromLines } from "./company";
 
 export const A4_W = 595.28;
 export const A4_H = 841.89;
@@ -229,28 +229,14 @@ export async function loadLogo(doc: PDFDocument): Promise<PDFImage | null> {
   }
 }
 
-export async function generateOfferPdf(offer: OfferData): Promise<Uint8Array> {
-  const doc = await PDFDocument.create();
-  doc.setTitle(`Offert ${offer.offer_number ?? ""}`.trim());
-  doc.setAuthor("Triad Solutions");
-  doc.setCreator("Triad Admin");
-
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const fontItalic = await doc.embedFont(StandardFonts.HelveticaOblique);
-
-  const page = doc.addPage([A4_W, A4_H]);
-  const p = new Pdf(doc, page, font, fontBold, fontItalic);
-
-  const logo = await loadLogo(doc);
-  drawOfferContent(p, offer, logo);
-
-  return await doc.save();
-}
-
 // Ritar hela offertinnehållet på den aktiva sidan i `p`. Bryter sidor vid behov.
 // Bryts ut så att samma innehåll kan följas av SaaS-avtalet i samma PDF.
-export function drawOfferContent(p: Pdf, offer: OfferData, logo: PDFImage | null) {
+export function drawOfferContent(
+  p: Pdf,
+  offer: OfferData,
+  logo: PDFImage | null,
+  company: CompanyInfo,
+) {
   const { font, fontBold, fontItalic } = p;
 
   // ====== HEADER ======
@@ -284,8 +270,8 @@ export function drawOfferContent(p: Pdf, offer: OfferData, logo: PDFImage | null
   let toY = p.cursor + 14;
 
   const fromLines: [string, boolean][] = [
-    [COMPANY.name, true],
-    ...companyFromLines().map((l) => [l, false] as [string, boolean]),
+    [company.name, true],
+    ...companyFromLines(company).map((l) => [l, false] as [string, boolean]),
   ];
   const toLines: [string, boolean][] = [
     [offer.customer?.name ?? "—", true],

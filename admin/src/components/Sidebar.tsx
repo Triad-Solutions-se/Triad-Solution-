@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, CheckSquare, FolderKanban, Calendar, Users, FileText,
   Wallet, Palette, BookTemplate, BarChart3, LogOut, X,
-  PanelLeftClose, PanelLeftOpen,
+  PanelLeftClose, PanelLeftOpen, Settings,
 } from "lucide-react";
 
 const nav = [
@@ -18,6 +18,7 @@ const nav = [
   { href: "/admin/analytics", label: "Analys", icon: BarChart3 },
   { href: "/admin/brand", label: "Grafisk Profil", icon: Palette },
   { href: "/admin/templates", label: "Mallar", icon: BookTemplate },
+  { href: "/admin/settings", label: "Inställningar", icon: Settings },
 ];
 
 export function Sidebar({

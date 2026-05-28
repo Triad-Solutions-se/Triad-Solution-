@@ -1,7 +1,21 @@
 import type { createClient } from "@/lib/supabase/server";
 import type { OfferData } from "@/lib/offer-pdf";
+import { type CompanyInfo, toCompanyInfo } from "@/lib/company";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+// Hämtar leverantörens (Triad) företagsuppgifter från company_settings.
+// Faller tillbaka på defaults om raden saknas.
+export async function fetchCompanyInfo(
+  supabase: SupabaseServerClient,
+): Promise<CompanyInfo> {
+  const { data } = await supabase
+    .from("company_settings")
+    .select("name,org_number,address,email,phone,dpo")
+    .eq("id", 1)
+    .maybeSingle();
+  return toCompanyInfo(data);
+}
 
 const SELECT =
   "offer_number,title,reference,offer_date,valid_until,project_description,project_price,monthly_price,project_discount_pct,monthly_discount_pct,other_costs,vat_rate,currency,customer:customers(name,contact_person,email,phone,website,org_number,address)";

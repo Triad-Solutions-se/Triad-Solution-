@@ -27,7 +27,7 @@ import {
   fmtDateSv,
   type OfferData,
 } from "./offer-pdf";
-import { COMPANY, companyAddressLine } from "./company";
+import { CompanyInfo, companyAddressLine } from "./company";
 
 // ---------------------------------------------------------------------------
 // Block-modell
@@ -342,14 +342,14 @@ function drawContractCover(
 // SaaS-avtal innehåll
 // ---------------------------------------------------------------------------
 
-function saasBlocks(x: Ctx): Block[] {
+function saasBlocks(x: Ctx, company: CompanyInfo): Block[] {
   return [
     {
       t: "meta",
       rows: [
         [
           "Leverantör:",
-          `${COMPANY.name}, org.nr ${COMPANY.orgNumber}, ${companyAddressLine()}`,
+          `${company.name}, org.nr ${company.orgNumber || "[ORG.NR]"}, ${companyAddressLine(company) || "[ADRESS]"}`,
         ],
         ["Kund:", `${x.customerName}, org.nr ${x.customerOrg}, ${x.customerAddress}`],
         ["Avtalsdatum:", x.offerDate],
@@ -589,7 +589,7 @@ function saasBlocks(x: Ctx): Block[] {
     { t: "space", h: 10 },
     {
       t: "signatures",
-      left: `För Leverantören (${COMPANY.name})`,
+      left: `För Leverantören (${company.name})`,
       right: `För Kunden (${x.customerName})`,
     },
   ];
@@ -599,7 +599,7 @@ function saasBlocks(x: Ctx): Block[] {
 // PUB-avtal innehåll
 // ---------------------------------------------------------------------------
 
-function pubBlocks(x: Ctx): Block[] {
+function pubBlocks(x: Ctx, company: CompanyInfo): Block[] {
   const saasRef = x.offerNumber
     ? `Ingår som Bilaga 2 i SaaS-avtal (offert ${x.offerNumber}) daterat ${x.offerDate}`
     : `Ingår som Bilaga 2 i SaaS-avtal daterat ${x.offerDate}`;
@@ -618,7 +618,7 @@ function pubBlocks(x: Ctx): Block[] {
         ],
         [
           "Personuppgiftsbiträde (PUB):",
-          `${COMPANY.name}, org.nr ${COMPANY.orgNumber}`,
+          `${company.name}, org.nr ${company.orgNumber || "[ORG.NR]"}`,
         ],
         ["Avtalsdatum:", x.offerDate],
         ["Relaterat SaaS-avtal:", saasRef],
@@ -841,7 +841,7 @@ function pubBlocks(x: Ctx): Block[] {
     { t: "h2", text: "Personuppgiftsbiträde (Leverantören)" },
     {
       t: "p",
-      text: `Namn: ${COMPANY.name}\nE-post: ${COMPANY.email}\nTelefon: ${COMPANY.phone}\nDPO/Dataskyddsombud: ${COMPANY.dpo}`,
+      text: `Namn: ${company.name}\nE-post: ${company.email}\nTelefon: ${company.phone || "[TELEFONNUMMER]"}\nDPO/Dataskyddsombud: ${company.dpo}`,
     },
 
     { t: "h1", text: "12. Tillämplig lag och tillsynsmyndighet" },
@@ -864,10 +864,10 @@ function pubBlocks(x: Ctx): Block[] {
 // Publika generatorer
 // ---------------------------------------------------------------------------
 
-async function newDoc(title: string) {
+async function newDoc(title: string, author: string) {
   const doc = await PDFDocument.create();
   doc.setTitle(title);
-  doc.setAuthor(COMPANY.name);
+  doc.setAuthor(author);
   doc.setCreator("Triad Admin");
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -878,24 +878,31 @@ async function newDoc(title: string) {
 }
 
 // Offert + SaaS-avtal i en och samma PDF (avtalet placeras efter offerten).
-export async function generateOfferWithSaasPdf(offer: OfferData): Promise<Uint8Array> {
-  const { doc, p } = await newDoc(`Offert ${offer.offer_number ?? ""}`.trim());
+export async function generateOfferWithSaasPdf(
+  offer: OfferData,
+  company: CompanyInfo,
+): Promise<Uint8Array> {
+  const { doc, p } = await newDoc(`Offert ${offer.offer_number ?? ""}`.trim(), company.name);
   const logo = await loadLogo(doc);
 
-  drawOfferContent(p, offer, logo);
+  drawOfferContent(p, offer, logo, company);
 
   // SaaS-avtalet börjar på en ny sida.
   p.newPage();
   drawContractCover(p, logo, "SAAS-AVTAL", "Programvarutjänst som molntjänst");
-  renderBlocks(p, saasBlocks(buildCtx(offer)));
+  renderBlocks(p, saasBlocks(buildCtx(offer), company));
 
   return await doc.save();
 }
 
 // PUB-avtal som separat PDF.
-export async function generatePubPdf(offer: OfferData): Promise<Uint8Array> {
+export async function generatePubPdf(
+  offer: OfferData,
+  company: CompanyInfo,
+): Promise<Uint8Array> {
   const { doc, p } = await newDoc(
     `PUB-avtal ${offer.offer_number ?? ""}`.trim(),
+    company.name,
   );
   const logo = await loadLogo(doc);
 
@@ -905,7 +912,7 @@ export async function generatePubPdf(offer: OfferData): Promise<Uint8Array> {
     "PERSONUPPGIFTSBITRÄDESAVTAL",
     "Bilaga 2 – GDPR Artikel 28",
   );
-  renderBlocks(p, pubBlocks(buildCtx(offer)));
+  renderBlocks(p, pubBlocks(buildCtx(offer), company));
 
   return await doc.save();
 }

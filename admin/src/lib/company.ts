@@ -1,35 +1,56 @@
-// Triad Solutions företagsuppgifter — används som "Leverantör" i SaaS-avtalet
-// och som "Personuppgiftsbiträde" i PUB-avtalet, samt i offertens FRÅN-block.
+// Leverantörens (Triad Solutions) företagsuppgifter. Redigeras i portalen under
+// Inställningar och lagras i tabellen `company_settings` (singleton, id = 1).
+// Används som "Leverantör" i SaaS-avtalet, "Personuppgiftsbiträde" i PUB-avtalet
+// och i offertens FRÅN-block.
 //
-// Dessa värden är desamma för varje offert och avtal. Fyll i de fält som är
-// markerade med "[SÄTT ...]" en gång här — då fylls de automatiskt in i alla
-// genererade dokument.
+// Denna fil är ren (inga server-beroenden) så den kan importeras var som helst.
+// Själva DB-hämtningen sker via fetchCompanyInfo() i API-routerna.
 
-export const COMPANY = {
+export type CompanyInfo = {
+  name: string;
+  orgNumber: string;
+  address: string;
+  email: string;
+  phone: string;
+  dpo: string;
+};
+
+export const DEFAULT_COMPANY: CompanyInfo = {
   name: "Triad Solutions",
-  orgNumber: "[SÄTT ORG.NR i src/lib/company.ts]",
-  street: "[SÄTT GATUADRESS i src/lib/company.ts]",
-  zip: "[POSTNR]",
-  city: "[ORT]",
+  orgNumber: "",
+  address: "",
   email: "info@triadsolutions.se",
-  phone: "[SÄTT TELEFON i src/lib/company.ts]",
-  // Dataskyddsombud (DPO) — ange namn eller "Ej utsett".
+  phone: "",
   dpo: "Ej utsett",
-} as const;
+};
 
-// "Gatuadress, Postnr Ort" på en rad.
-export function companyAddressLine(): string {
-  const cityLine = [COMPANY.zip, COMPANY.city].filter(Boolean).join(" ").trim();
-  return [COMPANY.street, cityLine].filter(Boolean).join(", ");
+// Mappar en rad från `company_settings` till CompanyInfo, med defaults för
+// saknade/null-fält.
+export function toCompanyInfo(row: Record<string, any> | null | undefined): CompanyInfo {
+  if (!row) return { ...DEFAULT_COMPANY };
+  return {
+    name: row.name?.trim() || DEFAULT_COMPANY.name,
+    orgNumber: row.org_number?.trim() || "",
+    address: row.address?.trim() || "",
+    email: row.email?.trim() || DEFAULT_COMPANY.email,
+    phone: row.phone?.trim() || "",
+    dpo: row.dpo?.trim() || DEFAULT_COMPANY.dpo,
+  };
 }
 
-// Rader för FRÅN-blocket i offerten.
-export function companyFromLines(): string[] {
-  return [
-    `Organisationsnummer: ${COMPANY.orgNumber}`,
-    COMPANY.street,
-    [COMPANY.zip, COMPANY.city].filter(Boolean).join(" ").trim(),
-    COMPANY.email,
-    COMPANY.phone,
-  ].filter((l) => l && l.trim());
+// "Gatuadress, Postnr Ort" på en rad (kollapsar ev. radbrytningar).
+export function companyAddressLine(c: CompanyInfo): string {
+  return (c.address || "").replace(/\s*\n\s*/g, ", ").trim();
+}
+
+// Rader för FRÅN-blocket i offerten (utan företagsnamnet, som ritas separat).
+export function companyFromLines(c: CompanyInfo): string[] {
+  const lines: string[] = [];
+  if (c.orgNumber) lines.push(`Organisationsnummer: ${c.orgNumber}`);
+  for (const part of (c.address || "").split(/\r?\n/)) {
+    if (part.trim()) lines.push(part.trim());
+  }
+  if (c.email) lines.push(c.email);
+  if (c.phone) lines.push(c.phone);
+  return lines;
 }
