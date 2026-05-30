@@ -1570,6 +1570,38 @@
       /* Reduce preview area height on mobile */
       .svc-preview { min-height: 120px; }
       .svc-browser-body { height: 110px; }
+
+      /* Collapsible subcards on mobile: only the header row (icon + title)
+         is visible by default; tapping the header reveals description +
+         preview so more rows fit on screen. */
+      #svc-track.view-subcards .svc-subcard .svc-card-meta {
+        position: relative;
+        cursor: pointer;
+        padding: 20px 22px;
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+      }
+      #svc-track.view-subcards .svc-subcard.expanded .svc-card-meta {
+        padding-bottom: 4px;
+      }
+      #svc-track.view-subcards .svc-subcard .svc-card-arrow {
+        position: absolute;
+        right: 22px;
+        top: 50%;
+        font-size: 18px;
+        line-height: 1;
+        color: rgba(255,255,255,.45);
+        transform: translateY(-50%) rotate(0deg);
+        transition: transform .25s ease, color .25s ease;
+      }
+      #svc-track.view-subcards .svc-subcard.expanded .svc-card-arrow {
+        transform: translateY(-50%) rotate(90deg);
+        color: rgba(0,180,168,.85);
+      }
+      #svc-track.view-subcards .svc-subcard:not(.expanded) .svc-card-desc,
+      #svc-track.view-subcards .svc-subcard:not(.expanded) .svc-preview {
+        display: none;
+      }
     }
 
     /* ── MODALS ── */
@@ -3751,7 +3783,7 @@
     function showCategories() {
       performTransition(() => {
         catCards.forEach(c => c.classList.remove('hidden'));
-        subcards.forEach(c => c.classList.add('hidden'));
+        subcards.forEach(c => { c.classList.add('hidden'); c.classList.remove('expanded'); });
         backBtn.classList.add('hidden');
         tabs.forEach(t => t.classList.remove('active'));
         document.querySelector('.svc-tab[data-filter="all"]').classList.add('active');
@@ -3763,6 +3795,7 @@
         catCards.forEach(c => c.classList.add('hidden'));
         subcards.forEach(c => {
           c.classList.toggle('hidden', c.dataset.category !== group);
+          c.classList.remove('expanded');
         });
         backBtn.classList.remove('hidden');
         tabs.forEach(t => t.classList.remove('active'));
@@ -3770,6 +3803,20 @@
         if (activeTab) activeTab.classList.add('active');
       }, 'view-subcards');
     }
+
+    // Mobile: tap the header row to expand/collapse a subcard.
+    const mobileMQ = window.matchMedia('(max-width: 768px)');
+    subcards.forEach(card => {
+      const meta = card.querySelector('.svc-card-meta');
+      if (!meta) return;
+      meta.addEventListener('click', () => {
+        if (!mobileMQ.matches) return;
+        card.classList.toggle('expanded');
+      });
+    });
+    mobileMQ.addEventListener('change', (e) => {
+      if (!e.matches) subcards.forEach(c => c.classList.remove('expanded'));
+    });
 
     catCards.forEach(card => {
       card.addEventListener('click', () => showSubcards(card.dataset.group));
