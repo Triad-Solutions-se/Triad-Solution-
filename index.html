@@ -1266,15 +1266,23 @@
       #svc-track.is-swapping { opacity: 1; transform: none; }
     }
 
-    /* Category card internals — stack icon block above the title so long
-       titles wrap predictably without nudging the count badge around */
+    /* Category card internals — icon + count anchored on row 1,
+       title spans its own row so it can wrap freely without ever
+       pushing the count badge out of place. */
     .svc-cat-card-top {
       display: grid;
-      grid-template-columns: auto 1fr auto;
+      grid-template-columns: auto 1fr;
+      grid-template-areas:
+        "icon  count"
+        "title title";
       align-items: center;
-      gap: 12px;
+      column-gap: 12px;
+      row-gap: 14px;
     }
+    .svc-cat-card-top .svc-card-icon { grid-area: icon; }
     .svc-cat-card-count {
+      grid-area: count;
+      justify-self: end;
       font-size: 11px;
       color: rgba(0,180,168,.85);
       background: rgba(0,180,168,.1);
@@ -1282,17 +1290,17 @@
       border-radius: 100px;
       padding: 3px 10px;
       white-space: nowrap;
-      justify-self: end;
     }
     .svc-cat-card-title {
-      font-size: 15.5px;
+      grid-area: title;
+      font-size: 16px;
       font-weight: 500;
       color: #fff;
       letter-spacing: -.01em;
       line-height: 1.3;
       min-height: 2.6em; /* reserve 2 lines so 1-liners stay aligned */
       display: flex;
-      align-items: center;
+      align-items: flex-start;
     }
     .svc-cat-card-desc {
       font-size: 13px;
