@@ -866,6 +866,89 @@
       .hww-inner { padding: 0 20px; }
     }
 
+    /* ============================================
+       PROJEKT-SHOWCASE
+    ============================================ */
+    #projects {
+      padding: 120px 0;
+    }
+    .proj-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 40px;
+    }
+    .proj-head {
+      text-align: center;
+      margin-bottom: 64px;
+    }
+    .proj-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 18px;
+    }
+    .proj-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      text-decoration: none;
+      background: rgba(255,255,255,.02);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 18px;
+      padding: 28px 18px 26px;
+      transition: background .35s, border-color .35s, transform .35s, box-shadow .35s;
+    }
+    .proj-card:hover {
+      background: rgba(0,180,168,.05);
+      border-color: rgba(0,180,168,.35);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,180,168,.10);
+    }
+    .proj-logo-wrap {
+      width: 84px;
+      height: 84px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 18px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .proj-logo-wrap img {
+      max-width: 64%;
+      max-height: 64%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+    }
+    .proj-name {
+      font-size: 17px;
+      font-weight: 400;
+      color: var(--white);
+      letter-spacing: -.01em;
+      margin-bottom: 6px;
+    }
+    .proj-slogan {
+      font-size: 12px;
+      font-weight: 300;
+      color: var(--g400);
+      line-height: 1.5;
+    }
+    @media (max-width: 1024px) {
+      .proj-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 700px) {
+      .proj-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+      .proj-inner { padding: 0 20px; }
+      #projects { padding: 80px 0; }
+      .proj-head { margin-bottom: 40px; }
+    }
+    @media (max-width: 420px) {
+      .proj-grid { grid-template-columns: 1fr; }
+    }
+
     /* ── WHY / BELIEF — STICKY SCROLL ── */
     #why-pin-container {
       height: 450vh;
@@ -3068,6 +3151,65 @@
 
 
 <!-- ============================================================
+     PROJEKT — Showcase grid
+============================================================ -->
+<section id="projects">
+  <div class="proj-inner">
+    <div class="proj-head">
+      <h2 class="section-title reveal d1" style="margin-top:12px;">Några av våra projekt.</h2>
+    </div>
+
+    <div class="proj-grid">
+
+      <a href="https://www.cvlab.app/" target="_blank" rel="noopener noreferrer" class="proj-card reveal d1">
+        <div class="proj-logo-wrap">
+          <img src="https://www.cvlab.app/Logo.svg" alt="CVLab" loading="lazy" />
+        </div>
+        <h3 class="proj-name">CVLab</h3>
+        <p class="proj-slogan">AI-driven CV-byggare</p>
+      </a>
+
+      <a href="https://servera.triadsolutions.se/" target="_blank" rel="noopener noreferrer" class="proj-card reveal d2">
+        <div class="proj-logo-wrap">
+          <img src="https://servera.triadsolutions.se/logo.png" alt="Servera" loading="lazy" />
+        </div>
+        <h3 class="proj-name">Servera</h3>
+        <p class="proj-slogan">QR-beställning för restauranger</p>
+      </a>
+
+      <a href="https://veckoblad.triadsolutions.se/" target="_blank" rel="noopener noreferrer" class="proj-card reveal d3">
+        <div class="proj-logo-wrap">
+          <img src="https://veckoblad.triadsolutions.se/icon-512.png" alt="Veckoblad" loading="lazy" />
+        </div>
+        <h3 class="proj-name">Veckoblad</h3>
+        <p class="proj-slogan">Veckoblad för dagligvaruhandeln</p>
+      </a>
+
+      <a href="https://smashboard.triadsolutions.se/" target="_blank" rel="noopener noreferrer" class="proj-card reveal d4">
+        <div class="proj-logo-wrap">
+          <img src="https://smashboard.triadsolutions.se/icons/logo.svg" alt="Smashboard" loading="lazy" />
+        </div>
+        <h3 class="proj-name">Smashboard</h3>
+        <p class="proj-slogan">Padelturneringar live</p>
+      </a>
+
+      <a href="https://indian-express-green.vercel.app/" target="_blank" rel="noopener noreferrer" class="proj-card reveal d5">
+        <div class="proj-logo-wrap">
+          <img src="https://indian-express-green.vercel.app/logo-v3.png" alt="Indian Express" loading="lazy" />
+        </div>
+        <h3 class="proj-name">Indian Express</h3>
+        <p class="proj-slogan">Äkta indisk mat i Malmö</p>
+      </a>
+
+    </div>
+  </div>
+</section>
+
+
+<div class="divider"></div>
+
+
+<!-- ============================================================
      OM OSS
 ============================================================ -->
 <section id="about" style="padding: 140px 40px; max-width:1200px; margin:0 auto;">
@@ -3466,6 +3608,13 @@
     'Driftsättning': 'Deployment',
     'Utbildning': 'Training',
     '24/7 Support': '24/7 Support',
+    // Projects
+    'Några av våra projekt.': 'Some of our projects.',
+    'AI-driven CV-byggare': 'AI-powered CV builder',
+    'QR-beställning för restauranger': 'QR ordering for restaurants',
+    'Veckoblad för dagligvaruhandeln': 'Weekly flyers for grocery retail',
+    'Padelturneringar live': 'Live padel tournaments',
+    'Äkta indisk mat i Malmö': 'Authentic Indian food in Malmö',
     // About
     'Vi är ett techbolag som hjälper företag att identifiera och lösa affärskritiska problem genom skräddarsydda tekniska lösningar. Istället för standardiserade produkter utvecklar vi system, automationer och digitala verktyg anpassade efter varje kunds unika behov och mål.': "We are a tech company that helps businesses identify and solve business-critical problems through tailored technical solutions. Instead of off-the-shelf products, we develop systems, automations and digital tools adapted to each client's unique needs and goals.",
     'Vår modell kombinerar en initial implementation med fortsatt sammarbete för drift, support och kontinuerlig optimering. Det säkerställer att våra lösningar inte bara fungerar idag, utan även utvecklas i takt med kundens verksamhet.': "Our model combines an initial implementation with continued collaboration for operations, support and ongoing optimization. This ensures our solutions not only work today, but evolve together with the client's business.",
