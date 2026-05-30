@@ -1166,78 +1166,139 @@
       border-color: rgba(0,180,168,.5);
       color: #00b4a8;
     }
-    #svc-track-wrap { position: relative; overflow: hidden; }
+    #svc-track-wrap {
+      position: relative;
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 0 48px;
+    }
     #svc-track {
-      display: flex;
+      display: grid;
       gap: 20px;
-      padding: 8px 48px 60px;
-      overflow-x: scroll;
-      scroll-snap-type: x mandatory;
-      scroll-behavior: smooth;
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-      justify-content: center;
+      padding: 8px 0 60px;
+      min-height: 280px;
+      transition: opacity .22s ease;
     }
-    #svc-track::-webkit-scrollbar { display: none; }
-    #svc-track-fade {
-      position: absolute;
-      right: 0; top: 0; bottom: 0;
-      width: 140px;
-      background: linear-gradient(to right, transparent, #061a2e);
-      pointer-events: none;
+    /* Category view: 5-up on wide screens, fluid below */
+    #svc-track.view-categories {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
     }
+    /* Subcard view: 3-up on desktop, wider cards */
+    #svc-track.view-subcards {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      min-height: 520px;
+    }
+    @media (max-width: 1200px) {
+      #svc-track.view-categories { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      #svc-track.view-subcards   { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 768px) {
+      #svc-track.view-categories,
+      #svc-track.view-subcards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 480px) {
+      #svc-track.view-categories,
+      #svc-track.view-subcards {
+        grid-template-columns: 1fr;
+      }
+    }
+    /* Fade + lift the whole grid in on view change */
+    #svc-track.is-swapping { opacity: 0; transform: translateY(6px); }
+    #svc-track-fade { display: none; }
+
     .svc-card {
-      flex: 0 0 320px;
       min-height: 460px;
       border-radius: 20px;
       border: 1px solid rgba(255,255,255,.08);
       background: rgba(255,255,255,.025);
-      scroll-snap-align: start;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      transition: border-color .25s, transform .25s;
+      transition: border-color .25s ease, transform .25s ease, background .25s ease;
+      animation: svcCardIn .45s cubic-bezier(.16,1,.3,1) both;
     }
     .svc-card:hover { border-color: rgba(255,255,255,.16); transform: translateY(-2px); }
     .svc-card.hidden { display: none; }
+
     .svc-cat-card {
-      flex: 0 0 280px;
-      min-height: 220px;
+      min-height: 240px;
       border-radius: 20px;
       border: 1px solid rgba(255,255,255,.08);
       background: rgba(255,255,255,.025);
-      scroll-snap-align: start;
       display: flex;
       flex-direction: column;
-      padding: 28px;
+      padding: 24px;
       gap: 14px;
       cursor: pointer;
-      transition: border-color .25s, transform .25s, background .25s;
+      transition: border-color .25s ease, transform .25s ease, background .25s ease;
+      animation: svcCardIn .45s cubic-bezier(.16,1,.3,1) both;
     }
     .svc-cat-card:hover {
-      border-color: rgba(0,180,168,.4);
+      border-color: rgba(0,180,168,.45);
       background: rgba(0,180,168,.06);
-      transform: translateY(-2px);
+      transform: translateY(-3px);
     }
     .svc-cat-card.hidden { display: none; }
-    .svc-cat-card-top { display: flex; align-items: center; gap: 14px; }
+
+    /* Staggered card entrance — small per-child delay */
+    #svc-track > .svc-card:nth-child(1),
+    #svc-track > .svc-cat-card:nth-child(1) { animation-delay: 0ms; }
+    #svc-track > .svc-card:nth-child(2),
+    #svc-track > .svc-cat-card:nth-child(2) { animation-delay: 40ms; }
+    #svc-track > .svc-card:nth-child(3),
+    #svc-track > .svc-cat-card:nth-child(3) { animation-delay: 80ms; }
+    #svc-track > .svc-card:nth-child(4),
+    #svc-track > .svc-cat-card:nth-child(4) { animation-delay: 120ms; }
+    #svc-track > .svc-card:nth-child(5),
+    #svc-track > .svc-cat-card:nth-child(5) { animation-delay: 160ms; }
+    #svc-track > .svc-card:nth-child(n+6) { animation-delay: 200ms; }
+
+    @keyframes svcCardIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #svc-track,
+      .svc-card,
+      .svc-cat-card { transition: none !important; animation: none !important; }
+      #svc-track.is-swapping { opacity: 1; transform: none; }
+    }
+
+    /* Category card internals — stack icon block above the title so long
+       titles wrap predictably without nudging the count badge around */
+    .svc-cat-card-top {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 12px;
+    }
     .svc-cat-card-count {
-      margin-left: auto;
       font-size: 11px;
-      color: rgba(0,180,168,.8);
+      color: rgba(0,180,168,.85);
       background: rgba(0,180,168,.1);
-      border: 1px solid rgba(0,180,168,.2);
+      border: 1px solid rgba(0,180,168,.25);
       border-radius: 100px;
       padding: 3px 10px;
       white-space: nowrap;
+      justify-self: end;
     }
     .svc-cat-card-title {
-      font-size: 16px; font-weight: 500;
-      color: #fff; letter-spacing: -.01em;
+      font-size: 15.5px;
+      font-weight: 500;
+      color: #fff;
+      letter-spacing: -.01em;
+      line-height: 1.3;
+      min-height: 2.6em; /* reserve 2 lines so 1-liners stay aligned */
+      display: flex;
+      align-items: center;
     }
     .svc-cat-card-desc {
-      font-size: 13px; color: var(--g400);
-      font-weight: 300; line-height: 1.65;
+      font-size: 13px;
+      color: var(--g400);
+      font-weight: 300;
+      line-height: 1.65;
       flex: 1;
     }
     .svc-cat-card-cta {
@@ -1402,13 +1463,12 @@
     }
     @media (max-width: 768px) {
       #svc-header { padding: 0 24px; }
-      #svc-track { padding: 8px 24px 48px; }
-      .svc-card { flex: 0 0 280px; }
+      #svc-track-wrap { padding: 0 24px; }
       #svc-section { padding: 80px 0 0; }
-
     }
     @media (max-width: 1024px) {
       #svc-header { padding: 0 32px; }
+      #svc-track-wrap { padding: 0 32px; }
     }
 
     /* ============================================
@@ -1466,7 +1526,7 @@
         padding: 0 20px;
       }
 
-      /* Controls row: horizontally scrollable */
+      /* Controls row: horizontally scrollable so tabs never wrap */
       #svc-controls {
         width: 100%;
         flex-wrap: nowrap !important;
@@ -1483,27 +1543,18 @@
       #svc-tabs { flex-shrink: 0; }
       .svc-tab { white-space: nowrap; font-size: 12px; padding: 6px 13px; flex-shrink: 0; }
 
-      /* Switch from horizontal scroll to a proper 2-column grid */
-      #svc-track {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 14px;
-        overflow-x: visible;
-        scroll-snap-type: none;
-        padding: 8px 20px 40px;
-        justify-content: unset;
-      }
+      /* Tighten grid + cards for mobile */
+      #svc-track-wrap { padding: 0 20px; }
+      #svc-track { gap: 14px; padding: 8px 0 40px; min-height: unset; }
+      #svc-track.view-subcards { min-height: unset; }
 
-      /* Cards fill the grid cell */
       .svc-cat-card {
-        flex: unset;
-        width: 100%;
-        min-height: 180px;
+        min-height: 200px;
         border-radius: 16px;
+        padding: 20px;
       }
+      .svc-cat-card-title { min-height: unset; }
       .svc-card {
-        flex: unset;
-        width: 100%;
         min-height: unset;
         border-radius: 16px;
       }
@@ -1511,14 +1562,6 @@
       /* Reduce preview area height on mobile */
       .svc-preview { min-height: 120px; }
       .svc-browser-body { height: 110px; }
-
-      /* Hide the right-fade gradient (no horizontal scroll) */
-      #svc-track-fade { display: none; }
-    }
-
-    /* Single column on very small phones */
-    @media (max-width: 480px) {
-      #svc-track { grid-template-columns: 1fr; gap: 12px; }
     }
 
     /* ── MODALS ── */
@@ -3667,28 +3710,57 @@
      SERVICE TABS — filter cards
   ═══════════════════════════════════════════════ */
   (function initSvcNav() {
-    const catCards  = document.querySelectorAll('.svc-cat-card');
-    const subcards  = document.querySelectorAll('.svc-subcard');
-    const tabs      = document.querySelectorAll('.svc-tab');
-    const backBtn   = document.getElementById('svc-back');
+    const track    = document.getElementById('svc-track');
+    const catCards = document.querySelectorAll('.svc-cat-card');
+    const subcards = document.querySelectorAll('.svc-subcard');
+    const tabs     = document.querySelectorAll('.svc-tab');
+    const backBtn  = document.getElementById('svc-back');
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Apply the DOM swap + (re)trigger entrance animations on visible cards.
+    function applySwap(mutate, viewClass) {
+      mutate();
+      track.classList.remove('view-categories', 'view-subcards');
+      track.classList.add(viewClass);
+      // Force reflow so the staggered keyframe animation restarts on the
+      // newly-visible cards even though their elements were never replaced.
+      void track.offsetWidth;
+    }
+
+    function performTransition(mutate, viewClass) {
+      if (prefersReduced) {
+        applySwap(mutate, viewClass);
+        return;
+      }
+      track.classList.add('is-swapping');
+      // Wait for fade-out before swapping content, then fade back in.
+      setTimeout(() => {
+        applySwap(mutate, viewClass);
+        track.classList.remove('is-swapping');
+      }, 180);
+    }
 
     function showCategories() {
-      catCards.forEach(c => c.classList.remove('hidden'));
-      subcards.forEach(c => c.classList.add('hidden'));
-      backBtn.classList.add('hidden');
-      tabs.forEach(t => t.classList.remove('active'));
-      document.querySelector('.svc-tab[data-filter="all"]').classList.add('active');
+      performTransition(() => {
+        catCards.forEach(c => c.classList.remove('hidden'));
+        subcards.forEach(c => c.classList.add('hidden'));
+        backBtn.classList.add('hidden');
+        tabs.forEach(t => t.classList.remove('active'));
+        document.querySelector('.svc-tab[data-filter="all"]').classList.add('active');
+      }, 'view-categories');
     }
 
     function showSubcards(group) {
-      catCards.forEach(c => c.classList.add('hidden'));
-      subcards.forEach(c => {
-        c.classList.toggle('hidden', c.dataset.category !== group);
-      });
-      backBtn.classList.remove('hidden');
-      tabs.forEach(t => t.classList.remove('active'));
-      const activeTab = document.querySelector(`.svc-tab[data-filter="${group}"]`);
-      if (activeTab) activeTab.classList.add('active');
+      performTransition(() => {
+        catCards.forEach(c => c.classList.add('hidden'));
+        subcards.forEach(c => {
+          c.classList.toggle('hidden', c.dataset.category !== group);
+        });
+        backBtn.classList.remove('hidden');
+        tabs.forEach(t => t.classList.remove('active'));
+        const activeTab = document.querySelector(`.svc-tab[data-filter="${group}"]`);
+        if (activeTab) activeTab.classList.add('active');
+      }, 'view-subcards');
     }
 
     catCards.forEach(card => {
@@ -3709,7 +3781,14 @@
     });
 
     // Initial state: show category cards, hide subcards
-    showCategories();
+    applySwap(() => {
+      catCards.forEach(c => c.classList.remove('hidden'));
+      subcards.forEach(c => c.classList.add('hidden'));
+      backBtn.classList.add('hidden');
+      tabs.forEach(t => t.classList.remove('active'));
+      const allTab = document.querySelector('.svc-tab[data-filter="all"]');
+      if (allTab) allTab.classList.add('active');
+    }, 'view-categories');
   })();
 
   /* ═══════════════════════════════════════════════
