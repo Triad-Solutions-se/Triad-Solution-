@@ -1,48 +1,28 @@
 // Genererar SaaS-avtal (bifogas efter offerten i samma PDF) och PUB-avtal
-// (separat PDF). Bygger på samma pdf-lib-renderer som offerten (offer-pdf.ts).
-//
-// Avtalstexterna är transkriberade från mallarna SaaS-Avtal.docx och
-// PUB-Avtal.docx. Identitets-/datumfält fylls automatiskt från offert + kund +
-// företagskonfig (src/lib/company.ts). Domänspecifika fält som inte kan härledas
-// (ändamål, kategorier, underbiträden m.m.) lämnas som [hakparenteser] att fylla
-// i för hand.
+// (separat PDF). Bygger på samma pdf-lib-renderer som offerten (offer-pdf.ts)
+// och delar block-primitiver med villkor.ts/agreement-pdf.ts via
+// contract-blocks.ts.
 
-import { PDFDocument, PDFImage, StandardFonts } from "pdf-lib";
+import { PDFDocument, StandardFonts } from "pdf-lib";
 import {
   A4_W,
   A4_H,
-  MARGIN,
-  CONTENT_W,
-  BRAND,
-  DARK,
-  LIGHT,
-  GREY,
-  WHITE,
-  BLACK,
-  BORDER,
-  AMBER,
   Pdf,
   loadLogo,
   drawOfferContent,
   fmtDateSv,
   type OfferData,
 } from "./offer-pdf";
+import {
+  type Block,
+  renderBlocks,
+  drawContractCover,
+} from "./contract-blocks";
 import { CompanyInfo, companyAddressLine } from "./company";
 
 // ---------------------------------------------------------------------------
-// Block-modell
+// Ctx — substituerade fält som platshållare i avtalstexten ersätts mot.
 // ---------------------------------------------------------------------------
-
-type Block =
-  | { t: "h1"; text: string }
-  | { t: "h2"; text: string }
-  | { t: "p"; text: string }
-  | { t: "bullets"; items: string[] }
-  | { t: "callout"; kind: "info" | "warn"; text: string }
-  | { t: "meta"; rows: [string, string][] }
-  | { t: "table"; headers: string[]; rows: string[][]; widths: number[] }
-  | { t: "signatures"; left: string; right: string }
-  | { t: "space"; h: number };
 
 type Ctx = {
   customerName: string;
@@ -74,271 +54,6 @@ function buildCtx(offer: OfferData): Ctx {
 }
 
 // ---------------------------------------------------------------------------
-// Render-hjälpare
-// ---------------------------------------------------------------------------
-
-const BODY = 10;
-const BODY_LH = 14;
-
-function para(
-  p: Pdf,
-  text: string,
-  opts: { indent?: number; size?: number; color?: any; font?: any } = {},
-) {
-  const size = opts.size ?? BODY;
-  const lh = size * 1.4;
-  const font = opts.font ?? p.font;
-  const indent = opts.indent ?? 0;
-  const x = MARGIN + indent;
-  const width = CONTENT_W - indent;
-  for (const line of p.wrap(text, font, size, width)) {
-    p.newPageIfNeeded(lh);
-    p.drawText(line, x, p.cursor, { font, size, color: opts.color ?? BLACK });
-    p.cursor += lh;
-  }
-}
-
-function bullet(p: Pdf, text: string) {
-  const size = BODY;
-  const lh = size * 1.4;
-  const bx = MARGIN + 6;
-  const tx = MARGIN + 20;
-  const width = CONTENT_W - 20;
-  const lines = p.wrap(text, p.font, size, width);
-  lines.forEach((line, i) => {
-    p.newPageIfNeeded(lh);
-    if (i === 0) {
-      p.drawText("•", bx, p.cursor, { font: p.fontBold, size, color: BRAND });
-    }
-    p.drawText(line, tx, p.cursor, { size });
-    p.cursor += lh;
-  });
-}
-
-function calloutBlock(p: Pdf, kind: "info" | "warn", text: string) {
-  const size = 9;
-  const lh = size * 1.45;
-  const padX = 10;
-  const padY = 8;
-  const barW = 3;
-  const innerW = CONTENT_W - padX * 2 - barW;
-  const lines = p.wrap(text, p.fontItalic, size, innerW);
-  const boxH = lines.length * lh + padY * 2;
-  p.newPageIfNeeded(boxH + 6);
-  const accent = kind === "warn" ? AMBER : BRAND;
-  p.drawRect(MARGIN, p.cursor, CONTENT_W, boxH, LIGHT);
-  p.drawRect(MARGIN, p.cursor, barW, boxH, accent);
-  let y = p.cursor + padY;
-  for (const line of lines) {
-    p.drawText(line, MARGIN + barW + padX, y, {
-      font: p.fontItalic,
-      size,
-      color: kind === "warn" ? AMBER : DARK,
-    });
-    y += lh;
-  }
-  p.cursor += boxH + 8;
-}
-
-function metaBlock(p: Pdf, rows: [string, string][]) {
-  const size = 10;
-  const lh = 14;
-  const labelW = 160;
-  const padX = 10;
-  const padY = 9;
-  const gap = 5;
-  const valueW = CONTENT_W - labelW - padX * 2;
-  const rowLines = rows.map(([, v]) =>
-    Math.max(1, p.wrap(v, p.font, size, valueW).length),
-  );
-  const innerH =
-    rowLines.reduce((a, n) => a + n * lh, 0) + (rows.length - 1) * gap;
-  const boxH = innerH + padY * 2;
-  p.newPageIfNeeded(boxH + 6);
-  p.drawRect(MARGIN, p.cursor, CONTENT_W, boxH, LIGHT, {
-    color: BORDER,
-    width: 0.5,
-  });
-  let y = p.cursor + padY;
-  rows.forEach(([label, value], i) => {
-    p.drawText(label, MARGIN + padX, y, {
-      font: p.fontBold,
-      size,
-      color: DARK,
-      width: labelW - 6,
-    });
-    const vlines = p.wrap(value, p.font, size, valueW);
-    let vy = y;
-    for (const line of vlines) {
-      p.drawText(line, MARGIN + padX + labelW, vy, { size, color: BLACK });
-      vy += lh;
-    }
-    y += Math.max(1, rowLines[i]) * lh + gap;
-  });
-  p.cursor += boxH + 10;
-}
-
-function tableBlock(
-  p: Pdf,
-  headers: string[],
-  rows: string[][],
-  widths: number[],
-) {
-  const size = 9;
-  const lh = 12;
-  const padX = 6;
-  const padY = 5;
-  const cols = widths.map((w) => w * CONTENT_W);
-  const xs: number[] = [];
-  let acc = MARGIN;
-  for (const w of cols) {
-    xs.push(acc);
-    acc += w;
-  }
-
-  const drawRow = (
-    cells: string[],
-    o: { header?: boolean; bg?: any } = {},
-  ) => {
-    const font = o.header ? p.fontBold : p.font;
-    const color = o.header ? WHITE : BLACK;
-    const wrapped = cells.map((c, i) =>
-      p.wrap(c, font, size, cols[i] - padX * 2),
-    );
-    const rowH = Math.max(...wrapped.map((w) => w.length)) * lh + padY * 2;
-    p.newPageIfNeeded(rowH);
-    const bg = o.header ? DARK : o.bg;
-    if (bg) p.drawRect(MARGIN, p.cursor, CONTENT_W, rowH, bg);
-    // bottom border
-    p.drawLine(MARGIN, MARGIN + CONTENT_W, p.cursor + rowH, BORDER, 0.5);
-    wrapped.forEach((lines, i) => {
-      let y = p.cursor + padY;
-      for (const line of lines) {
-        p.drawText(line, xs[i] + padX, y, { font, size, color });
-        y += lh;
-      }
-    });
-    p.cursor += rowH;
-  };
-
-  drawRow(headers, { header: true });
-  rows.forEach((r, i) => drawRow(r, { bg: i % 2 === 1 ? LIGHT : null }));
-  p.cursor += 10;
-}
-
-function signatureColumns(p: Pdf, leftTitle: string, rightTitle: string) {
-  p.newPageIfNeeded(150);
-  const colW = (CONTENT_W - 30) / 2;
-  const startY = p.cursor;
-  const draw = (x: number, title: string) => {
-    let y = startY;
-    p.drawText(title, x, y, { font: p.fontBold, size: 10, color: DARK, width: colW });
-    y += 50;
-    p.drawLine(x, x + colW, y, BLACK, 0.5);
-    p.drawText("Underskrift", x, y + 4, { size: 8, color: GREY });
-    y += 36;
-    p.drawLine(x, x + colW, y, BLACK, 0.5);
-    p.drawText("Namn och befattning", x, y + 4, { size: 8, color: GREY });
-    y += 36;
-    p.drawLine(x, x + colW, y, BLACK, 0.5);
-    p.drawText("Datum och ort", x, y + 4, { size: 8, color: GREY });
-    return y + 16;
-  };
-  const endL = draw(MARGIN, leftTitle);
-  const endR = draw(MARGIN + colW + 30, rightTitle);
-  p.cursor = Math.max(endL, endR);
-}
-
-function renderBlocks(p: Pdf, blocks: Block[]) {
-  for (const b of blocks) {
-    switch (b.t) {
-      case "h1": {
-        p.newPageIfNeeded(40);
-        p.cursor += 6;
-        p.drawText(b.text, MARGIN, p.cursor, {
-          font: p.fontBold,
-          size: 13,
-          color: DARK,
-        });
-        const lineY = p.cursor + 17;
-        p.drawLine(MARGIN, MARGIN + CONTENT_W, lineY, BRAND, 1.5);
-        p.cursor = lineY + 10;
-        break;
-      }
-      case "h2": {
-        p.newPageIfNeeded(28);
-        p.cursor += 2;
-        p.drawText(b.text, MARGIN, p.cursor, {
-          font: p.fontBold,
-          size: 11,
-          color: DARK,
-        });
-        p.cursor += 18;
-        break;
-      }
-      case "p":
-        para(p, b.text);
-        p.cursor += 6;
-        break;
-      case "bullets":
-        for (const it of b.items) bullet(p, it);
-        p.cursor += 8;
-        break;
-      case "callout":
-        calloutBlock(p, b.kind, b.text);
-        break;
-      case "meta":
-        metaBlock(p, b.rows);
-        break;
-      case "table":
-        tableBlock(p, b.headers, b.rows, b.widths);
-        break;
-      case "signatures":
-        signatureColumns(p, b.left, b.right);
-        break;
-      case "space":
-        p.cursor += b.h;
-        break;
-    }
-  }
-}
-
-function drawContractCover(
-  p: Pdf,
-  logo: PDFImage | null,
-  title: string,
-  subtitle: string,
-) {
-  if (logo) {
-    p.drawImage(logo, MARGIN, MARGIN, 60, 60);
-  } else {
-    p.drawText("TRIAD SOLUTIONS", MARGIN, MARGIN + 18, {
-      font: p.fontBold,
-      size: 18,
-      color: BRAND,
-    });
-  }
-  p.drawText("AVTAL", MARGIN, MARGIN + 10, {
-    font: p.fontBold,
-    size: 20,
-    color: GREY,
-    width: CONTENT_W,
-    align: "right",
-  });
-  const dividerY = MARGIN + 70;
-  p.drawLine(MARGIN, MARGIN + CONTENT_W, dividerY, BRAND, 2);
-  p.cursor = dividerY + 22;
-  p.drawText(title, MARGIN, p.cursor, { font: p.fontBold, size: 22, color: DARK });
-  p.cursor += 26;
-  p.drawText(subtitle, MARGIN, p.cursor, {
-    font: p.fontItalic,
-    size: 11,
-    color: BRAND,
-  });
-  p.cursor += 26;
-}
-
-// ---------------------------------------------------------------------------
 // SaaS-avtal innehåll
 // ---------------------------------------------------------------------------
 
@@ -347,14 +62,17 @@ function saasBlocks(x: Ctx, company: CompanyInfo): Block[] {
     {
       t: "meta",
       rows: [
-        [
-          "Leverantör:",
-          `${company.name}, org.nr ${company.orgNumber || "[ORG.NR]"}, ${companyAddressLine(company) || "[ADRESS]"}`,
-        ],
-        ["Kund:", `${x.customerName}, org.nr ${x.customerOrg}, ${x.customerAddress}`],
-        ["Avtalsdatum:", x.offerDate],
-        ["Avtalsstart:", x.agreementStart],
-        ["Version:", "1.0"],
+        {
+          label: "Leverantör:",
+          value: `${company.name}, org.nr ${company.orgNumber || "[ORG.NR]"}, ${companyAddressLine(company) || "[ADRESS]"}`,
+        },
+        {
+          label: "Kund:",
+          value: `${x.customerName}, org.nr ${x.customerOrg}, ${x.customerAddress}`,
+        },
+        { label: "Avtalsdatum:", value: x.offerDate },
+        { label: "Avtalsstart:", value: x.agreementStart },
+        { label: "Version:", value: "1.0" },
       ],
     },
 
@@ -612,16 +330,16 @@ function pubBlocks(x: Ctx, company: CompanyInfo): Block[] {
     {
       t: "meta",
       rows: [
-        [
-          "Personuppgiftsansvarig (PUA):",
-          `${x.customerName}, org.nr ${x.customerOrg}`,
-        ],
-        [
-          "Personuppgiftsbiträde (PUB):",
-          `${company.name}, org.nr ${company.orgNumber || "[ORG.NR]"}`,
-        ],
-        ["Avtalsdatum:", x.offerDate],
-        ["Relaterat SaaS-avtal:", saasRef],
+        {
+          label: "Personuppgiftsansvarig (PUA):",
+          value: `${x.customerName}, org.nr ${x.customerOrg}`,
+        },
+        {
+          label: "Personuppgiftsbiträde (PUB):",
+          value: `${company.name}, org.nr ${company.orgNumber || "[ORG.NR]"}`,
+        },
+        { label: "Avtalsdatum:", value: x.offerDate },
+        { label: "Relaterat SaaS-avtal:", value: saasRef },
       ],
     },
 
@@ -889,7 +607,7 @@ export async function generateOfferWithSaasPdf(
 
   // SaaS-avtalet börjar på en ny sida.
   p.newPage();
-  drawContractCover(p, logo, "SAAS-AVTAL", "Programvarutjänst som molntjänst");
+  drawContractCover(p, logo, "AVTAL", "SAAS-AVTAL", "Programvarutjänst som molntjänst");
   renderBlocks(p, saasBlocks(buildCtx(offer), company));
 
   return await doc.save();
@@ -909,6 +627,7 @@ export async function generatePubPdf(
   drawContractCover(
     p,
     logo,
+    "AVTAL",
     "PERSONUPPGIFTSBITRÄDESAVTAL",
     "Bilaga 2 – GDPR Artikel 28",
   );

@@ -229,15 +229,31 @@ export async function loadLogo(doc: PDFDocument): Promise<PDFImage | null> {
   }
 }
 
+// Variant-konfiguration när drawOfferContent används för både offert och avtal.
+// "agreement" rebrandar headern till AVTAL, byter detalj-boxar (avtalsdatum/
+// startdatum istället för offertdatum/giltig till) och hoppar över de
+// inbyggda VILLKOR- och GODKÄNNANDE-sektionerna (de ersätts av Villkor-bilagan
+// som renderas separat).
+export type OfferRenderVariant =
+  | { kind: "offer" }
+  | {
+      kind: "agreement";
+      agreementNumber: string | null;
+      agreementDate: string; // ISO YYYY-MM-DD
+      startDate: string;     // ISO YYYY-MM-DD
+    };
+
 // Ritar hela offertinnehållet på den aktiva sidan i `p`. Bryter sidor vid behov.
-// Bryts ut så att samma innehåll kan följas av SaaS-avtalet i samma PDF.
+// Bryts ut så att samma innehåll kan följas av SaaS-avtalet / Villkor i samma PDF.
 export function drawOfferContent(
   p: Pdf,
   offer: OfferData,
   logo: PDFImage | null,
   company: CompanyInfo,
+  variant: OfferRenderVariant = { kind: "offer" },
 ) {
   const { font, fontBold, fontItalic } = p;
+  const isAgreement = variant.kind === "agreement";
 
   // ====== HEADER ======
   if (logo) {
@@ -248,7 +264,7 @@ export function drawOfferContent(
       font: fontBold, size: 22, color: BRAND,
     });
   }
-  p.drawText("OFFERT", MARGIN, MARGIN + 8, {
+  p.drawText(isAgreement ? "AVTAL" : "OFFERT", MARGIN, MARGIN + 8, {
     font: fontBold, size: 28, color: DARK,
     width: CONTENT_W, align: "right",
   });
@@ -303,12 +319,19 @@ export function drawOfferContent(
   p.cursor = Math.max(fromY, toY) + 6;
 
   // ====== DETALJBOXAR ======
-  const boxes = [
-    { label: "OFFERTNUMMER", value: offer.offer_number ?? "—" },
-    { label: "OFFERTDATUM", value: fmtDateSv(offer.offer_date) },
-    { label: "GILTIG TILL", value: fmtDateSv(offer.valid_until) },
-    { label: "ER REFERENS", value: offer.reference ?? "—" },
-  ];
+  const boxes = isAgreement
+    ? [
+        { label: "AVTALSNUMMER", value: variant.agreementNumber ?? "—" },
+        { label: "AVTALSDATUM", value: fmtDateSv(variant.agreementDate) },
+        { label: "AVTALSSTART", value: fmtDateSv(variant.startDate) },
+        { label: "ER REFERENS", value: offer.reference ?? "—" },
+      ]
+    : [
+        { label: "OFFERTNUMMER", value: offer.offer_number ?? "—" },
+        { label: "OFFERTDATUM", value: fmtDateSv(offer.offer_date) },
+        { label: "GILTIG TILL", value: fmtDateSv(offer.valid_until) },
+        { label: "ER REFERENS", value: offer.reference ?? "—" },
+      ];
   const boxW = CONTENT_W / 4;
   const boxH = 46;
   for (let i = 0; i < boxes.length; i++) {
@@ -500,50 +523,52 @@ export function drawOfferContent(
     p.cursor += 22;
   }
 
-  // ====== VILLKOR ======
-  p.newPageIfNeeded(200);
-  p.cursor = drawSectionHeading(p, "VILLKOR", p.cursor);
+  // ====== VILLKOR (endast offert-variant; avtal-variant använder bifogade Villkor) ======
+  if (!isAgreement) {
+    p.newPageIfNeeded(200);
+    p.cursor = drawSectionHeading(p, "VILLKOR", p.cursor);
 
-  const villkor: [string, string][] = [
-    ["Betalningsvillkor:", "30 dagar netto från fakturadatum."],
-    ["Giltighetstid:", `Offerten är giltig till ${fmtDateSv(offer.valid_until)}.`],
-    ["Leveranstid:", "[Ange uppskattad leveranstid eller projektplan]."],
-    ["Priser:", `Samtliga priser anges exklusive moms i ${offer.currency}.`],
-    ["Ändringar:", "Tilläggsarbeten utöver specifikationen debiteras separat enligt timpris [XXX SEK/h]."],
-    ["Underhåll:", "Avtalstid 12 mån, därefter löpande med 3 mån uppsägningstid om inget annat avtalats."],
-    ["Resor/utlägg:", "Eventuella resor och utlägg debiteras enligt självkostnadsprincipen."],
-    ["Övrigt:", "I övrigt gäller ALOS 05 (Allmänna leveransbestämmelser)."],
-  ];
-  for (const [label, text] of villkor) {
-    p.newPageIfNeeded(24);
-    p.drawText(`• ${label}`, MARGIN, p.cursor, {
-      font: fontBold, size: 10, width: 110,
+    const villkor: [string, string][] = [
+      ["Betalningsvillkor:", "30 dagar netto från fakturadatum."],
+      ["Giltighetstid:", `Offerten är giltig till ${fmtDateSv(offer.valid_until)}.`],
+      ["Leveranstid:", "[Ange uppskattad leveranstid eller projektplan]."],
+      ["Priser:", `Samtliga priser anges exklusive moms i ${offer.currency}.`],
+      ["Ändringar:", "Tilläggsarbeten utöver specifikationen debiteras separat enligt timpris [XXX SEK/h]."],
+      ["Underhåll:", "Avtalstid 12 mån, därefter löpande med 3 mån uppsägningstid om inget annat avtalats."],
+      ["Resor/utlägg:", "Eventuella resor och utlägg debiteras enligt självkostnadsprincipen."],
+      ["Övrigt:", "I övrigt gäller ALOS 05 (Allmänna leveransbestämmelser)."],
+    ];
+    for (const [label, text] of villkor) {
+      p.newPageIfNeeded(24);
+      p.drawText(`• ${label}`, MARGIN, p.cursor, {
+        font: fontBold, size: 10, width: 110,
+      });
+      const endY = p.drawWrapped(text, MARGIN + 115, p.cursor, {
+        size: 10, color: BLACK, width: CONTENT_W - 115,
+      });
+      p.cursor = Math.max(p.cursor + 16, endY + 4);
+    }
+    p.cursor += 8;
+
+    // ====== GODKÄNNANDE ======
+    p.newPageIfNeeded(160);
+    p.cursor = drawSectionHeading(p, "GODKÄNNANDE", p.cursor);
+    p.drawText(
+      "Vänligen returnera signerad offert till info@triadsolutions.se för att bekräfta beställningen.",
+      MARGIN, p.cursor,
+      { size: 10, color: GREY, width: CONTENT_W },
+    );
+    p.cursor += 30;
+
+    const sigW = (CONTENT_W - 30) / 2;
+    drawSignatureBlock(p, MARGIN, p.cursor, sigW, "Underskrift — För Triad Solutions");
+    drawSignatureBlock(p, MARGIN + sigW + 30, p.cursor, sigW, "Underskrift — För kunden");
+
+    // Footer (bottom of current page)
+    p.drawText("Tack för förtroendet!", MARGIN, A4_H - MARGIN - 16, {
+      font: fontItalic, size: 11, color: BRAND, width: CONTENT_W, align: "center",
     });
-    const endY = p.drawWrapped(text, MARGIN + 115, p.cursor, {
-      size: 10, color: BLACK, width: CONTENT_W - 115,
-    });
-    p.cursor = Math.max(p.cursor + 16, endY + 4);
   }
-  p.cursor += 8;
-
-  // ====== GODKÄNNANDE ======
-  p.newPageIfNeeded(160);
-  p.cursor = drawSectionHeading(p, "GODKÄNNANDE", p.cursor);
-  p.drawText(
-    "Vänligen returnera signerad offert till info@triadsolutions.se för att bekräfta beställningen.",
-    MARGIN, p.cursor,
-    { size: 10, color: GREY, width: CONTENT_W },
-  );
-  p.cursor += 30;
-
-  const sigW = (CONTENT_W - 30) / 2;
-  drawSignatureBlock(p, MARGIN, p.cursor, sigW, "Underskrift — För Triad Solutions");
-  drawSignatureBlock(p, MARGIN + sigW + 30, p.cursor, sigW, "Underskrift — För kunden");
-
-  // Footer (bottom of current page)
-  p.drawText("Tack för förtroendet!", MARGIN, A4_H - MARGIN - 16, {
-    font: fontItalic, size: 11, color: BRAND, width: CONTENT_W, align: "center",
-  });
 }
 
 export function drawSectionHeading(p: Pdf, label: string, topY: number): number {

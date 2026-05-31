@@ -1,24 +1,26 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/PageHeader";
 import Link from "next/link";
-import { FileText, FileSpreadsheet, ChevronRight } from "lucide-react";
+import { FileText, FileSpreadsheet, FileSignature, ChevronRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function TemplatesPage() {
   const supabase = await createClient();
 
-  const [docsRes, offersRes] = await Promise.all([
+  const [docsRes, offersRes, agreementsRes] = await Promise.all([
     supabase
       .from("documents")
       .select("id", { count: "exact", head: true })
       .eq("is_template", true),
     supabase.from("offers").select("id", { count: "exact", head: true }),
+    supabase.from("agreements").select("id", { count: "exact", head: true }),
   ]);
 
   const docsCount = docsRes.count ?? 0;
-  // offers-tabellen kanske inte finns ännu (migration 0015 ej körd) — fallback till 0
+  // offers/agreements-tabellerna kanske inte finns ännu (migration ej körd) — fallback till 0
   const offersCount = offersRes.error ? 0 : offersRes.count ?? 0;
+  const agreementsCount = agreementsRes.error ? 0 : agreementsRes.count ?? 0;
 
   const cards = [
     {
@@ -35,6 +37,13 @@ export default async function TemplatesPage() {
       icon: FileSpreadsheet,
       count: offersCount,
     },
+    {
+      href: "/admin/templates/avtal",
+      title: "Avtal",
+      desc: "Skapa avtal från en offert + PUB-mall. Genererar Avtal + Villkor som en PDF och PUB-avtal som separat PDF.",
+      icon: FileSignature,
+      count: agreementsCount,
+    },
   ];
 
   return (
@@ -43,7 +52,7 @@ export default async function TemplatesPage() {
         title="Mallar"
         subtitle="Återanvändbara dokument och offert-mallar."
       />
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => {
           const Icon = c.icon;
           return (
