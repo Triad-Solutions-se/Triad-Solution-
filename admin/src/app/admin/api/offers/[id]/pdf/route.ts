@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { generateOfferWithSaasPdf } from "@/lib/contracts";
+import { generateOfferPdf } from "@/lib/contracts";
 import { fetchOfferForContract, fetchCompanyInfo, offerFileBase } from "../contract-data";
-import { missingContractFields } from "@/lib/offer-validate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,16 +16,8 @@ export async function GET(
   const { offer, error, status } = await fetchOfferForContract(supabase, id);
   if (!offer) return NextResponse.json({ error }, { status });
 
-  const missing = missingContractFields(offer);
-  if (missing.length > 0) {
-    return NextResponse.json(
-      { error: `Offerten saknar obligatoriska fält för avtal: ${missing.join(", ")}.` },
-      { status: 400 },
-    );
-  }
-
   const company = await fetchCompanyInfo(supabase);
-  const buffer = await generateOfferWithSaasPdf(offer, company);
+  const buffer = await generateOfferPdf(offer, company);
   const filename = `Offert_${offerFileBase(offer, id)}.pdf`;
 
   const blob = new Blob([buffer as unknown as BlobPart], { type: "application/pdf" });
