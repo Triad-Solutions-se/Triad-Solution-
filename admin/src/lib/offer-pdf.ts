@@ -437,34 +437,8 @@ export function drawOfferContent(
     p.cursor += 22;
   }
 
-  // ====== VILLKOR (endast offert-variant; avtal-variant använder bifogade Villkor) ======
+  // ====== GODKÄNNANDE (endast offert-variant) ======
   if (!isAgreement) {
-    p.newPageIfNeeded(200);
-    p.cursor = drawSectionHeading(p, "VILLKOR", p.cursor);
-
-    const villkor: [string, string][] = [
-      ["Betalningsvillkor:", "30 dagar netto från fakturadatum."],
-      ["Giltighetstid:", `Offerten är giltig till ${fmtDateSv(offer.valid_until)}.`],
-      ["Leveranstid:", "[Ange uppskattad leveranstid eller projektplan]."],
-      ["Priser:", `Samtliga priser anges exklusive moms i ${offer.currency}.`],
-      ["Ändringar:", "Tilläggsarbeten utöver specifikationen debiteras separat enligt timpris [XXX SEK/h]."],
-      ["Underhåll:", "Avtalstid 12 mån, därefter löpande med 3 mån uppsägningstid om inget annat avtalats."],
-      ["Resor/utlägg:", "Eventuella resor och utlägg debiteras enligt självkostnadsprincipen."],
-      ["Övrigt:", "I övrigt gäller ALOS 05 (Allmänna leveransbestämmelser)."],
-    ];
-    for (const [label, text] of villkor) {
-      p.newPageIfNeeded(24);
-      p.drawText(`• ${label}`, MARGIN, p.cursor, {
-        font: fontBold, size: 10, width: 110,
-      });
-      const endY = p.drawWrapped(text, MARGIN + 115, p.cursor, {
-        size: 10, color: BLACK, width: CONTENT_W - 115,
-      });
-      p.cursor = Math.max(p.cursor + 16, endY + 4);
-    }
-    p.cursor += 8;
-
-    // ====== GODKÄNNANDE ======
     p.newPageIfNeeded(160);
     p.cursor = drawSectionHeading(p, "GODKÄNNANDE", p.cursor);
     p.drawText(

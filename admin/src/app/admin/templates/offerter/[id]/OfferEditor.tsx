@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Chip } from "@/components/Chip";
 import { Download, FileText, Save, Trash2, AlertTriangle } from "lucide-react";
-import { missingContractFields } from "@/lib/offer-validate";
 
 type Customer = { id: string; name: string; org_number?: string | null; address?: string | null };
 
@@ -69,20 +68,6 @@ export function OfferEditor({
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-
-  const selectedCustomer = customers.find((c) => c.id === f.customer_id) ?? null;
-  const contractMissing = missingContractFields({
-    offer_date: f.offer_date,
-    valid_until: f.valid_until,
-    customer: selectedCustomer
-      ? {
-          name: selectedCustomer.name,
-          org_number: selectedCustomer.org_number,
-          address: selectedCustomer.address,
-        }
-      : null,
-  });
-  const contractReady = contractMissing.length === 0;
 
   const projectPrice = Number(f.project_price) || 0;
   const monthlyPrice = Number(f.monthly_price) || 0;
@@ -176,23 +161,13 @@ export function OfferEditor({
     setTimeout(() => URL.revokeObjectURL(objUrl), 5000);
   }
 
-  // Laddar ner två filer: offert + SaaS-avtal (en PDF) och PUB-avtal (separat PDF).
-  async function downloadContracts() {
-    if (!contractReady) {
-      alert(
-        "Kan inte exportera avtalen. Följande krävs först:\n\n• " +
-          contractMissing.join("\n• ") +
-          "\n\nKundens organisationsnummer och adress fylls i under Kunder.",
-      );
-      return;
-    }
+  async function downloadOffer() {
     setDownloading(true);
     try {
-      // Spara först så att PDF:erna speglar aktuella ändringar.
+      // Spara först så att PDF:en speglar aktuella ändringar.
       const ok = await save();
       if (!ok) return;
       await downloadFile(`/admin/api/offers/${offer.id}/pdf`, "Offert.pdf");
-      await downloadFile(`/admin/api/offers/${offer.id}/pub`, "PUB-avtal.pdf");
     } catch (e: any) {
       alert(e?.message ?? "Export misslyckades.");
     } finally {
@@ -240,16 +215,12 @@ export function OfferEditor({
           </div>
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
-              onClick={downloadContracts}
-              disabled={downloading || !contractReady}
-              title={
-                contractReady
-                  ? "Laddar ner offert + SaaS-avtal (en PDF) och PUB-avtal (separat PDF)"
-                  : `Saknar: ${contractMissing.join(", ")}`
-              }
+              onClick={downloadOffer}
+              disabled={downloading}
+              title="Laddar ner offerten som PDF"
               className="rounded-btn bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-2 text-sm flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <FileText size={14} /> {downloading ? "Exporterar…" : "Ladda ner PDF + avtal"}
+              <FileText size={14} /> {downloading ? "Exporterar…" : "Ladda ner offert"}
             </button>
             <a
               href={`/admin/api/offers/${offer.id}/export`}
@@ -284,33 +255,6 @@ export function OfferEditor({
           ))}
         </div>
       </div>
-
-      {/* Avtalskrav-varning */}
-      {!contractReady && (
-        <div className="glass rounded-card p-4 border border-amber-400/30 bg-amber-400/5">
-          <div className="flex items-start gap-3">
-            <AlertTriangle size={18} className="text-amber-300 shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <div className="font-semibold text-amber-200">
-                PDF-export är låst tills avtalsuppgifterna är kompletta
-              </div>
-              <p className="text-[var(--muted)] mt-1">
-                Följande krävs för att generera SaaS- och PUB-avtalen:{" "}
-                <span className="text-amber-200">{contractMissing.join(", ")}</span>.
-                {(selectedCustomer && (!selectedCustomer.org_number?.trim() || !selectedCustomer.address?.trim())) && (
-                  <>
-                    {" "}Organisationsnummer och adress fylls i på kunden under{" "}
-                    <a href="/admin/customers" className="text-teal-400 hover:underline">
-                      Kunder
-                    </a>
-                    .
-                  </>
-                )}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Form */}
       <div className="grid gap-6 lg:grid-cols-3">
