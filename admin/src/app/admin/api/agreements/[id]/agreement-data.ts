@@ -6,6 +6,7 @@ import type { OfferData } from "@/lib/offer-pdf";
 import type { CompanyInfo } from "@/lib/company";
 import { toCompanyInfo } from "@/lib/company";
 import type { Block } from "@/lib/contract-blocks";
+import { normalizeItems } from "@/lib/offer-items";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -57,7 +58,7 @@ export async function fetchAgreement(
 // Återanvänder samma select som offer-contract route så fält och typer
 // matchar OfferData.
 const OFFER_SELECT =
-  "offer_number,title,reference,offer_date,valid_until,project_description,project_price,monthly_price,project_discount_pct,monthly_discount_pct,other_costs,vat_rate,currency,customer:customers(name,contact_person,email,phone,website,org_number,address)";
+  "offer_number,title,reference,offer_date,valid_until,project_description,project_price,monthly_price,project_discount_pct,monthly_discount_pct,project_items,monthly_items,other_costs,vat_rate,currency,customer:customers(name,contact_person,email,phone,website,org_number,address)";
 
 export async function fetchOffer(
   supabase: SupabaseServerClient,
@@ -87,6 +88,8 @@ export async function fetchOffer(
       monthly_price: Number(data.monthly_price ?? 0),
       project_discount_pct: Number((data as any).project_discount_pct ?? 0),
       monthly_discount_pct: Number((data as any).monthly_discount_pct ?? 0),
+      project_items: normalizeItems((data as any).project_items),
+      monthly_items: normalizeItems((data as any).monthly_items),
       other_costs: (data as any).other_costs ?? null,
       vat_rate: Number(data.vat_rate ?? 25),
       currency: data.currency ?? "SEK",

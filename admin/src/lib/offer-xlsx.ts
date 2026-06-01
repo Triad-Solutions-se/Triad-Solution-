@@ -5,6 +5,7 @@
 import ExcelJS from "exceljs";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { type OfferItem, itemsOrFallback } from "./offer-items";
 
 const BRAND = "FF00B4A8";
 const DARK = "FF0A2540";
@@ -35,6 +36,8 @@ export type OfferData = {
   monthly_price: number;
   project_discount_pct?: number | null;
   monthly_discount_pct?: number | null;
+  project_items?: OfferItem[];
+  monthly_items?: OfferItem[];
   other_costs?: string | null;
   vat_rate: number;
   currency: string;
@@ -252,93 +255,158 @@ export async function generateOfferXlsx(offer: OfferData): Promise<Uint8Array> {
   setRowHeight(SP, 22);
   setRowHeight(SP + 1, 8);
 
-  const HDR = SP + 2;
-  const headerCellOpts = {
-    font: { name: FONT, size: 10, bold: true, color: { argb: WHITE } },
-    fill: DARK,
-    border: allBorders,
-  };
-  setMerge(`B${HDR}:B${HDR}`, "Beskrivning", {
-    ...headerCellOpts,
-    alignment: { vertical: "middle", horizontal: "left", indent: 1 },
-  });
-  set(`C${HDR}`, "Antal", {
-    ...headerCellOpts,
-    alignment: { vertical: "middle", horizontal: "center" },
-  });
-  set(`D${HDR}`, `À-pris (${offer.currency})`, {
-    ...headerCellOpts,
-    alignment: { vertical: "middle", horizontal: "right", indent: 1 },
-  });
-  setMerge(`E${HDR}:F${HDR}`, `Belopp (${offer.currency})`, {
-    ...headerCellOpts,
-    alignment: { vertical: "middle", horizontal: "right", indent: 1 },
-  });
-  setRowHeight(HDR, 24);
-
   // Visar heltal i offerten (närmaste krona). Excel-cellen har fortfarande
   // full precision under huven — bara presentationen rundas.
   const numFmt = "#,##0";
+  const vatPct = (offer.vat_rate ?? 25) / 100;
 
-  // Rad 1: Engångskostnad
-  const R1 = HDR + 1;
-  set(`B${R1}`, "Projektkostnad (engångsavgift)", {
-    font: { ...fNormal, bold: true },
-    border: allBorders,
-    alignment: { vertical: "middle", horizontal: "left", indent: 1, wrapText: true },
-  });
-  set(`C${R1}`, 1, {
-    font: fNormal,
-    border: allBorders,
-    alignment: { vertical: "middle", horizontal: "center" },
-    numFmt: "0",
-  });
-  set(`D${R1}`, offer.project_price, {
-    font: fNormal,
-    border: allBorders,
-    alignment: { vertical: "middle", horizontal: "right", indent: 1 },
-    numFmt,
-  });
-  setMerge(`E${R1}:F${R1}`, { formula: `C${R1}*D${R1}` }, {
-    font: { ...fNormal, bold: true },
-    border: allBorders,
-    alignment: { vertical: "middle", horizontal: "right", indent: 1 },
-  });
-  ws.getCell(`E${R1}`).numFmt = numFmt;
-  setRowHeight(R1, 24);
+  const projectItems = itemsOrFallback(
+    offer.project_items ?? [],
+    Number(offer.project_price ?? 0),
+    Number(offer.project_discount_pct ?? 0),
+    "Projektkostnad (engångsavgift)",
+  );
+  const monthlyItems = itemsOrFallback(
+    offer.monthly_items ?? [],
+    Number(offer.monthly_price ?? 0),
+    Number(offer.monthly_discount_pct ?? 0),
+    "Underhållsavgift (per månad)",
+  );
 
-  // Rad 2: Underhållsavgift
-  const R2 = HDR + 2;
-  set(`B${R2}`, "Underhållsavgift (per månad)", {
-    font: { ...fNormal, bold: true },
-    fill: LIGHT,
-    border: allBorders,
-    alignment: { vertical: "middle", horizontal: "left", indent: 1, wrapText: true },
-  });
-  set(`C${R2}`, 1, {
-    font: fNormal,
-    fill: LIGHT,
-    border: allBorders,
-    alignment: { vertical: "middle", horizontal: "center" },
-    numFmt: "0",
-  });
-  set(`D${R2}`, offer.monthly_price, {
-    font: fNormal,
-    fill: LIGHT,
-    border: allBorders,
-    alignment: { vertical: "middle", horizontal: "right", indent: 1 },
-    numFmt,
-  });
-  setMerge(`E${R2}:F${R2}`, { formula: `C${R2}*D${R2}` }, {
-    font: { ...fNormal, bold: true },
-    fill: LIGHT,
-    border: allBorders,
-    alignment: { vertical: "middle", horizontal: "right", indent: 1 },
-  });
-  ws.getCell(`E${R2}`).numFmt = numFmt;
-  setRowHeight(R2, 24);
+  // Emit en hel pris-sektion (heading + tabellrubrik + items + totals).
+  // Returnerar nästa lediga rad samt raden där sektionens TOTAL ligger, så
+  // ev. årskostnad-rad kan referera den med formel.
+  function emitSection(opts: {
+    startRow: number;
+    heading: string;
+    items: OfferItem[];
+    totalLabel: string;
+    highlightColor: string;
+  }): { nextRow: number; totalRow: number } {
+    let r = opts.startRow;
 
-  setRowHeight(R2 + 1, 14);
+    // Section-heading
+    setMerge(`B${r}:F${r}`, opts.heading, {
+      font: { name: FONT, size: 10, bold: true, color: { argb: DARK } },
+      alignment: { vertical: "middle", horizontal: "left" },
+    });
+    sectionUnderline(r, "FF0A2540", "thin");
+    setRowHeight(r, 22);
+    r++;
+
+    // Tabellrubrik
+    const HR = r;
+    const headerCellOpts = {
+      font: { name: FONT, size: 10, bold: true, color: { argb: WHITE } },
+      fill: DARK,
+      border: allBorders,
+    };
+    setMerge(`B${HR}:B${HR}`, "Beskrivning", {
+      ...headerCellOpts,
+      alignment: { vertical: "middle", horizontal: "left", indent: 1 },
+    });
+    set(`C${HR}`, `À-pris (${offer.currency})`, {
+      ...headerCellOpts,
+      alignment: { vertical: "middle", horizontal: "right", indent: 1 },
+    });
+    set(`D${HR}`, "Rabatt %", {
+      ...headerCellOpts,
+      alignment: { vertical: "middle", horizontal: "center" },
+    });
+    setMerge(`E${HR}:F${HR}`, `Belopp (${offer.currency})`, {
+      ...headerCellOpts,
+      alignment: { vertical: "middle", horizontal: "right", indent: 1 },
+    });
+    setRowHeight(HR, 24);
+    r++;
+
+    // Items
+    const itemsStart = r;
+    const hasAnyDiscount = opts.items.some((it) => (it.discount_pct ?? 0) > 0);
+
+    if (opts.items.length === 0) {
+      setMerge(`B${r}:F${r}`, "Inga rader.", {
+        font: { ...fGrey, italic: true },
+        alignment: { vertical: "middle", horizontal: "left", indent: 1 },
+        border: allBorders,
+      });
+      setRowHeight(r, 22);
+      r++;
+    } else {
+      opts.items.forEach((it, idx) => {
+        const stripe = idx % 2 === 1 ? LIGHT : null;
+        const cellOpts = (extra: any = {}) => ({
+          ...extra,
+          border: allBorders,
+          ...(stripe ? { fill: stripe } : {}),
+        });
+        set(`B${r}`, it.description || "—", cellOpts({
+          font: { ...fNormal, bold: true },
+          alignment: { vertical: "middle", horizontal: "left", indent: 1, wrapText: true },
+        }));
+        set(`C${r}`, it.unit_price, cellOpts({
+          font: fNormal,
+          alignment: { vertical: "middle", horizontal: "right", indent: 1 },
+          numFmt,
+        }));
+        set(`D${r}`, it.discount_pct > 0 ? it.discount_pct / 100 : null, cellOpts({
+          font: it.discount_pct > 0
+            ? { name: FONT, size: 10, color: { argb: "FFB91C1C" } }
+            : fGrey,
+          alignment: { vertical: "middle", horizontal: "center" },
+          numFmt: "0.##%",
+        }));
+        setMerge(`E${r}:F${r}`, { formula: `C${r}*(1-IFERROR(D${r},0))` }, cellOpts({
+          font: { ...fNormal, bold: true },
+          alignment: { vertical: "middle", horizontal: "right", indent: 1 },
+        }));
+        ws.getCell(`E${r}`).numFmt = numFmt;
+        setRowHeight(r, 22);
+        r++;
+      });
+    }
+    const itemsEnd = r - 1;
+
+    // Totals
+    const subRow = r++;
+    totalsRow(
+      subRow,
+      "Delsumma",
+      opts.items.length > 0 ? `SUM(C${itemsStart}:C${itemsEnd})` : "0",
+      { divider: true },
+    );
+
+    let afterDiscRef = `E${subRow}`;
+    if (hasAnyDiscount && opts.items.length > 0) {
+      const rabRow = r++;
+      totalsRow(
+        rabRow,
+        "Total rabatt",
+        `SUM(E${itemsStart}:E${itemsEnd})-SUM(C${itemsStart}:C${itemsEnd})`,
+        { divider: true },
+      );
+      ws.getCell(`E${rabRow}`).font = { name: FONT, size: 10, color: { argb: "FFB91C1C" } };
+
+      const afterRow = r++;
+      totalsRow(afterRow, "Efter rabatt", `SUM(E${itemsStart}:E${itemsEnd})`, { divider: true });
+      afterDiscRef = `E${afterRow}`;
+    }
+
+    const momsRow = r++;
+    totalsRow(
+      momsRow,
+      `Moms (${offer.vat_rate ?? 25} %)`,
+      `${afterDiscRef}*${vatPct}`,
+      { divider: true },
+    );
+
+    const totalRow = r++;
+    totalsRow(totalRow, opts.totalLabel, `${afterDiscRef}+E${momsRow}`, {
+      highlight: opts.highlightColor,
+    });
+
+    return { nextRow: r, totalRow };
+  }
 
   function totalsRow(row: number, labelText: string, formula: string, opts: any = {}) {
     const labelFont = opts.highlight
@@ -366,77 +434,35 @@ export async function generateOfferXlsx(offer: OfferData): Promise<Uint8Array> {
     setRowHeight(row, opts.highlight ? 26 : 20);
   }
 
-  const projDiscPct = Math.max(0, Math.min(100, Number(offer.project_discount_pct ?? 0)));
-  const monthDiscPct = Math.max(0, Math.min(100, Number(offer.monthly_discount_pct ?? 0)));
-  const vatPct = (offer.vat_rate ?? 25) / 100;
-
   // ENGÅNGSKOSTNAD
-  const ETO = R2 + 2;
-  setMerge(`B${ETO}:F${ETO}`, "ENGÅNGSKOSTNAD (faktureras vid projektstart)", {
-    font: { name: FONT, size: 10, bold: true, color: { argb: DARK } },
-    alignment: { vertical: "middle", horizontal: "left" },
+  const eng = emitSection({
+    startRow: SP + 2,
+    heading: "ENGÅNGSKOSTNAD (faktureras vid projektstart)",
+    items: projectItems,
+    totalLabel: "TOTALT (inkl. moms)",
+    highlightColor: DARK,
   });
-  sectionUnderline(ETO, "FF0A2540", "thin");
-  setRowHeight(ETO, 22);
 
-  // Dynamiska rader: rabatt-rader hoppar in om procent > 0
-  let cursor = ETO + 1;
-  const ED = cursor++;
-  totalsRow(ED, "Delsumma", `E${R1}`, { divider: true });
+  setRowHeight(eng.nextRow, 14);
+  let cursor = eng.nextRow + 1;
 
-  // Subtotal-cellen som moms och total räknar på (efter ev. rabatt)
-  let projectAfterDiscountRef = `E${ED}`;
-  if (projDiscPct > 0) {
-    const ERab = cursor++;
-    totalsRow(ERab, `Rabatt (${projDiscPct} %)`, `-E${ED}*${projDiscPct / 100}`, { divider: true });
-    // Färga rabatt-värdet rosa-rött för synlighet
-    ws.getCell(`E${ERab}`).font = { name: FONT, size: 10, color: { argb: "FFB91C1C" } };
-
-    const EAfter = cursor++;
-    totalsRow(EAfter, "Efter rabatt", `E${ED}+E${ERab}`, { divider: true });
-    projectAfterDiscountRef = `E${EAfter}`;
-  }
-  const EM = cursor++;
-  totalsRow(EM, `Moms (${offer.vat_rate ?? 25} %)`, `${projectAfterDiscountRef}*${vatPct}`, { divider: true });
-  const ET = cursor++;
-  totalsRow(ET, "TOTALT (inkl. moms)", `${projectAfterDiscountRef}+E${EM}`, { highlight: DARK });
-
-  setRowHeight(cursor, 14);
-  cursor++;
-
-  // MÅNADSKOSTNAD
-  const MTO = cursor++;
-  setMerge(`B${MTO}:F${MTO}`, "ÅTERKOMMANDE MÅNADSKOSTNAD (faktureras månadsvis)", {
-    font: { name: FONT, size: 10, bold: true, color: { argb: DARK } },
-    alignment: { vertical: "middle", horizontal: "left" },
+  // ÅTERKOMMANDE MÅNADSKOSTNAD
+  const mon = emitSection({
+    startRow: cursor,
+    heading: "ÅTERKOMMANDE MÅNADSKOSTNAD (faktureras månadsvis)",
+    items: monthlyItems,
+    totalLabel: "PER MÅNAD (inkl. moms)",
+    highlightColor: BRAND,
   });
-  sectionUnderline(MTO, "FF0A2540", "thin");
-  setRowHeight(MTO, 22);
+  cursor = mon.nextRow;
 
-  const MD = cursor++;
-  totalsRow(MD, "Per månad exkl. moms", `E${R2}`, { divider: true });
-
-  let monthlyAfterDiscountRef = `E${MD}`;
-  if (monthDiscPct > 0) {
-    const MRab = cursor++;
-    totalsRow(MRab, `Rabatt (${monthDiscPct} %)`, `-E${MD}*${monthDiscPct / 100}`, { divider: true });
-    ws.getCell(`E${MRab}`).font = { name: FONT, size: 10, color: { argb: "FFB91C1C" } };
-
-    const MAfter = cursor++;
-    totalsRow(MAfter, "Per månad efter rabatt", `E${MD}+E${MRab}`, { divider: true });
-    monthlyAfterDiscountRef = `E${MAfter}`;
-  }
-  const MM = cursor++;
-  totalsRow(MM, `Moms (${offer.vat_rate ?? 25} %)`, `${monthlyAfterDiscountRef}*${vatPct}`, { divider: true });
-  const MT = cursor++;
-  totalsRow(MT, "PER MÅNAD (inkl. moms)", `${monthlyAfterDiscountRef}+E${MM}`, { highlight: BRAND });
-
+  // Årskostnad refererar månads-totalen direkt så den uppdateras med formler.
   const MY = cursor++;
   setMerge(`C${MY}:D${MY}`, "Årskostnad (inkl. moms)", {
     font: { ...fGrey, italic: true },
     alignment: { vertical: "middle", horizontal: "right", indent: 1 },
   });
-  setMerge(`E${MY}:F${MY}`, { formula: `E${MT}*12` }, {
+  setMerge(`E${MY}:F${MY}`, { formula: `E${mon.totalRow}*12` }, {
     font: { ...fGrey, italic: true },
     alignment: { vertical: "middle", horizontal: "right", indent: 1 },
   });

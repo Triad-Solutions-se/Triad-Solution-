@@ -3,7 +3,14 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Chip } from "@/components/Chip";
-import { Download, FileText, Save, Trash2, AlertTriangle } from "lucide-react";
+import { Download, FileText, Save, Trash2, AlertTriangle, Plus, X } from "lucide-react";
+import {
+  type OfferItem,
+  computeSectionTotals,
+  itemsOrFallback,
+  newEmptyItem,
+  normalizeItems,
+} from "@/lib/offer-items";
 
 type Customer = { id: string; name: string; org_number?: string | null; address?: string | null };
 
@@ -21,6 +28,8 @@ type Offer = {
   monthly_price: number;
   project_discount_pct?: number | null;
   monthly_discount_pct?: number | null;
+  project_items?: unknown;
+  monthly_items?: unknown;
   other_costs?: string | null;
   vat_rate: number;
   currency: string;
@@ -55,49 +64,40 @@ export function OfferEditor({
     offer_date: offer.offer_date,
     valid_until: offer.valid_until ?? "",
     project_description: offer.project_description ?? "",
-    project_price: String(offer.project_price ?? 0),
-    monthly_price: String(offer.monthly_price ?? 0),
-    project_discount_pct: String(offer.project_discount_pct ?? 0),
-    monthly_discount_pct: String(offer.monthly_discount_pct ?? 0),
     other_costs: offer.other_costs ?? "",
     vat_rate: String(offer.vat_rate ?? 25),
     currency: offer.currency ?? "SEK",
     status: offer.status,
     notes: offer.notes ?? "",
   });
+
+  // Items är egen state — komplexare än textfält, så vi håller dem separat.
+  // Faller tillbaka till legacy-priset första gången editorn öppnas på en
+  // gammal offert (om backfill-migrationen inte körts).
+  const [projectItems, setProjectItems] = useState<OfferItem[]>(() =>
+    itemsOrFallback(
+      normalizeItems(offer.project_items),
+      Number(offer.project_price ?? 0),
+      Number(offer.project_discount_pct ?? 0),
+      "Projektkostnad (engångsavgift)",
+    ),
+  );
+  const [monthlyItems, setMonthlyItems] = useState<OfferItem[]>(() =>
+    itemsOrFallback(
+      normalizeItems(offer.monthly_items),
+      Number(offer.monthly_price ?? 0),
+      Number(offer.monthly_discount_pct ?? 0),
+      "Underhållsavgift (per månad)",
+    ),
+  );
+
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const projectPrice = Number(f.project_price) || 0;
-  const monthlyPrice = Number(f.monthly_price) || 0;
-  const projDiscPct = clampPct(Number(f.project_discount_pct) || 0);
-  const monthDiscPct = clampPct(Number(f.monthly_discount_pct) || 0);
   const vat = Number(f.vat_rate) || 0;
-
-  const totals = useMemo(() => {
-    const projDiscount = projectPrice * (projDiscPct / 100);
-    const projAfterDiscount = projectPrice - projDiscount;
-    const projVat = projAfterDiscount * (vat / 100);
-    const projTotal = projAfterDiscount + projVat;
-
-    const monthDiscount = monthlyPrice * (monthDiscPct / 100);
-    const monthAfterDiscount = monthlyPrice - monthDiscount;
-    const monthVat = monthAfterDiscount * (vat / 100);
-    const monthTotal = monthAfterDiscount + monthVat;
-
-    return {
-      projDiscount,
-      projAfterDiscount,
-      projVat,
-      projTotal,
-      monthDiscount,
-      monthAfterDiscount,
-      monthVat,
-      monthTotal,
-      yearTotal: monthTotal * 12,
-    };
-  }, [projectPrice, monthlyPrice, projDiscPct, monthDiscPct, vat]);
+  const projTotals = useMemo(() => computeSectionTotals(projectItems, vat), [projectItems, vat]);
+  const monthTotals = useMemo(() => computeSectionTotals(monthlyItems, vat), [monthlyItems, vat]);
 
   function bind<K extends keyof typeof f>(k: K) {
     return {
@@ -108,6 +108,9 @@ export function OfferEditor({
 
   async function save() {
     setSaving(true);
+    // project_price / monthly_price speglar sektionens delsumma (före rabatt)
+    // så listvyn fortfarande har en meningsfull siffra utan att läsa items.
+    // Sektionens discount_pct nollställs — rabatten är nu per rad.
     const payload = {
       customer_id: f.customer_id || null,
       title: f.title || null,
@@ -115,10 +118,12 @@ export function OfferEditor({
       offer_date: f.offer_date,
       valid_until: f.valid_until || null,
       project_description: f.project_description || null,
-      project_price: Number(f.project_price) || 0,
-      monthly_price: Number(f.monthly_price) || 0,
-      project_discount_pct: clampPct(Number(f.project_discount_pct) || 0),
-      monthly_discount_pct: clampPct(Number(f.monthly_discount_pct) || 0),
+      project_price: projTotals.subtotal,
+      monthly_price: monthTotals.subtotal,
+      project_discount_pct: 0,
+      monthly_discount_pct: 0,
+      project_items: projectItems,
+      monthly_items: monthlyItems,
       other_costs: f.other_costs || null,
       vat_rate: Number(f.vat_rate) || 25,
       currency: f.currency,
@@ -164,7 +169,6 @@ export function OfferEditor({
   async function downloadOffer() {
     setDownloading(true);
     try {
-      // Spara först så att PDF:en speglar aktuella ändringar.
       const ok = await save();
       if (!ok) return;
       await downloadFile(`/admin/api/offers/${offer.id}/pdf`, "Offert.pdf");
@@ -331,61 +335,21 @@ export function OfferEditor({
               Priser (exkl. moms)
             </h2>
 
-            {/* Engångskostnad + rabatt */}
-            <div className="rounded-btn border border-white/5 p-3 space-y-3 bg-black/20">
-              <div className="text-xs font-semibold text-white/70">Engångskostnad</div>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block">
-                  <span className="text-xs text-[var(--muted)]">À-pris</span>
-                  <input
-                    type="number"
-                    step="any"
-                    min="0"
-                    {...bind("project_price")}
-                    className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm font-mono"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-xs text-[var(--muted)]">Rabatt %</span>
-                  <input
-                    type="number"
-                    step="any"
-                    min="0"
-                    max="100"
-                    {...bind("project_discount_pct")}
-                    className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm font-mono"
-                  />
-                </label>
-              </div>
-            </div>
+            <ItemsEditor
+              title="Engångskostnad"
+              accent="dark"
+              items={projectItems}
+              onChange={setProjectItems}
+              currency={f.currency}
+            />
 
-            {/* Månadsavgift + rabatt */}
-            <div className="rounded-btn border border-teal-400/20 p-3 space-y-3 bg-teal-400/5">
-              <div className="text-xs font-semibold text-teal-200">Underhåll per månad</div>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block">
-                  <span className="text-xs text-[var(--muted)]">À-pris/mån</span>
-                  <input
-                    type="number"
-                    step="any"
-                    min="0"
-                    {...bind("monthly_price")}
-                    className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm font-mono"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-xs text-[var(--muted)]">Rabatt %</span>
-                  <input
-                    type="number"
-                    step="any"
-                    min="0"
-                    max="100"
-                    {...bind("monthly_discount_pct")}
-                    className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm font-mono"
-                  />
-                </label>
-              </div>
-            </div>
+            <ItemsEditor
+              title="Underhåll per månad"
+              accent="teal"
+              items={monthlyItems}
+              onChange={setMonthlyItems}
+              currency={f.currency}
+            />
 
             {/* Moms + valuta */}
             <div className="grid grid-cols-2 gap-3">
@@ -486,27 +450,27 @@ export function OfferEditor({
               Engångskostnad
             </h2>
             <div className="space-y-1.5 text-sm">
-              <RowLine label="Delsumma" value={fmt(projectPrice)} unit={f.currency} />
-              {projDiscPct > 0 && (
+              <RowLine label="Delsumma" value={fmt(projTotals.subtotal)} unit={f.currency} />
+              {projTotals.discount > 0 && (
                 <>
                   <RowLine
-                    label={`Rabatt (${projDiscPct} %)`}
-                    value={`−${fmt(totals.projDiscount)}`}
+                    label="Rabatt"
+                    value={`−${fmt(projTotals.discount)}`}
                     unit={f.currency}
                     tone="rose"
                   />
                   <RowLine
                     label="Efter rabatt"
-                    value={fmt(totals.projAfterDiscount)}
+                    value={fmt(projTotals.afterDiscount)}
                     unit={f.currency}
                   />
                 </>
               )}
-              <RowLine label={`Moms (${vat} %)`} value={fmt(totals.projVat)} unit={f.currency} />
+              <RowLine label={`Moms (${vat} %)`} value={fmt(projTotals.vat)} unit={f.currency} />
               <div className="border-t border-white/10 pt-1.5 mt-1.5">
                 <RowLine
                   label="Totalt inkl. moms"
-                  value={fmt(totals.projTotal)}
+                  value={fmt(projTotals.total)}
                   unit={f.currency}
                   highlight
                 />
@@ -519,27 +483,27 @@ export function OfferEditor({
               Återkommande månadskostnad
             </h2>
             <div className="space-y-1.5 text-sm">
-              <RowLine label="Per månad" value={fmt(monthlyPrice)} unit={f.currency} />
-              {monthDiscPct > 0 && (
+              <RowLine label="Per månad" value={fmt(monthTotals.subtotal)} unit={f.currency} />
+              {monthTotals.discount > 0 && (
                 <>
                   <RowLine
-                    label={`Rabatt (${monthDiscPct} %)`}
-                    value={`−${fmt(totals.monthDiscount)}`}
+                    label="Rabatt"
+                    value={`−${fmt(monthTotals.discount)}`}
                     unit={f.currency}
                     tone="rose"
                   />
                   <RowLine
                     label="Efter rabatt"
-                    value={fmt(totals.monthAfterDiscount)}
+                    value={fmt(monthTotals.afterDiscount)}
                     unit={f.currency}
                   />
                 </>
               )}
-              <RowLine label={`Moms (${vat} %)`} value={fmt(totals.monthVat)} unit={f.currency} />
+              <RowLine label={`Moms (${vat} %)`} value={fmt(monthTotals.vat)} unit={f.currency} />
               <div className="border-t border-white/10 pt-1.5 mt-1.5">
                 <RowLine
                   label="Per månad inkl. moms"
-                  value={fmt(totals.monthTotal)}
+                  value={fmt(monthTotals.total)}
                   unit={f.currency}
                   highlight
                   tone="teal"
@@ -547,7 +511,7 @@ export function OfferEditor({
               </div>
               <RowLine
                 label="Årskostnad (×12)"
-                value={fmt(totals.yearTotal)}
+                value={fmt(monthTotals.total * 12)}
                 unit={f.currency}
                 small
               />
@@ -584,6 +548,118 @@ export function OfferEditor({
       </div>
     </div>
   );
+}
+
+function ItemsEditor({
+  title,
+  accent,
+  items,
+  onChange,
+  currency,
+}: {
+  title: string;
+  accent: "dark" | "teal";
+  items: OfferItem[];
+  onChange: (next: OfferItem[]) => void;
+  currency: string;
+}) {
+  const isTeal = accent === "teal";
+  const cardCls = isTeal
+    ? "rounded-btn border border-teal-400/20 p-3 space-y-3 bg-teal-400/5"
+    : "rounded-btn border border-white/5 p-3 space-y-3 bg-black/20";
+  const titleCls = isTeal ? "text-xs font-semibold text-teal-200" : "text-xs font-semibold text-white/70";
+
+  function update(idx: number, patch: Partial<OfferItem>) {
+    onChange(items.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
+  }
+  function remove(idx: number) {
+    onChange(items.filter((_, i) => i !== idx));
+  }
+  function add() {
+    onChange([...items, newEmptyItem()]);
+  }
+
+  return (
+    <div className={cardCls}>
+      <div className="flex items-center justify-between">
+        <div className={titleCls}>{title}</div>
+        <button
+          type="button"
+          onClick={add}
+          className="rounded-btn bg-white/5 hover:bg-white/10 border border-white/10 px-2 py-1 text-[11px] flex items-center gap-1"
+        >
+          <Plus size={12} /> Lägg till rad
+        </button>
+      </div>
+
+      {items.length === 0 ? (
+        <div className="text-[11px] text-[var(--muted)] italic py-2">
+          Inga rader — tryck "Lägg till rad" för att börja.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {/* Kolumnrubriker */}
+          <div className="grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wider text-[var(--muted)] px-1">
+            <div className="col-span-6">Beskrivning</div>
+            <div className="col-span-3 text-right">À-pris</div>
+            <div className="col-span-2 text-right">Rabatt %</div>
+            <div className="col-span-1" />
+          </div>
+
+          {items.map((it, idx) => {
+            const lineNet = it.unit_price * (1 - clamp(it.discount_pct) / 100);
+            return (
+              <div key={it.id} className="grid grid-cols-12 gap-2 items-start">
+                <input
+                  type="text"
+                  value={it.description}
+                  onChange={(e) => update(idx, { description: e.target.value })}
+                  placeholder="t.ex. Implementation, fas 1"
+                  className="col-span-6 rounded-btn bg-black/30 border border-white/10 px-2 py-1.5 text-sm"
+                />
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  value={it.unit_price}
+                  onChange={(e) => update(idx, { unit_price: Number(e.target.value) || 0 })}
+                  className="col-span-3 rounded-btn bg-black/30 border border-white/10 px-2 py-1.5 text-sm font-mono text-right"
+                />
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  max="100"
+                  value={it.discount_pct}
+                  onChange={(e) => update(idx, { discount_pct: clamp(Number(e.target.value) || 0) })}
+                  className="col-span-2 rounded-btn bg-black/30 border border-white/10 px-2 py-1.5 text-sm font-mono text-right"
+                />
+                <button
+                  type="button"
+                  onClick={() => remove(idx)}
+                  className="col-span-1 h-[34px] rounded-btn text-[var(--muted)] hover:text-rose-300 hover:bg-rose-500/10 flex items-center justify-center"
+                  title="Ta bort rad"
+                >
+                  <X size={14} />
+                </button>
+                {/* Per-rad netto (visas under priset om rabatt finns, så användaren ser effekten) */}
+                {it.discount_pct > 0 && (
+                  <div className="col-span-12 -mt-1 text-[10px] text-[var(--muted)] text-right font-mono pr-9">
+                    Efter rabatt: {fmt(lineNet)} {currency}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function clamp(n: number) {
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(100, n));
 }
 
 function RowLine({
@@ -638,9 +714,4 @@ function fmt(n: number) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(Math.round(n));
-}
-
-function clampPct(n: number) {
-  if (!Number.isFinite(n)) return 0;
-  return Math.max(0, Math.min(100, n));
 }

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateOfferXlsx } from "@/lib/offer-xlsx";
+import { normalizeItems } from "@/lib/offer-items";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ export async function GET(
   const { data: offer, error } = await supabase
     .from("offers")
     .select(
-      "offer_number,title,reference,offer_date,valid_until,project_description,project_price,monthly_price,project_discount_pct,monthly_discount_pct,other_costs,vat_rate,currency,customer:customers(name,contact_person,email,phone,website)",
+      "offer_number,title,reference,offer_date,valid_until,project_description,project_price,monthly_price,project_discount_pct,monthly_discount_pct,project_items,monthly_items,other_costs,vat_rate,currency,customer:customers(name,contact_person,email,phone,website)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -38,6 +39,8 @@ export async function GET(
     monthly_price: Number(offer.monthly_price ?? 0),
     project_discount_pct: Number((offer as any).project_discount_pct ?? 0),
     monthly_discount_pct: Number((offer as any).monthly_discount_pct ?? 0),
+    project_items: normalizeItems((offer as any).project_items),
+    monthly_items: normalizeItems((offer as any).monthly_items),
     other_costs: (offer as any).other_costs ?? null,
     vat_rate: Number(offer.vat_rate ?? 25),
     currency: offer.currency ?? "SEK",

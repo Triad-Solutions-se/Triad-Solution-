@@ -1,6 +1,7 @@
 import type { createClient } from "@/lib/supabase/server";
 import type { OfferData } from "@/lib/offer-pdf";
 import { type CompanyInfo, toCompanyInfo } from "@/lib/company";
+import { normalizeItems } from "@/lib/offer-items";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -18,7 +19,7 @@ export async function fetchCompanyInfo(
 }
 
 const SELECT =
-  "offer_number,title,reference,offer_date,valid_until,project_description,project_price,monthly_price,project_discount_pct,monthly_discount_pct,other_costs,vat_rate,currency,customer:customers(name,contact_person,email,phone,website,org_number,address)";
+  "offer_number,title,reference,offer_date,valid_until,project_description,project_price,monthly_price,project_discount_pct,monthly_discount_pct,project_items,monthly_items,other_costs,vat_rate,currency,customer:customers(name,contact_person,email,phone,website,org_number,address)";
 
 // Hämtar en offert + kund i den form som offert-/avtalsgeneratorerna förväntar.
 // Delas av PDF- och PUB-routerna så att urval och mappning hålls i synk.
@@ -51,6 +52,8 @@ export async function fetchOfferForContract(
       monthly_price: Number(offer.monthly_price ?? 0),
       project_discount_pct: Number((offer as any).project_discount_pct ?? 0),
       monthly_discount_pct: Number((offer as any).monthly_discount_pct ?? 0),
+      project_items: normalizeItems((offer as any).project_items),
+      monthly_items: normalizeItems((offer as any).monthly_items),
       other_costs: (offer as any).other_costs ?? null,
       vat_rate: Number(offer.vat_rate ?? 25),
       currency: offer.currency ?? "SEK",

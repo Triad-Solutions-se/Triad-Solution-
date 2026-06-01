@@ -25,10 +25,6 @@ export function NewOfferButton({ customers }: { customers: Customer[] }) {
     offer_date: todayISO(),
     valid_until: plusDaysISO(30),
     project_description: "",
-    project_price: "0",
-    monthly_price: "0",
-    project_discount_pct: "0",
-    monthly_discount_pct: "0",
     other_costs: "",
     vat_rate: "25",
     currency: "SEK",
@@ -53,6 +49,7 @@ export function NewOfferButton({ customers }: { customers: Customer[] }) {
     }
     setSaving(true);
 
+    // Skapas tom — användaren lägger till prisrader i editorn efteråt.
     const payload = {
       customer_id: f.customer_id,
       title: f.title || null,
@@ -60,10 +57,12 @@ export function NewOfferButton({ customers }: { customers: Customer[] }) {
       offer_date: f.offer_date,
       valid_until: f.valid_until || null,
       project_description: f.project_description || null,
-      project_price: Number(f.project_price) || 0,
-      monthly_price: Number(f.monthly_price) || 0,
-      project_discount_pct: clampPct(Number(f.project_discount_pct) || 0),
-      monthly_discount_pct: clampPct(Number(f.monthly_discount_pct) || 0),
+      project_price: 0,
+      monthly_price: 0,
+      project_discount_pct: 0,
+      monthly_discount_pct: 0,
+      project_items: [],
+      monthly_items: [],
       other_costs: f.other_costs || null,
       vat_rate: Number(f.vat_rate) || 25,
       currency: f.currency,
@@ -93,16 +92,6 @@ export function NewOfferButton({ customers }: { customers: Customer[] }) {
     };
   }
 
-  const projectPrice = Number(f.project_price) || 0;
-  const monthlyPrice = Number(f.monthly_price) || 0;
-  const projDisc = clampPct(Number(f.project_discount_pct) || 0);
-  const monthDisc = clampPct(Number(f.monthly_discount_pct) || 0);
-  const vat = Number(f.vat_rate) || 0;
-  const projAfterDisc = projectPrice * (1 - projDisc / 100);
-  const monthAfterDisc = monthlyPrice * (1 - monthDisc / 100);
-  const projTotal = projAfterDisc * (1 + vat / 100);
-  const monthlyTotal = monthAfterDisc * (1 + vat / 100);
-
   return (
     <>
       <button
@@ -123,6 +112,9 @@ export function NewOfferButton({ customers }: { customers: Customer[] }) {
             className="w-full max-w-2xl glass rounded-modal p-6 space-y-4 max-h-[90vh] overflow-auto"
           >
             <h3 className="font-heading text-lg font-semibold">Ny offert</h3>
+            <p className="text-xs text-[var(--muted)] -mt-2">
+              Skapa offerten först — prisrader läggs till i editorn efter att den skapats.
+            </p>
 
             {/* Kund + ref */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -203,119 +195,30 @@ export function NewOfferButton({ customers }: { customers: Customer[] }) {
               />
             </label>
 
-            {/* Priser */}
-            <div className="border-t border-white/5 pt-3 space-y-3">
-              <div className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">
-                Priser (exkl. moms)
-              </div>
-
-              {/* Engångskostnad + rabatt */}
-              <div className="rounded-btn border border-white/5 p-3 space-y-2 bg-black/20">
-                <div className="text-xs font-semibold text-white/70">Engångskostnad</div>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="block">
-                    <span className="text-xs text-[var(--muted)]">À-pris</span>
-                    <input
-                      type="number"
-                      step="any"
-                      min="0"
-                      {...bind("project_price")}
-                      className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm font-mono"
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="text-xs text-[var(--muted)]">Rabatt %</span>
-                    <input
-                      type="number"
-                      step="any"
-                      min="0"
-                      max="100"
-                      {...bind("project_discount_pct")}
-                      className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm font-mono"
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {/* Månad + rabatt */}
-              <div className="rounded-btn border border-teal-400/20 p-3 space-y-2 bg-teal-400/5">
-                <div className="text-xs font-semibold text-teal-200">Underhåll per månad</div>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="block">
-                    <span className="text-xs text-[var(--muted)]">À-pris/mån</span>
-                    <input
-                      type="number"
-                      step="any"
-                      min="0"
-                      {...bind("monthly_price")}
-                      className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm font-mono"
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="text-xs text-[var(--muted)]">Rabatt %</span>
-                    <input
-                      type="number"
-                      step="any"
-                      min="0"
-                      max="100"
-                      {...bind("monthly_discount_pct")}
-                      className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm font-mono"
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {/* Moms + valuta */}
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block">
-                  <span className="text-xs text-[var(--muted)]">Moms %</span>
-                  <input
-                    type="number"
-                    step="any"
-                    min="0"
-                    max="100"
-                    {...bind("vat_rate")}
-                    className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm font-mono"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-xs text-[var(--muted)]">Valuta</span>
-                  <select
-                    {...bind("currency")}
-                    className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
-                  >
-                    <option value="SEK">SEK</option>
-                    <option value="EUR">EUR</option>
-                    <option value="USD">USD</option>
-                  </select>
-                </label>
-              </div>
-
-              {/* Live-preview total */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="rounded-btn bg-black/20 border border-white/5 p-3">
-                  <div className="text-[var(--muted)] mb-1">Engångskostnad (inkl. moms)</div>
-                  <div className="font-mono font-semibold text-base">
-                    {fmt(projTotal)} {f.currency}
-                  </div>
-                  {projDisc > 0 && (
-                    <div className="text-[10px] text-rose-300 mt-0.5">
-                      −{projDisc}% rabatt applicerad
-                    </div>
-                  )}
-                </div>
-                <div className="rounded-btn bg-teal-400/10 border border-teal-400/20 p-3">
-                  <div className="text-teal-200 mb-1">Per månad (inkl. moms)</div>
-                  <div className="font-mono font-semibold text-base text-teal-100">
-                    {fmt(monthlyTotal)} {f.currency}
-                  </div>
-                  {monthDisc > 0 && (
-                    <div className="text-[10px] text-rose-300 mt-0.5">
-                      −{monthDisc}% rabatt applicerad
-                    </div>
-                  )}
-                </div>
-              </div>
+            {/* Moms + valuta */}
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="text-xs text-[var(--muted)]">Moms %</span>
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  max="100"
+                  {...bind("vat_rate")}
+                  className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm font-mono"
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs text-[var(--muted)]">Valuta</span>
+                <select
+                  {...bind("currency")}
+                  className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
+                >
+                  <option value="SEK">SEK</option>
+                  <option value="EUR">EUR</option>
+                  <option value="USD">USD</option>
+                </select>
+              </label>
             </div>
 
             {/* Övriga kostnader */}
@@ -355,16 +258,4 @@ export function NewOfferButton({ customers }: { customers: Customer[] }) {
       )}
     </>
   );
-}
-
-function fmt(n: number) {
-  return new Intl.NumberFormat("sv-SE", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(Math.round(n));
-}
-
-function clampPct(n: number) {
-  if (!Number.isFinite(n)) return 0;
-  return Math.max(0, Math.min(100, n));
 }
