@@ -621,7 +621,8 @@ function ItemsEditor({
                   type="number"
                   step="any"
                   min="0"
-                  value={it.unit_price}
+                  placeholder="0"
+                  value={it.unit_price || ""}
                   onChange={(e) => update(idx, { unit_price: Number(e.target.value) || 0 })}
                   className="col-span-3 rounded-btn bg-black/30 border border-white/10 px-2 py-1.5 text-sm font-mono text-right"
                 />
@@ -630,7 +631,8 @@ function ItemsEditor({
                   step="any"
                   min="0"
                   max="100"
-                  value={it.discount_pct}
+                  placeholder="0"
+                  value={it.discount_pct || ""}
                   onChange={(e) => update(idx, { discount_pct: clamp(Number(e.target.value) || 0) })}
                   className="col-span-2 rounded-btn bg-black/30 border border-white/10 px-2 py-1.5 text-sm font-mono text-right"
                 />
