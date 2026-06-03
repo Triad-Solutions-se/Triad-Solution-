@@ -504,10 +504,15 @@ function drawPricingSection(p: Pdf, c: PricingSectionInput): number {
   const totals = computeSectionTotals(c.items, c.vatRate);
   const hasDiscount = totals.discount > 0;
 
-  const colDesc = padX;
-  const colUnit = w * 0.55;
-  const colDisc = w * 0.72;
-  const colAmt  = w - padX;
+  // Fyra kolumner med egna ankarpunkter så À-pris / Rabatt / Belopp inte
+  // hamnar ovanpå varandra. De tre sista är högerjusterade mot sin egen
+  // högerkant.
+  const colDesc = padX;          // Beskrivning (vänsterjust.)
+  const colUnit = w * 0.48;      // À-pris
+  const colDisc = w * 0.66;      // Rabatt
+  const colAmt  = w * 0.80;      // Belopp
+  const rightEdge = w - padX;    // tabellens högerkant
+  const colGap = 6;
   const colTextW = w - padX * 2;
 
   let y = p.cursor;
@@ -541,28 +546,41 @@ function drawPricingSection(p: Pdf, c: PricingSectionInput): number {
   });
   p.drawText("À-pris", x + colUnit, y + 4, {
     font: p.fontBold, size: 8, color: GREY,
-    width: colDisc - colUnit - 4, align: "right",
+    width: colDisc - colUnit - colGap, align: "right",
   });
   p.drawText("Rabatt", x + colDisc, y + 4, {
     font: p.fontBold, size: 8, color: GREY,
-    width: colAmt - colDisc - 4, align: "right",
+    width: colAmt - colDisc - colGap, align: "right",
   });
-  p.drawText("Belopp", x + colDesc, y + 4, {
+  p.drawText("Belopp", x + colAmt, y + 4, {
     font: p.fontBold, size: 8, color: GREY,
-    width: colTextW, align: "right",
+    width: rightEdge - colAmt, align: "right",
   });
   y += 16;
+
+  // Beskrivningar är vänsterjusterade och klipps inte automatiskt av
+  // drawText — korta av med ellips så de inte rinner in i À-pris-kolumnen.
+  const descMaxW = colUnit - colDesc - colGap;
+  const ellipsize = (text: string): string => {
+    const s = text || "—";
+    if (p.font.widthOfTextAtSize(s, 9) <= descMaxW) return s;
+    let t = s;
+    while (t.length > 1 && p.font.widthOfTextAtSize(t + "…", 9) > descMaxW) {
+      t = t.slice(0, -1);
+    }
+    return t.trimEnd() + "…";
+  };
 
   // ===== Items =====
   for (const it of c.items) {
     pageBreak(rowH);
     const lineNet = it.unit_price * (1 - it.discount_pct / 100);
     p.drawRect(x, y, w, rowH, WHITE, { color: BORDER, width: 0.3 });
-    p.drawText(it.description || "—", x + colDesc, y + 5, {
-      size: 9, color: BLACK, width: colUnit - colDesc - 4,
+    p.drawText(ellipsize(it.description), x + colDesc, y + 5, {
+      size: 9, color: BLACK, width: descMaxW,
     });
     p.drawText(fmtMoney(it.unit_price), x + colUnit, y + 5, {
-      size: 9, color: BLACK, width: colDisc - colUnit - 4, align: "right",
+      size: 9, color: BLACK, width: colDisc - colUnit - colGap, align: "right",
     });
     p.drawText(
       it.discount_pct > 0 ? `${trimPct(it.discount_pct)} %` : "—",
@@ -570,13 +588,13 @@ function drawPricingSection(p: Pdf, c: PricingSectionInput): number {
       {
         size: 9,
         color: it.discount_pct > 0 ? ROSE : GREY,
-        width: colAmt - colDisc - 4,
+        width: colAmt - colDisc - colGap,
         align: "right",
       },
     );
-    p.drawText(fmtMoney(lineNet), x + colDesc, y + 5, {
+    p.drawText(fmtMoney(lineNet), x + colAmt, y + 5, {
       font: p.fontBold, size: 9, color: BLACK,
-      width: colTextW, align: "right",
+      width: rightEdge - colAmt, align: "right",
     });
     y += rowH;
   }
