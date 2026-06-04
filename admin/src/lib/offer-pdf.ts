@@ -373,6 +373,9 @@ export function drawOfferContent(
   }
 
   // ====== PRISER ======
+  // Börja alltid prissektionen på en ny sida.
+  p.newPage();
+
   const vat = offer.vat_rate ?? 25;
   const projectItems = itemsOrFallback(
     offer.project_items ?? [],
