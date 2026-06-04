@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Chip } from "@/components/Chip";
-import { Download, FileText, Save, Trash2, AlertTriangle, Plus, X } from "lucide-react";
+import { FileText, Save, Trash2, AlertTriangle, Plus, X } from "lucide-react";
 import {
   type OfferItem,
   computeSectionTotals,
@@ -226,12 +226,6 @@ export function OfferEditor({
             >
               <FileText size={14} /> {downloading ? "Exporterar…" : "Ladda ner offert"}
             </button>
-            <a
-              href={`/admin/api/offers/${offer.id}/export`}
-              className="rounded-btn bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-2 text-sm flex items-center gap-2 transition-colors"
-            >
-              <Download size={14} /> Excel
-            </a>
             <button
               onClick={save}
               disabled={saving}
