@@ -440,11 +440,6 @@ export function drawOfferContent(
   if (!isAgreement) {
     p.newPageIfNeeded(160);
     p.cursor = drawSectionHeading(p, "GODKÄNNANDE", p.cursor);
-    p.drawText(
-      "Vänligen returnera signerad offert till info@triadsolutions.se för att bekräfta beställningen.",
-      MARGIN, p.cursor,
-      { size: 10, color: GREY, width: CONTENT_W },
-    );
     p.cursor += 30;
 
     const sigW = (CONTENT_W - 30) / 2;
