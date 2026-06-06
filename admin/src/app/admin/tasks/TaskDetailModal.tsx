@@ -58,6 +58,7 @@ export function TaskDetailModal({
           status: task.status,
           assignee_ids: assignees.map((a) => a.id),
           project_id: task.project?.id ?? null,
+          estimate_hours: task.estimate_hours ?? null,
         }}
       />
     );

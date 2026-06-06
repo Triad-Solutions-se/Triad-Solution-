@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Pencil, Check, X, ExternalLink } from "lucide-react";
+import { Pencil, Check, X, ExternalLink, Github } from "lucide-react";
 import { fmtDate } from "@/lib/date";
 import { DateInput } from "@/components/DateInput";
 
@@ -19,6 +19,8 @@ type ProjectInfo = {
   customer_id: string | null;
   summary: string | null;
   external_url: string | null;
+  github_owner: string | null;
+  github_repo: string | null;
 };
 
 const STATUSES = [
@@ -55,9 +57,17 @@ export function ProjectInfoEditor({
     customer_id: project.customer_id ?? "",
     summary: project.summary ?? "",
     external_url: project.external_url ?? "",
+    github: project.github_owner && project.github_repo
+      ? `${project.github_owner}/${project.github_repo}`
+      : "",
   });
 
   async function save() {
+    const repo = parseRepoRef(f.github);
+    if (f.github.trim() && !repo) {
+      alert("Ogiltigt GitHub-repo. Använd formatet owner/repo eller en github.com-länk.");
+      return;
+    }
     setSaving(true);
     const { error } = await supabase
       .from("projects")
@@ -70,6 +80,8 @@ export function ProjectInfoEditor({
         customer_id: f.customer_id || null,
         summary: f.summary || null,
         external_url: f.external_url.trim() ? normalizeUrl(f.external_url.trim()) : null,
+        github_owner: repo?.owner ?? null,
+        github_repo: repo?.repo ?? null,
       })
       .eq("id", project.id);
     setSaving(false);
@@ -100,6 +112,23 @@ export function ProjectInfoEditor({
             >
               <span className="truncate">{prettyUrl(project.external_url)}</span>
               <ExternalLink size={11} className="opacity-70 shrink-0" />
+            </a>
+          ) : (
+            "—"
+          )}
+        </Row>
+        <Row label="GitHub">
+          {project.github_owner && project.github_repo ? (
+            <a
+              href={`https://github.com/${project.github_owner}/${project.github_repo}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[var(--triad-teal)] hover:underline max-w-full"
+            >
+              <Github size={11} className="shrink-0 opacity-70" />
+              <span className="truncate">
+                {project.github_owner}/{project.github_repo}
+              </span>
             </a>
           ) : (
             "—"
@@ -198,6 +227,15 @@ export function ProjectInfoEditor({
           className="w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm text-white"
         />
       </Field>
+      <Field label="GitHub-repo">
+        <input
+          type="text"
+          placeholder="owner/repo"
+          value={f.github}
+          onChange={(e) => setF((p) => ({ ...p, github: e.target.value }))}
+          className="w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm text-white"
+        />
+      </Field>
       <Field label="Sammanfattning">
         <textarea
           value={f.summary}
@@ -241,6 +279,18 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <div className="mt-1">{children}</div>
     </label>
   );
+}
+
+// Klient-sidans motsvarighet till parseRepoRef i lib/github.ts (som är
+// server-only). Tolkar "owner/repo" eller en github.com-länk.
+function parseRepoRef(input: string): { owner: string; repo: string } | null {
+  const raw = input.trim();
+  if (!raw) return null;
+  const slug = raw.match(/^([\w.-]+)\/([\w.-]+?)(?:\.git)?$/);
+  if (slug) return { owner: slug[1], repo: slug[2] };
+  const url = raw.match(/github\.com[/:]([\w.-]+)\/([\w.-]+?)(?:\.git)?(?:[/?#].*)?$/i);
+  if (url) return { owner: url[1], repo: url[2] };
+  return null;
 }
 
 function normalizeUrl(raw: string) {

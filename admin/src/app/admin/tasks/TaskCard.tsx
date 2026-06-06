@@ -14,6 +14,7 @@ export type Task = {
   start_at: string | null;
   due_at: string | null;
   description: string | null;
+  estimate_hours?: number | null;
   project?: { id: string; name: string } | null;
   assignees?: Array<{ id: string; display_name: string | null }>;
 };

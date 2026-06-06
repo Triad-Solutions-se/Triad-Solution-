@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Chip } from "@/components/Chip";
@@ -8,6 +9,7 @@ import { ProjectContactEditor } from "./ProjectContactEditor";
 import { ProjectFilesManager, type ProjectFile } from "./ProjectFilesManager";
 import { ProjectTimeline, type TimelineTask } from "./ProjectTimeline";
 import { ProjectTaskList, type ProjectTask } from "./ProjectTaskList";
+import { ProjectRepoHealth } from "./ProjectRepoHealth";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +25,7 @@ export default async function ProjectDashboardPage({
     supabase
       .from("projects")
       .select(
-        "id,name,status,priority,summary,start_date,end_date,owner_id,customer_id,contact_name,contact_email,contact_phone,external_url," +
+        "id,name,status,priority,summary,start_date,end_date,owner_id,customer_id,contact_name,contact_email,contact_phone,external_url,github_owner,github_repo," +
           "owner:profiles(id,display_name,email)," +
           "customer:customers(id,name,contact_person,email,phone,website)",
       )
@@ -186,11 +188,19 @@ export default async function ProjectDashboardPage({
                 customer_id: project.customer_id,
                 summary: project.summary,
                 external_url: project.external_url,
+                github_owner: project.github_owner,
+                github_repo: project.github_repo,
               }}
               owner={project.owner}
               profiles={profiles}
               customers={customers}
             />
+          </Section>
+
+          <Section title="Leveranshälsa">
+            <Suspense fallback={<RepoHealthSkeleton />}>
+              <ProjectRepoHealth owner={project.github_owner} repo={project.github_repo} />
+            </Suspense>
           </Section>
 
           <Section title="Kontakt">
@@ -211,6 +221,21 @@ export default async function ProjectDashboardPage({
         </aside>
       </div>
     </>
+  );
+}
+
+function RepoHealthSkeleton() {
+  return (
+    <div className="space-y-3 animate-pulse">
+      <div className="h-4 w-2/3 rounded bg-white/5" />
+      <div className="grid grid-cols-3 gap-2">
+        <div className="h-12 rounded bg-white/5" />
+        <div className="h-12 rounded bg-white/5" />
+        <div className="h-12 rounded bg-white/5" />
+      </div>
+      <div className="h-3 w-1/3 rounded bg-white/5" />
+      <div className="h-3 w-full rounded bg-white/5" />
+    </div>
   );
 }
 

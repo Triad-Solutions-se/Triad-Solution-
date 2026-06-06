@@ -15,6 +15,7 @@ export type TaskInput = {
   status: string;
   assignee_ids: string[];
   project_id: string | null;
+  estimate_hours: number | null;
 };
 
 type Profile = { id: string; display_name: string | null };
@@ -44,6 +45,9 @@ export function TaskFormModal({
   );
   const [assigneeIds, setAssigneeIds] = useState<string[]>(initial?.assignee_ids ?? []);
   const [projectId, setProjectId] = useState(initial?.project_id ?? "");
+  const [estimate, setEstimate] = useState(
+    initial?.estimate_hours != null ? String(initial.estimate_hours) : "",
+  );
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [saving, setSaving] = useState(false);
@@ -75,6 +79,7 @@ export function TaskFormModal({
       due_at: due ? new Date(due).toISOString() : null,
       assignee_ids: assigneeIds,
       project_id: projectId || null,
+      estimate_hours: estimate.trim() ? Number(estimate.replace(",", ".")) : null,
       completed_at: status === "done" ? new Date().toISOString() : null,
     };
     const { error } =
@@ -204,6 +209,19 @@ export function TaskFormModal({
               <option value="medium">Medel</option>
               <option value="high">Hög</option>
             </select>
+          </Field>
+
+          <Field label="Est. tid (h)">
+            <input
+              type="number"
+              min="0"
+              step="0.5"
+              inputMode="decimal"
+              value={estimate}
+              onChange={(e) => setEstimate(e.target.value)}
+              placeholder="t.ex. 4"
+              className="w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm text-white"
+            />
           </Field>
 
           {mode === "edit" && (

@@ -4,11 +4,12 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, CheckSquare, FolderKanban, Calendar, Users, FileText,
   Wallet, Palette, BookTemplate, BarChart3, LogOut, X,
-  PanelLeftClose, PanelLeftOpen, Settings,
+  PanelLeftClose, PanelLeftOpen, Settings, Sparkles,
 } from "lucide-react";
 
 const nav = [
   { href: "/admin", label: "Översikt", icon: LayoutDashboard, exact: true },
+  { href: "/admin/supermind", label: "Supermind", icon: Sparkles },
   { href: "/admin/tasks", label: "Uppgifter", icon: CheckSquare },
   { href: "/admin/projects", label: "Projekt", icon: FolderKanban },
   { href: "/admin/meetings", label: "Möten", icon: Calendar },
