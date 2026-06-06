@@ -61,6 +61,7 @@ function lastUserText(history: Anthropic.MessageParam[]): string {
  */
 export async function runSupermind(
   supabase: SupabaseClient,
+  userId: string,
   history: Anthropic.MessageParam[],
   contextNote: string,
 ): Promise<AgentResult> {
@@ -84,7 +85,7 @@ export async function runSupermind(
   if (!triage.needsPortalData && triage.directReply) {
     const { data: runRow } = await supabase
       .from("ai_runs")
-      .insert({ kind: "chat_fast", status: "done", summary: triage.directReply.slice(0, 500), tokens: triage.tokens })
+      .insert({ kind: "chat_fast", status: "done", summary: triage.directReply.slice(0, 500), tokens: triage.tokens, created_by: userId })
       .select("id")
       .maybeSingle();
     return {
@@ -103,7 +104,7 @@ export async function runSupermind(
 
   const { data: runRow } = await supabase
     .from("ai_runs")
-    .insert({ kind: "chat", status: "running" })
+    .insert({ kind: "chat", status: "running", created_by: userId })
     .select("id")
     .maybeSingle();
   const runId = (runRow as any)?.id ?? null;

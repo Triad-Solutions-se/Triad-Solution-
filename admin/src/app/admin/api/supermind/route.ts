@@ -61,7 +61,7 @@ export async function POST(req: Request) {
   const who = user.email ?? "okänd medlem";
   const contextNote = `Dagens datum: ${today}. Inloggad medlem: ${who}.`;
 
-  const result = await runSupermind(supabase, history, contextNote);
+  const result = await runSupermind(supabase, user.id, history, contextNote);
 
   // Spara user- och assistant-meddelandet.
   await supabase.from("ai_messages").insert([
