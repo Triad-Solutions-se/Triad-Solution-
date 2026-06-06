@@ -43,7 +43,7 @@ export async function ProjectRepoHealth({
   if (!githubConfigured()) {
     return (
       <div className="space-y-2">
-        <RepoLink ref={ref} />
+        <RepoLink repoRef={ref} />
         <Muted>
           GitHub-token saknas på servern (<code className="text-white/80">GITHUB_TOKEN</code>).
           Lägg till den i miljövariablerna för att aktivera live-status.
@@ -57,7 +57,7 @@ export async function ProjectRepoHealth({
   if (!result.ok) {
     return (
       <div className="space-y-2">
-        <RepoLink ref={ref} />
+        <RepoLink repoRef={ref} />
         <Muted>
           {result.reason === "not-found"
             ? "Repot hittades inte eller saknar åtkomst för token."
@@ -176,16 +176,18 @@ function Stat({
   );
 }
 
-function RepoLink({ ref }: { ref: RepoRef }) {
+// OBS: prop:en får INTE heta `ref` — det är ett reserverat React-namn som
+// kastar "Refs cannot be used in Server Components".
+function RepoLink({ repoRef }: { repoRef: RepoRef }) {
   return (
     <a
-      href={repoHtmlUrl(ref)}
+      href={repoHtmlUrl(repoRef)}
       target="_blank"
       rel="noopener noreferrer"
       className="inline-flex items-center gap-1.5 text-[var(--triad-teal)] hover:underline"
     >
       <Github size={14} />
-      {ref.owner}/{ref.repo}
+      {repoRef.owner}/{repoRef.repo}
       <ExternalLink size={11} className="opacity-70" />
     </a>
   );
