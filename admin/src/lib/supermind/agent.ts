@@ -1,12 +1,12 @@
-// Supermind Fas 2: den agentiska loopen. Manuell loop (inte tool-runner) så att
-// vi kan logga varje verktygsanrop till ai_runs/ai_actions och senare (Fas 3)
-// lägga in skriv-gates. Läsläge — inga skrivningar mot portaldata.
+// Supermind: den agentiska loopen. Manuell loop (inte tool-runner) så att vi kan
+// logga varje verktygsanrop till ai_runs/ai_actions och styra skriv-gates.
+// Läsläge alltid på; skrivläge (endast uppgifter) styrs av canWrite.
 //
 // Hybrid modelluppsättning: Haiku triagerar varje tur billigt och svarar direkt
 // på triviala turer; Opus kör den tunga planeringsloopen med verktyg.
 import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { TOOL_DEFS, runTool } from "./tools";
+import { READ_TOOL_DEFS, WRITE_TOOL_DEFS, runTool, toolTier } from "./tools";
 import { PLANNING_MODEL, FAST_MODEL, triageMessage } from "./models";
 
 const MAX_ITERATIONS = 8;
@@ -19,22 +19,39 @@ Triad Solutions är ett svenskt teknik- och konsultbolag som grundats av tre ing
 TJÄNA PENGAR.
 
 Du har läsåtkomst till portalens data via verktyg: projekt, uppgifter (med
-tidsuppskattning), kunder, offerter, ekonomi, möten, GitHub-leveranshälsa och teamets
-veckokapacitet. Använd verktygen för att hämta fakta innan du svarar — gissa aldrig om
-det finns ett verktyg som ger svaret.
+tidsuppskattning), kunder, offerter, ekonomi, möten, GitHub-leveranshälsa och teamet
+(varje medlems roll, expertis och veckokapacitet). Använd verktygen för att hämta fakta
+innan du svarar — gissa aldrig om det finns ett verktyg som ger svaret.
 
 Arbetssätt:
 - Svara på svenska, koncist och konkret. Punktlistor när det passar.
 - Var intäktsfokuserad: prioritera det som för oss närmare betalande kunder. Kunder nära
   "closed" eller med öppna offerter, och projekt med offert men stillastående leverans, är
   högst prioriterat. Ledig kapacitet → föreslå sälj/uppsökande arbete, inte bara leverans.
-- När någon ber om en plan utifrån tillgänglig tid: hämta veckokapaciteten, väg uppgifternas
-  tidsuppskattning mot deadlines och intäktspåverkan, och föreslå en tidssatt, prioriterad
-  lista som ryms inom timmarna.
-- Var ärlig om osäkerhet och sakna data. Hitta inte på siffror.
+- När du föreslår vem som ska göra en uppgift: använd get_team och matcha uppgiften mot varje
+  medlems roll och expertis. Föreslå den person vars kompetens passar bäst, och respektera
+  deras lediga kapacitet. Om ingen roll är satt, säg det och föreslå utifrån vad du vet.
+- När någon ber om en plan utifrån tillgänglig tid: hämta teamet (roller + kapacitet), väg
+  uppgifternas tidsuppskattning mot deadlines och intäktspåverkan, och föreslå en tidssatt,
+  prioriterad lista som ryms inom timmarna — med rätt person på rätt uppgift.
+- Var ärlig om osäkerhet och sakna data. Hitta inte på siffror.`;
 
-Du är i LÄSLÄGE (advisor). Du kan inte ändra något ännu — föreslå åtgärder, så utför
-teamet dem. (Skriv- och autonomiläge kommer senare.)`;
+// Lägesspecifika avslut. Konkateneras med SYSTEM → två frusna varianter, var
+// och en cachas för sig.
+const MODE_READONLY = `
+Du är i LÄSLÄGE (advisor). Du kan inte ändra något — föreslå åtgärder, så utför teamet dem.`;
+
+const MODE_WRITE = `
+Du har SKRIVLÄGE för UPPGIFTER. Du kan skapa, uppdatera och arkivera uppgifter med
+verktygen create_task, update_task och archive_task. Regler:
+- Gör bara det användaren faktiskt ber om. Skapa/ändra inte uppgifter oombedd.
+- Hämta nödvändiga id:n först (get_team för personer, list_projects för projekt,
+  list_tasks för att hitta rätt uppgift) innan du skriver.
+- Radera aldrig hårt — arkivera (archive_task) i stället.
+- Om en begäran är tvetydig eller skulle ändra många uppgifter (mer än ~5), beskriv kort
+  vad du tänker göra och be om bekräftelse först.
+- Efter att du skrivit: sammanfatta exakt vad du gjorde (vilka uppgifter, vilka ändringar).
+- Allt annat (offerter, kunder, ekonomi) är fortfarande LÄSLÄGE — föreslå, ändra inte.`;
 
 export type AgentTrace = { tool: string; input: unknown; ok: boolean }[];
 
@@ -64,6 +81,7 @@ export async function runSupermind(
   userId: string,
   history: Anthropic.MessageParam[],
   contextNote: string,
+  canWrite: boolean,
 ): Promise<AgentResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -97,7 +115,11 @@ export async function runSupermind(
     };
   }
 
-  // 3. Substantiell tur → Opus-loopen med verktyg.
+  // 3. Substantiell tur → Opus-loopen med verktyg. Skrivläge avgör verktygsuppsättning
+  // och systemprompt-variant (två frusna varianter, var och en cachas för sig).
+  const tools = canWrite ? [...READ_TOOL_DEFS, ...WRITE_TOOL_DEFS] : READ_TOOL_DEFS;
+  const systemText = SYSTEM + (canWrite ? MODE_WRITE : MODE_READONLY);
+
   const messages: Anthropic.MessageParam[] = [...history];
   const trace: AgentTrace = [];
   let tokens = triage.tokens;
@@ -120,10 +142,10 @@ export async function runSupermind(
         // Cachebar prefix: stora frusna instruktionerna. Det dynamiska
         // kontextblocket (datum m.m.) ligger efter brytpunkten och stör inte cachen.
         system: [
-          { type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } },
+          { type: "text", text: systemText, cache_control: { type: "ephemeral" } },
           { type: "text", text: contextNote },
         ],
-        tools: TOOL_DEFS,
+        tools,
         messages,
       });
 
@@ -147,7 +169,12 @@ export async function runSupermind(
       );
       const toolResults: Anthropic.ToolResultBlockParam[] = [];
       for (const tu of toolUses) {
-        const result = await runTool(supabase, tu.name, (tu.input ?? {}) as Record<string, unknown>);
+        const result = await runTool(
+          supabase,
+          userId,
+          tu.name,
+          (tu.input ?? {}) as Record<string, unknown>,
+        );
         trace.push({ tool: tu.name, input: tu.input, ok: result.ok });
         if (runId) {
           await supabase.from("ai_actions").insert({
@@ -155,7 +182,7 @@ export async function runSupermind(
             tool: tu.name,
             args: tu.input ?? {},
             result: result as unknown as Record<string, unknown>,
-            tier: "green",
+            tier: toolTier(tu.name),
             reversible: true,
           });
         }

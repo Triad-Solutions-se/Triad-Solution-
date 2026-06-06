@@ -61,7 +61,15 @@ export async function POST(req: Request) {
   const who = user.email ?? "okänd medlem";
   const contextNote = `Dagens datum: ${today}. Inloggad medlem: ${who}.`;
 
-  const result = await runSupermind(supabase, user.id, history, contextNote);
+  // Kill switch: skrivläge för uppgifter aktiveras via company_settings.ai_enabled.
+  const { data: company } = await supabase
+    .from("company_settings")
+    .select("ai_enabled")
+    .eq("id", 1)
+    .maybeSingle();
+  const canWrite = (company as any)?.ai_enabled === true;
+
+  const result = await runSupermind(supabase, user.id, history, contextNote, canWrite);
 
   // Spara user- och assistant-meddelandet.
   await supabase.from("ai_messages").insert([
