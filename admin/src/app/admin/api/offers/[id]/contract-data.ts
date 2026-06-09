@@ -19,7 +19,7 @@ export async function fetchCompanyInfo(
 }
 
 const SELECT =
-  "offer_number,title,reference,offer_date,valid_until,project_description,project_price,monthly_price,project_discount_pct,monthly_discount_pct,project_items,monthly_items,other_costs,vat_rate,currency,customer:customers(name,contact_person,email,phone,website,org_number,address)";
+  "offer_number,title,reference,offer_date,valid_until,project_description,custom_header,custom_text,project_price,monthly_price,project_discount_pct,monthly_discount_pct,project_items,monthly_items,other_costs,vat_rate,currency,customer:customers(name,contact_person,email,phone,website,org_number,address)";
 
 // Hämtar en offert + kund i den form som offert-/avtalsgeneratorerna förväntar.
 // Delas av PDF- och PUB-routerna så att urval och mappning hålls i synk.
@@ -48,6 +48,8 @@ export async function fetchOfferForContract(
       offer_date: offer.offer_date,
       valid_until: offer.valid_until,
       project_description: offer.project_description,
+      custom_header: (offer as any).custom_header ?? null,
+      custom_text: (offer as any).custom_text ?? null,
       project_price: Number(offer.project_price ?? 0),
       monthly_price: Number(offer.monthly_price ?? 0),
       project_discount_pct: Number((offer as any).project_discount_pct ?? 0),
