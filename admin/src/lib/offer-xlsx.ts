@@ -32,6 +32,8 @@ export type OfferData = {
   offer_date: string;
   valid_until: string | null;
   project_description: string | null;
+  custom_header?: string | null;
+  custom_text?: string | null;
   project_price: number;
   monthly_price: number;
   project_discount_pct?: number | null;
@@ -247,9 +249,35 @@ export async function generateOfferXlsx(offer: OfferData): Promise<Uint8Array> {
   setRowHeight(PB + 4, 14);
 
   // ========================================
+  // EXTRA INFORMATION (valfri, per offert)
+  // ========================================
+  let afterPB = PB + 5;
+  const customHeader = offer.custom_header?.trim();
+  const customText = offer.custom_text?.trim();
+  if (customHeader || customText) {
+    const CH = afterPB;
+    set(`B${CH}`, customHeader || "EXTRA INFORMATION", { font: fHeading });
+    sectionUnderline(CH);
+    setRowHeight(CH, 22);
+
+    const lines = customText ? customText.split(/\r?\n/) : [];
+    const linesNeeded = Math.max(lines.length, 2);
+    const cFirst = CH + 1;
+    const cLast = CH + linesNeeded;
+    setMerge(`B${cFirst}:F${cLast}`, customText || "—", {
+      font: customText ? fNormal : fGrey,
+      alignment: { vertical: "top", horizontal: "left", wrapText: true },
+    });
+    for (let r = cFirst; r <= cLast; r++) setRowHeight(r, 18);
+    afterPB = cLast + 1;
+    setRowHeight(afterPB, 14);
+    afterPB++;
+  }
+
+  // ========================================
   // SPECIFIKATION
   // ========================================
-  const SP = PB + 5;
+  const SP = afterPB;
   set(`B${SP}`, "SPECIFIKATION", { font: fHeading });
   sectionUnderline(SP);
   setRowHeight(SP, 22);

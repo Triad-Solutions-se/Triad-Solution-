@@ -24,6 +24,8 @@ type Offer = {
   offer_date: string;
   valid_until: string | null;
   project_description: string | null;
+  custom_header: string | null;
+  custom_text: string | null;
   project_price: number;
   monthly_price: number;
   project_discount_pct?: number | null;
@@ -64,6 +66,8 @@ export function OfferEditor({
     offer_date: offer.offer_date,
     valid_until: offer.valid_until ?? "",
     project_description: offer.project_description ?? "",
+    custom_header: offer.custom_header ?? "",
+    custom_text: offer.custom_text ?? "",
     other_costs: offer.other_costs ?? "",
     vat_rate: String(offer.vat_rate ?? 25),
     currency: offer.currency ?? "SEK",
@@ -118,6 +122,8 @@ export function OfferEditor({
       offer_date: f.offer_date,
       valid_until: f.valid_until || null,
       project_description: f.project_description || null,
+      custom_header: f.custom_header || null,
+      custom_text: f.custom_text || null,
       project_price: projTotals.subtotal,
       monthly_price: monthTotals.subtotal,
       project_discount_pct: 0,
@@ -322,6 +328,32 @@ export function OfferEditor({
               placeholder="Vad ingår? Vilka problem löser den? 3–6 meningar passar bra."
               className="w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm resize-y"
             />
+          </div>
+
+          <div className="glass rounded-card p-5 space-y-3">
+            <h2 className="font-heading text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
+              Extra information
+            </h2>
+            <p className="text-xs text-[var(--muted)] -mt-2">
+              Valfri sektion med egen rubrik och text — visas direkt efter projektbeskrivningen i offerten. Lämna tom för att dölja.
+            </p>
+            <label className="block">
+              <span className="text-xs text-[var(--muted)]">Rubrik</span>
+              <input
+                {...bind("custom_header")}
+                placeholder="t.ex. Om oss, Vår metod, Leveransplan…"
+                className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs text-[var(--muted)]">Text</span>
+              <textarea
+                {...bind("custom_text")}
+                rows={5}
+                placeholder="Fritext som visas under rubriken."
+                className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm resize-y"
+              />
+            </label>
           </div>
 
           <div className="glass rounded-card p-5 space-y-4">
