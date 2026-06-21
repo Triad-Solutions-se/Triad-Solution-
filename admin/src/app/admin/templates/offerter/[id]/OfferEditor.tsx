@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Chip } from "@/components/Chip";
-import { FileText, Save, Trash2, AlertTriangle, Plus, X } from "lucide-react";
+import { FileText, Save, Trash2, AlertTriangle, Plus, X, Copy } from "lucide-react";
 import {
   type OfferItem,
   computeSectionTotals,
@@ -97,6 +97,7 @@ export function OfferEditor({
 
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const vat = Number(f.vat_rate) || 0;
@@ -192,6 +193,39 @@ export function OfferEditor({
     else router.refresh();
   }
 
+  async function duplicate() {
+    setDuplicating(true);
+    const payload = {
+      customer_id: f.customer_id || null,
+      title: f.title ? `${f.title} (kopia)` : null,
+      reference: f.reference || null,
+      offer_date: new Date().toISOString().slice(0, 10),
+      valid_until: f.valid_until || null,
+      project_description: f.project_description || null,
+      custom_header: f.custom_header || null,
+      custom_text: f.custom_text || null,
+      project_price: projTotals.subtotal,
+      monthly_price: monthTotals.subtotal,
+      project_discount_pct: 0,
+      monthly_discount_pct: 0,
+      project_items: projectItems,
+      monthly_items: monthlyItems,
+      other_costs: f.other_costs || null,
+      vat_rate: Number(f.vat_rate) || 25,
+      currency: f.currency,
+      status: "draft",
+      notes: f.notes || null,
+    };
+    const { data, error } = await supabase.from("offers").insert(payload).select("id").single();
+    setDuplicating(false);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    router.push(`/admin/templates/offerter/${data.id}`);
+    router.refresh();
+  }
+
   async function remove() {
     const { error } = await supabase.from("offers").delete().eq("id", offer.id);
     if (error) {
@@ -224,6 +258,14 @@ export function OfferEditor({
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              onClick={duplicate}
+              disabled={duplicating}
+              title="Duplicera offerten som nytt utkast"
+              className="rounded-btn bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-2 text-sm flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Copy size={14} /> {duplicating ? "Kopierar…" : "Duplicera"}
+            </button>
             <button
               onClick={downloadOffer}
               disabled={downloading}
