@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { FolderArchive } from "lucide-react";
 import { NewPaymentButton, PaymentsTable } from "./PaymentsSection";
 import { NewRecurringButton, RecurringTable } from "./RecurringSection";
+import { NewRecurringIncomeButton, RecurringIncomeTable } from "./RecurringIncomeSection";
 import { NewInvoiceButton, InvoicesTable } from "./InvoicesSection";
 import { NewExpenseButton, ExpensesTable } from "./ExpensesSection";
 import { NewIncomeButton, IncomeTable } from "./IncomeSection";
@@ -28,6 +29,7 @@ export default async function FinancePage() {
     invoices,
     payments,
     recurring,
+    recurringIncome,
     profiles,
     bankAccounts,
     projects,
@@ -44,6 +46,10 @@ export default async function FinancePage() {
       .from("recurring_payments")
       .select("*, assignee:profiles!recurring_payments_assignee_id_fkey(id,display_name,email)")
       .order("next_due_date", { ascending: true, nullsFirst: false }),
+    supabase
+      .from("recurring_income")
+      .select("*")
+      .order("next_due_date", { ascending: true, nullsFirst: false }),
     supabase.from("profiles").select("id,display_name,email").order("display_name"),
     supabase.from("bank_accounts").select("*").order("archived").order("name"),
     supabase.from("projects").select("id,name").order("name"),
@@ -55,6 +61,7 @@ export default async function FinancePage() {
   const invoicesData = invoices.data ?? [];
   const paymentsData = payments.data ?? [];
   const recurringData = recurring.data ?? [];
+  const recurringIncomeData = recurringIncome.data ?? [];
   const profileList = profiles.data ?? [];
   const bankList = (bankAccounts.data ?? []) as BankAccount[];
   const projectList = (projects.data ?? []) as { id: string; name: string }[];
@@ -62,15 +69,18 @@ export default async function FinancePage() {
 
   const totalExp = expensesData.reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
   const totalInc = incomeData.reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
-  const totalRecurringMonthly = recurringData
-    .filter((r: any) => r.active)
-    .reduce((s: number, r: any) => {
-      const amt = Number(r.amount_sek || 0);
-      if (r.frequency === "monthly") return s + amt;
-      if (r.frequency === "quarterly") return s + amt / 3;
-      if (r.frequency === "yearly") return s + amt / 12;
-      return s;
-    }, 0);
+  const monthlyEquivalent = (rows: any[]) =>
+    rows
+      .filter((r: any) => r.active)
+      .reduce((s: number, r: any) => {
+        const amt = Number(r.amount_sek || 0);
+        if (r.frequency === "monthly") return s + amt;
+        if (r.frequency === "quarterly") return s + amt / 3;
+        if (r.frequency === "yearly") return s + amt / 12;
+        return s;
+      }, 0);
+  const totalRecurringMonthly = monthlyEquivalent(recurringData);
+  const totalRecurringIncomeMonthly = monthlyEquivalent(recurringIncomeData);
   const net = totalInc - totalExp;
 
   // Bank balances: starting balance + received income + reimbursed/paid expenses + paid payments
@@ -139,6 +149,11 @@ export default async function FinancePage() {
               projects={projectList}
               bankAccounts={bankList}
             />
+            <NewRecurringIncomeButton
+              customers={customerList}
+              projects={projectList}
+              bankAccounts={bankList}
+            />
             <NewInvoiceButton
               customers={customerList}
               projects={projectList}
@@ -172,7 +187,10 @@ export default async function FinancePage() {
       </Section>
 
       <div className="text-xs text-[var(--muted)] mb-4 -mt-2">
-        Återkommande / mån: <span className="font-mono">{SEK(Math.round(totalRecurringMonthly))}</span>
+        Återkommande intäkter / mån:{" "}
+        <span className="font-mono text-emerald-300">{SEK(Math.round(totalRecurringIncomeMonthly))}</span>
+        {" · "}Återkommande kostnader / mån:{" "}
+        <span className="font-mono">{SEK(Math.round(totalRecurringMonthly))}</span>
       </div>
 
       <Section title="Betalningar">
@@ -188,6 +206,15 @@ export default async function FinancePage() {
         <RecurringTable
           rows={recurringData as any}
           profiles={profileList}
+          projects={projectList}
+          bankAccounts={bankList}
+        />
+      </Section>
+
+      <Section title="Återkommande intäkter">
+        <RecurringIncomeTable
+          rows={recurringIncomeData as any}
+          customers={customerList}
           projects={projectList}
           bankAccounts={bankList}
         />
