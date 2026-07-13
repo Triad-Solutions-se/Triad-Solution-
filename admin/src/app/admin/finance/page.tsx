@@ -143,6 +143,7 @@ export default async function FinancePage() {
               customers={customerList}
               projects={projectList}
               bankAccounts={bankList}
+              existingNumbers={invoicesData.map((r: any) => r.number).filter(Boolean)}
             />
             <NewIncomeButton
               customers={customerList}
