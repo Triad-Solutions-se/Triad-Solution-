@@ -5,6 +5,7 @@ import { FolderArchive } from "lucide-react";
 import { NewPaymentButton, PaymentsTable } from "./PaymentsSection";
 import { NewRecurringButton, RecurringTable } from "./RecurringSection";
 import { NewRecurringIncomeButton, RecurringIncomeTable } from "./RecurringIncomeSection";
+import { materializeRecurringIncome } from "./materializeRecurringIncome";
 import { NewInvoiceButton, InvoicesTable } from "./InvoicesSection";
 import { NewExpenseButton, ExpensesTable } from "./ExpensesSection";
 import { NewIncomeButton, IncomeTable } from "./IncomeSection";
@@ -23,6 +24,9 @@ const SEK = (n: number) =>
 
 export default async function FinancePage() {
   const supabase = await createClient();
+  // Skapa income-rader för passerade förfallodatum på återkommande intäkter
+  // innan datan hämtas, så tabellerna nedan visar dem direkt.
+  await materializeRecurringIncome(supabase);
   const [
     expenses,
     income,
