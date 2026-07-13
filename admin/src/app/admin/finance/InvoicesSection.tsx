@@ -42,6 +42,96 @@ const emptyForm = {
   notes: "",
 };
 
+// Nästa fakturanummer i serien YYYY-NNN (samma mönster som offertnummer).
+// Nummer som inte följer mönstret ignoreras; serien börjar om varje kalenderår.
+function nextInvoiceNumber(existing: string[]) {
+  const yr = new Date().getFullYear();
+  const re = new RegExp(`^${yr}-(\\d+)$`);
+  let max = 0;
+  for (const n of existing) {
+    const m = n?.match(re);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  return `${yr}-${String(max + 1).padStart(3, "0")}`;
+}
+
+function CustomerCombobox({
+  customers,
+  name,
+  customerId,
+  onChange,
+}: {
+  customers: CustomerOpt[];
+  name: string;
+  customerId: string;
+  onChange: (v: { name: string; id: string }) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [hi, setHi] = useState(0);
+  const q = name.trim().toLowerCase();
+  const shown = (q ? customers.filter((c) => c.name.toLowerCase().includes(q)) : customers).slice(0, 8);
+
+  function pick(c: CustomerOpt) {
+    onChange({ name: c.name, id: c.id });
+    setOpen(false);
+  }
+
+  return (
+    <div className="relative col-span-2">
+      <input
+        value={name}
+        onChange={(e) => {
+          onChange({ name: e.target.value, id: "" });
+          setOpen(true);
+          setHi(0);
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            if (!open) setOpen(true);
+            else setHi((h) => Math.min(h + 1, shown.length - 1));
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setHi((h) => Math.max(h - 1, 0));
+          } else if (e.key === "Enter" && open && shown[hi]) {
+            e.preventDefault();
+            pick(shown[hi]);
+          } else if (e.key === "Escape") {
+            setOpen(false);
+          }
+        }}
+        placeholder="Kund — sök…"
+        autoComplete="off"
+        className="w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
+      />
+      {customerId && (
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-teal-300 pointer-events-none">
+          Länkad
+        </span>
+      )}
+      {open && shown.length > 0 && (
+        <ul className="absolute z-20 mt-1 w-full rounded-btn border border-white/10 bg-black/90 backdrop-blur shadow-lg max-h-48 overflow-auto">
+          {shown.map((c, i) => (
+            <li key={c.id}>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => pick(c)}
+                onMouseEnter={() => setHi(i)}
+                className={`w-full text-left px-3 py-2 text-sm ${i === hi ? "bg-white/10" : ""}`}
+              >
+                {c.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function InvoiceFormModal({
   open,
   onClose,
@@ -49,6 +139,7 @@ function InvoiceFormModal({
   projects,
   bankAccounts,
   initial,
+  suggestedNumber,
 }: {
   open: boolean;
   onClose: () => void;
@@ -56,6 +147,7 @@ function InvoiceFormModal({
   projects: ProjectOpt[];
   bankAccounts: BankOpt[];
   initial?: Invoice | null;
+  suggestedNumber?: string;
 }) {
   const supabase = createClient();
   const router = useRouter();
@@ -77,7 +169,7 @@ function InvoiceFormModal({
           status: initial.status ?? "draft",
           notes: initial.notes ?? "",
         }
-      : emptyForm,
+      : { ...emptyForm, number: suggestedNumber ?? "" },
   );
 
   async function submit(e: React.FormEvent) {
@@ -154,18 +246,24 @@ function InvoiceFormModal({
         <h3 className="font-heading text-lg font-semibold">
           {isEdit ? "Redigera faktura" : "Ny faktura"}
         </h3>
-        <input
-          autoFocus
-          required
-          {...bind("number")}
-          placeholder="Fakturanummer"
-          className="w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2"
-        />
-        <div className="grid grid-cols-2 gap-3">
+        <label className="block">
+          {!isEdit && (
+            <span className="text-xs text-[var(--muted)]">Fakturanummer (genereras automatiskt)</span>
+          )}
           <input
-            {...bind("customer_name")}
-            placeholder="Kund"
-            className="rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm col-span-2"
+            autoFocus
+            required
+            {...bind("number")}
+            placeholder="Fakturanummer"
+            className={`w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 ${isEdit ? "" : "mt-1"}`}
+          />
+        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <CustomerCombobox
+            customers={customers}
+            name={f.customer_name}
+            customerId={f.customer_id}
+            onChange={(v) => setF((p) => ({ ...p, customer_name: v.name, customer_id: v.id }))}
           />
           <input
             {...bind("amount_sek")}
@@ -201,17 +299,6 @@ function InvoiceFormModal({
             />
           </label>
           <select
-            {...bind("customer_id")}
-            className="rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
-          >
-            <option value="">Kund (länk)…</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <select
             {...bind("project_id")}
             className="rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
           >
@@ -224,7 +311,7 @@ function InvoiceFormModal({
           </select>
           <select
             {...bind("bank_account_id")}
-            className="rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm col-span-2"
+            className="rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
           >
             <option value="">Bankkonto…</option>
             {bankAccounts.map((b) => (
@@ -288,10 +375,12 @@ export function NewInvoiceButton({
   customers,
   projects,
   bankAccounts,
+  existingNumbers = [],
 }: {
   customers: CustomerOpt[];
   projects: ProjectOpt[];
   bankAccounts: BankOpt[];
+  existingNumbers?: string[];
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -310,6 +399,7 @@ export function NewInvoiceButton({
           customers={customers}
           projects={projects}
           bankAccounts={bankAccounts}
+          suggestedNumber={nextInvoiceNumber(existingNumbers)}
         />
       )}
     </>
