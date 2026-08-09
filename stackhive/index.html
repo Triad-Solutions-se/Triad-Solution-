@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#061a2e" />
+  <meta name="description" content="StackHive — a cozy hexagon puzzle game for iPhone by Triad Solutions. Daily challenges, endless mode, Game Center leaderboards." />
+  <title>StackHive — Hexagon puzzle game by Triad Solutions</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --white: #ffffff;
+      --g400:  #a1a1a6;
+      --g600:  #636366;
+      --honey: #e8b34b;
+      --honey-deep: #b8860b;
+      --bg:    #061a2e;
+    }
+
+    html { scroll-behavior: smooth; background: var(--bg); }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: #000; }
+    ::-webkit-scrollbar-thumb { background: var(--g600); border-radius: 3px; }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      inset: 0 0 auto 0;
+      z-index: 900;
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      transition: background .4s ease;
+    }
+    nav.scrolled { background: rgba(6,26,46,.92); backdrop-filter: blur(16px); }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .nav-brand svg { flex-shrink: 0; }
+    .nav-brand-name {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      color: var(--white);
+    }
+    .nav-brand-by {
+      font-size: 10px;
+      font-weight: 300;
+      letter-spacing: .14em;
+      color: var(--g600);
+      text-transform: uppercase;
+    }
+    .nav-links { display: flex; align-items: center; gap: 26px; list-style: none; }
+    .nav-links a {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--g400);
+      text-decoration: none;
+      transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--white); }
+
+    @media (max-width: 560px) {
+      nav { padding: 0 20px; }
+      .nav-links { gap: 16px; }
+      .nav-brand-by { display: none; }
+    }
+
+    /* ── HERO ── */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      padding: 120px 24px 80px;
+    }
+    #hero-glow {
+      position: absolute;
+      inset: -20%;
+      background:
+        radial-gradient(ellipse 50% 40% at 30% 25%, rgba(232,179,75,.14) 0%, transparent 70%),
+        radial-gradient(ellipse 45% 40% at 75% 70%, rgba(184,134,11,.12) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 35% at 60% 20%, rgba(13,58,110,.5) 0%, transparent 70%);
+      filter: blur(48px);
+      pointer-events: none;
+    }
+    .hex-field {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: .5;
+    }
+    .hex-field svg { position: absolute; }
+    @keyframes hexFloat {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50%      { transform: translateY(-18px) rotate(8deg); }
+    }
+
+    #hero-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
+
+    .hero-logo {
+      margin-bottom: 32px;
+      filter: drop-shadow(0 12px 40px rgba(232,179,75,.35));
+    }
+
+    .hero-title {
+      font-size: clamp(52px, 9vw, 104px);
+      font-weight: 200;
+      letter-spacing: -.03em;
+      line-height: 1.04;
+      background: linear-gradient(175deg, #fff 30%, #8a7038 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      padding-bottom: .1em;
+    }
+    .hero-title strong { font-weight: 500; }
+
+    .hero-sub {
+      margin-top: 18px;
+      max-width: 520px;
+      font-size: clamp(15px, 1.8vw, 19px);
+      font-weight: 300;
+      color: var(--g400);
+      line-height: 1.7;
+    }
+
+    .hero-ctas {
+      margin-top: 40px;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: 100px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 500;
+      letter-spacing: .015em;
+      text-decoration: none;
+      transition: background .2s, transform .2s, border-color .2s;
+      padding: 14px 34px;
+      font-size: 15px;
+      white-space: nowrap;
+    }
+    .btn-honey {
+      background: linear-gradient(135deg, #f0c05e 0%, #d9a032 100%);
+      color: #241a05;
+    }
+    .btn-honey:hover { transform: scale(1.03); }
+    .btn-outline {
+      background: transparent;
+      color: var(--white);
+      border: 1px solid rgba(255,255,255,.22);
+    }
+    .btn-outline:hover { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.4); }
+
+    .hero-note {
+      margin-top: 20px;
+      font-size: 12px;
+      font-weight: 300;
+      letter-spacing: .08em;
+      color: var(--g600);
+      text-transform: uppercase;
+    }
+
+    /* ── SECTIONS ── */
+    .section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 110px 40px;
+    }
+    @media (max-width: 640px) { .section { padding: 72px 20px; } }
+
+    .label {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      color: var(--honey);
+      margin-bottom: 14px;
+      display: block;
+    }
+    .section-title {
+      font-size: clamp(34px, 5.5vw, 62px);
+      font-weight: 200;
+      letter-spacing: -.03em;
+      line-height: 1.08;
+      padding-bottom: .12em;
+      background: linear-gradient(175deg, #fff 30%, #666 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(to right, transparent, rgba(255,255,255,.09), transparent);
+    }
+
+    /* ── FEATURES ── */
+    .features-head { text-align: center; margin-bottom: 64px; }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .feature {
+      padding: 38px 32px;
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 22px;
+      background: rgba(255,255,255,.02);
+      transition: border-color .3s, background .3s, transform .3s;
+    }
+    .feature:hover {
+      border-color: rgba(232,179,75,.35);
+      background: rgba(232,179,75,.04);
+      transform: translateY(-4px);
+    }
+    .feature-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 13px;
+      background: linear-gradient(135deg, rgba(232,179,75,.18) 0%, rgba(232,179,75,.05) 100%);
+      border: 1px solid rgba(232,179,75,.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 22px;
+    }
+    .feature h3 {
+      font-size: 18px;
+      font-weight: 400;
+      letter-spacing: -.01em;
+      margin-bottom: 10px;
+    }
+    .feature p {
+      font-size: 14px;
+      color: var(--g400);
+      line-height: 1.75;
+      font-weight: 300;
+    }
+    @media (max-width: 900px) { .features-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 560px) { .features-grid { grid-template-columns: 1fr; } }
+
+    /* ── SUPPORT ── */
+    #support .support-inner { text-align: center; }
+    .support-cards {
+      margin-top: 52px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 320px));
+      gap: 18px;
+      justify-content: center;
+    }
+    .support-card {
+      display: block;
+      text-decoration: none;
+      padding: 34px 28px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 20px;
+      background: rgba(255,255,255,.02);
+      transition: border-color .3s, background .3s, transform .3s;
+    }
+    .support-card:hover {
+      border-color: rgba(232,179,75,.4);
+      background: rgba(232,179,75,.05);
+      transform: translateY(-4px);
+    }
+    .support-card h3 {
+      font-size: 17px;
+      font-weight: 400;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+    .support-card p { font-size: 13px; color: var(--g400); font-weight: 300; line-height: 1.65; }
+    .support-card .arrow { color: var(--honey); font-size: 13px; margin-top: 14px; display: inline-block; }
+    @media (max-width: 820px) { .support-cards { grid-template-columns: 1fr; } }
+
+    /* ── FOOTER ── */
+    footer {
+      padding: 48px 40px;
+      border-top: 1px solid rgba(255,255,255,.06);
+    }
+    .foot-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 18px;
+    }
+    .foot-copy { font-size: 12px; color: var(--g600); font-weight: 300; }
+    .foot-links { display: flex; gap: 22px; }
+    .foot-links a {
+      font-size: 12px;
+      color: var(--g600);
+      text-decoration: none;
+      font-weight: 300;
+      transition: color .2s;
+    }
+    .foot-links a:hover { color: var(--white); }
+    @media (max-width: 640px) {
+      footer { padding: 36px 20px; }
+      .foot-inner { flex-direction: column; text-align: center; }
+    }
+
+    /* ── REVEAL ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 1s cubic-bezier(.16,1,.3,1), transform 1s cubic-bezier(.16,1,.3,1);
+    }
+    .reveal.in { opacity: 1; transform: translateY(0); }
+    .d1 { transition-delay: .08s; }
+    .d2 { transition-delay: .18s; }
+    .d3 { transition-delay: .28s; }
+    .d4 { transition-delay: .38s; }
+    .d5 { transition-delay: .48s; }
+    .d6 { transition-delay: .58s; }
+  </style>
+</head>
+<body>
+
+<nav id="nav">
+  <a class="nav-brand" href="/">
+    <svg width="26" height="28" viewBox="0 0 26 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M13 1 L24.5 7.5 V20.5 L13 27 L1.5 20.5 V7.5 Z" stroke="#e8b34b" stroke-width="2" fill="rgba(232,179,75,.12)"/>
+    </svg>
+    <span>
+      <span class="nav-brand-name">StackHive</span><br>
+      <span class="nav-brand-by">by Triad Solutions</span>
+    </span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="support.html">Support</a></li>
+    <li><a href="privacy-policy.html">Privacy</a></li>
+  </ul>
+</nav>
+
+<!-- ── HERO ── -->
+<header id="hero">
+  <div id="hero-glow"></div>
+  <div class="hex-field" aria-hidden="true">
+    <svg style="top:18%;left:12%;animation:hexFloat 9s ease-in-out infinite;" width="54" height="60" viewBox="0 0 26 28"><path d="M13 1 L24.5 7.5 V20.5 L13 27 L1.5 20.5 V7.5 Z" stroke="rgba(232,179,75,.35)" stroke-width="1" fill="none"/></svg>
+    <svg style="top:64%;left:8%;animation:hexFloat 12s ease-in-out infinite 1.5s;" width="34" height="38" viewBox="0 0 26 28"><path d="M13 1 L24.5 7.5 V20.5 L13 27 L1.5 20.5 V7.5 Z" stroke="rgba(232,179,75,.25)" stroke-width="1" fill="none"/></svg>
+    <svg style="top:26%;right:14%;animation:hexFloat 10s ease-in-out infinite .8s;" width="44" height="48" viewBox="0 0 26 28"><path d="M13 1 L24.5 7.5 V20.5 L13 27 L1.5 20.5 V7.5 Z" stroke="rgba(255,255,255,.14)" stroke-width="1" fill="none"/></svg>
+    <svg style="top:70%;right:10%;animation:hexFloat 11s ease-in-out infinite 2s;" width="60" height="66" viewBox="0 0 26 28"><path d="M13 1 L24.5 7.5 V20.5 L13 27 L1.5 20.5 V7.5 Z" stroke="rgba(232,179,75,.3)" stroke-width="1" fill="none"/></svg>
+  </div>
+
+  <div id="hero-content">
+    <svg class="hero-logo" width="88" height="96" viewBox="0 0 26 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M13 1 L24.5 7.5 V20.5 L13 27 L1.5 20.5 V7.5 Z" stroke="#e8b34b" stroke-width="1.6" fill="rgba(232,179,75,.1)"/>
+      <path d="M13 8 L18.5 11 V17 L13 20 L7.5 17 V11 Z" fill="#e8b34b"/>
+    </svg>
+    <h1 class="hero-title">Stack<strong>Hive</strong></h1>
+    <p class="hero-sub">A cozy hexagon puzzle for iPhone. Place pieces, clear the board and keep your streak alive — one honeycomb at a time.</p>
+    <div class="hero-ctas">
+      <a class="btn btn-honey" href="support.html">Get support</a>
+      <a class="btn btn-outline" href="privacy-policy.html">Privacy policy</a>
+    </div>
+    <p class="hero-note">Free on the App Store · Made in Sweden</p>
+  </div>
+</header>
+
+<div class="divider"></div>
+
+<!-- ── FEATURES ── -->
+<section id="features" class="section">
+  <div class="features-head">
+    <span class="label reveal">The game</span>
+    <h2 class="section-title reveal d1">Easy to pick up.<br>Hard to put down.</h2>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature reveal d1">
+      <div class="feature-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8b34b" stroke-width="1.6"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+      </div>
+      <h3>Daily challenge &amp; streaks</h3>
+      <p>A new shared board every day. Solve it to extend your streak — miss a day and it resets. Optional reminders keep you on track.</p>
+    </div>
+
+    <div class="feature reveal d2">
+      <div class="feature-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8b34b" stroke-width="1.6"><path d="M12 2v20M2 12h20" opacity="0"/><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>
+      </div>
+      <h3>Endless mode</h3>
+      <p>No timer, no finish line. Chase your best run and climb the Game Center leaderboards against players worldwide.</p>
+    </div>
+
+    <div class="feature reveal d3">
+      <div class="feature-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8b34b" stroke-width="1.6"><path d="M12 2l2.9 6.1L21.5 9l-4.8 4.5L18 20l-6-3.4L6 20l1.3-6.5L2.5 9l6.6-.9z"/></svg>
+      </div>
+      <h3>Levels, stars &amp; coins</h3>
+      <p>Work through handcrafted levels, earn up to three stars on each and collect coins along the way.</p>
+    </div>
+
+    <div class="feature reveal d4">
+      <div class="feature-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8b34b" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      </div>
+      <h3>Play at your pace</h3>
+      <p>No lives, no energy meters. StackHive waits for you — pick it up for a minute or settle in for an evening.</p>
+    </div>
+
+    <div class="feature reveal d5">
+      <div class="feature-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8b34b" stroke-width="1.6"><path d="M12 3c-4 4-7 6.5-7 11a7 7 0 0 0 14 0c0-4.5-3-7-7-11z"/></svg>
+      </div>
+      <h3>Make it yours</h3>
+      <p>Spend coins on cosmetics, and tune sound, music, haptics and reduce-motion to play exactly the way you like.</p>
+    </div>
+
+    <div class="feature reveal d6">
+      <div class="feature-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8b34b" stroke-width="1.6"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      </div>
+      <h3>Private by design</h3>
+      <p>No account needed. Your progress lives on your device — we don't run servers that collect it.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── SUPPORT ── -->
+<section id="support" class="section">
+  <div class="support-inner">
+    <span class="label reveal">Need a hand?</span>
+    <h2 class="section-title reveal d1">We've got you.</h2>
+
+    <div class="support-cards">
+      <a class="support-card reveal d1" href="support.html">
+        <h3>Support &amp; FAQ</h3>
+        <p>Restoring purchases, streaks, resetting progress and more.</p>
+        <span class="arrow">Read the FAQ →</span>
+      </a>
+      <a class="support-card reveal d2" href="mailto:kontakt@triadsolutions.se">
+        <h3>Email us</h3>
+        <p>Found a bug or have an idea? Tell us — include your device model and iOS version.</p>
+        <span class="arrow">kontakt@triadsolutions.se →</span>
+      </a>
+      <a class="support-card reveal d3" href="privacy-policy.html">
+        <h3>Privacy policy</h3>
+        <p>What the app stores, how ads work and the choices you have.</p>
+        <span class="arrow">Read the policy →</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="foot-inner">
+    <span class="foot-copy">© 2026 Triad Solutions AB. StackHive is made with 🍯 in Sweden.</span>
+    <div class="foot-links">
+      <a href="/">triadsolutions.se</a>
+      <a href="support.html">Support</a>
+      <a href="privacy-policy.html">Privacy</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Navbar background on scroll
+  const nav = document.getElementById('nav');
+  addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', scrollY > 24);
+  }, { passive: true });
+
+  // Reveal-on-scroll
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold: .12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+
+</body>
+</html>
