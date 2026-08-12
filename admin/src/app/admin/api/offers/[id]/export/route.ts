@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateOfferXlsx } from "@/lib/offer-xlsx";
 import { normalizeItems } from "@/lib/offer-items";
+import { normalizeSections } from "@/lib/offer-sections";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ export async function GET(
   const { data: offer, error } = await supabase
     .from("offers")
     .select(
-      "offer_number,title,reference,offer_date,valid_until,project_description,custom_header,custom_text,project_price,monthly_price,project_discount_pct,monthly_discount_pct,project_items,monthly_items,other_costs,vat_rate,currency,customer:customers(name,contact_person,email,phone,website)",
+      "offer_number,title,reference,offer_date,valid_until,project_description,custom_header,custom_text,custom_sections,project_price,monthly_price,project_discount_pct,monthly_discount_pct,project_items,monthly_items,other_costs,vat_rate,currency,customer:customers(name,contact_person,email,phone,website)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -37,6 +38,7 @@ export async function GET(
     project_description: offer.project_description,
     custom_header: (offer as any).custom_header ?? null,
     custom_text: (offer as any).custom_text ?? null,
+    custom_sections: normalizeSections((offer as any).custom_sections),
     project_price: Number(offer.project_price ?? 0),
     monthly_price: Number(offer.monthly_price ?? 0),
     project_discount_pct: Number((offer as any).project_discount_pct ?? 0),

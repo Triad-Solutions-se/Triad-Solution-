@@ -13,6 +13,7 @@ import {
   computeSectionTotals,
   itemsOrFallback,
 } from "./offer-items";
+import { type CustomSection, sectionsForRender } from "./offer-sections";
 
 export const A4_W = 595.28;
 export const A4_H = 841.89;
@@ -37,9 +38,12 @@ export type OfferData = {
   offer_date: string;
   valid_until: string | null;
   project_description: string | null;
-  // Valfri extra-sektion (egen rubrik + text) som visas efter beskrivningen.
+  // Valfria extra-sektioner (egen rubrik + text) som visas efter beskrivningen.
+  // custom_header/custom_text är legacy singel-sektion — används som fallback
+  // om custom_sections saknas/är tom.
   custom_header?: string | null;
   custom_text?: string | null;
+  custom_sections?: CustomSection[];
   // Legacy enkel-pris-fält. Behålls för bakåtkompatibilitet (rendererarna
   // faller tillbaka till dem om items-arrayen är tom) och som "delsumma"
   // för listvyn.
@@ -375,18 +379,19 @@ export function drawOfferContent(
     p.cursor += 16;
   }
 
-  // ====== EXTRA INFORMATION (valfri, per offert) ======
-  const customHeader = offer.custom_header?.trim();
-  const customText = offer.custom_text?.trim();
-  if (customHeader || customText) {
+  // ====== EXTRA INFORMATION (valfria sektioner, per offert) ======
+  for (const section of sectionsForRender(
+    offer.custom_sections, offer.custom_header, offer.custom_text,
+  )) {
     p.newPageIfNeeded(80);
-    p.cursor = drawSectionHeading(p, customHeader || "EXTRA INFORMATION", p.cursor);
-    if (customText) {
-      const endY = p.drawWrapped(customText, MARGIN, p.cursor, {
+    p.cursor = drawSectionHeading(p, section.header || "EXTRA INFORMATION", p.cursor);
+    if (section.text) {
+      const endY = p.drawWrapped(section.text, MARGIN, p.cursor, {
         size: 10, color: BLACK, width: CONTENT_W,
       });
       p.cursor = endY + 8;
     }
+    p.cursor += 4;
   }
 
   // ====== PRISER ======
