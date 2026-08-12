@@ -6,6 +6,7 @@ import ExcelJS from "exceljs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { type OfferItem, itemsOrFallback } from "./offer-items";
+import { type CustomSection, sectionsForRender } from "./offer-sections";
 
 const BRAND = "FF00B4A8";
 const DARK = "FF0A2540";
@@ -34,6 +35,7 @@ export type OfferData = {
   project_description: string | null;
   custom_header?: string | null;
   custom_text?: string | null;
+  custom_sections?: CustomSection[];
   project_price: number;
   monthly_price: number;
   project_discount_pct?: number | null;
@@ -249,23 +251,23 @@ export async function generateOfferXlsx(offer: OfferData): Promise<Uint8Array> {
   setRowHeight(PB + 4, 14);
 
   // ========================================
-  // EXTRA INFORMATION (valfri, per offert)
+  // EXTRA INFORMATION (valfria sektioner, per offert)
   // ========================================
   let afterPB = PB + 5;
-  const customHeader = offer.custom_header?.trim();
-  const customText = offer.custom_text?.trim();
-  if (customHeader || customText) {
+  for (const section of sectionsForRender(
+    offer.custom_sections, offer.custom_header, offer.custom_text,
+  )) {
     const CH = afterPB;
-    set(`B${CH}`, customHeader || "EXTRA INFORMATION", { font: fHeading });
+    set(`B${CH}`, section.header || "EXTRA INFORMATION", { font: fHeading });
     sectionUnderline(CH);
     setRowHeight(CH, 22);
 
-    const lines = customText ? customText.split(/\r?\n/) : [];
+    const lines = section.text ? section.text.split(/\r?\n/) : [];
     const linesNeeded = Math.max(lines.length, 2);
     const cFirst = CH + 1;
     const cLast = CH + linesNeeded;
-    setMerge(`B${cFirst}:F${cLast}`, customText || "—", {
-      font: customText ? fNormal : fGrey,
+    setMerge(`B${cFirst}:F${cLast}`, section.text || "—", {
+      font: section.text ? fNormal : fGrey,
       alignment: { vertical: "top", horizontal: "left", wrapText: true },
     });
     for (let r = cFirst; r <= cLast; r++) setRowHeight(r, 18);

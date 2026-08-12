@@ -11,6 +11,11 @@ import {
   newEmptyItem,
   normalizeItems,
 } from "@/lib/offer-items";
+import {
+  type CustomSection,
+  newEmptySection,
+  sectionsOrLegacy,
+} from "@/lib/offer-sections";
 
 type Customer = { id: string; name: string; org_number?: string | null; address?: string | null };
 
@@ -26,6 +31,7 @@ type Offer = {
   project_description: string | null;
   custom_header: string | null;
   custom_text: string | null;
+  custom_sections?: unknown;
   project_price: number;
   monthly_price: number;
   project_discount_pct?: number | null;
@@ -66,8 +72,6 @@ export function OfferEditor({
     offer_date: offer.offer_date,
     valid_until: offer.valid_until ?? "",
     project_description: offer.project_description ?? "",
-    custom_header: offer.custom_header ?? "",
-    custom_text: offer.custom_text ?? "",
     other_costs: offer.other_costs ?? "",
     vat_rate: String(offer.vat_rate ?? 25),
     currency: offer.currency ?? "SEK",
@@ -93,6 +97,12 @@ export function OfferEditor({
       Number(offer.monthly_discount_pct ?? 0),
       "Underhållsavgift (per månad)",
     ),
+  );
+
+  // Extra informations-sektioner — egen state precis som items. Lyfter in
+  // legacy custom_header/custom_text som första sektion på gamla offerter.
+  const [customSections, setCustomSections] = useState<CustomSection[]>(() =>
+    sectionsOrLegacy(offer.custom_sections, offer.custom_header, offer.custom_text),
   );
 
   const [saving, setSaving] = useState(false);
@@ -123,8 +133,10 @@ export function OfferEditor({
       offer_date: f.offer_date,
       valid_until: f.valid_until || null,
       project_description: f.project_description || null,
-      custom_header: f.custom_header || null,
-      custom_text: f.custom_text || null,
+      // Legacy-fälten speglar första sektionen så äldre läsare fortsätter fungera.
+      custom_header: customSections[0]?.header.trim() || null,
+      custom_text: customSections[0]?.text.trim() || null,
+      custom_sections: customSections,
       project_price: projTotals.subtotal,
       monthly_price: monthTotals.subtotal,
       project_discount_pct: 0,
@@ -202,8 +214,9 @@ export function OfferEditor({
       offer_date: new Date().toISOString().slice(0, 10),
       valid_until: f.valid_until || null,
       project_description: f.project_description || null,
-      custom_header: f.custom_header || null,
-      custom_text: f.custom_text || null,
+      custom_header: customSections[0]?.header.trim() || null,
+      custom_text: customSections[0]?.text.trim() || null,
+      custom_sections: customSections,
       project_price: projTotals.subtotal,
       monthly_price: monthTotals.subtotal,
       project_discount_pct: 0,
@@ -373,29 +386,80 @@ export function OfferEditor({
           </div>
 
           <div className="glass rounded-card p-5 space-y-3">
-            <h2 className="font-heading text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
-              Extra information
-            </h2>
-            <p className="text-xs text-[var(--muted)] -mt-2">
-              Valfri sektion med egen rubrik och text — visas direkt efter projektbeskrivningen i offerten. Lämna tom för att dölja.
+            <div className="flex items-center justify-between">
+              <h2 className="font-heading text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
+                Extra information
+              </h2>
+              <button
+                type="button"
+                onClick={() => setCustomSections((prev) => [...prev, newEmptySection()])}
+                className="rounded-btn bg-white/5 hover:bg-white/10 border border-white/10 px-2 py-1 text-[11px] flex items-center gap-1"
+              >
+                <Plus size={12} /> Lägg till sektion
+              </button>
+            </div>
+            <p className="text-xs text-[var(--muted)] -mt-1">
+              Valfria sektioner med egen rubrik och text — visas i ordning direkt efter projektbeskrivningen i offerten. Tomma sektioner döljs.
             </p>
-            <label className="block">
-              <span className="text-xs text-[var(--muted)]">Rubrik</span>
-              <input
-                {...bind("custom_header")}
-                placeholder="t.ex. Om oss, Vår metod, Leveransplan…"
-                className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs text-[var(--muted)]">Text</span>
-              <textarea
-                {...bind("custom_text")}
-                rows={5}
-                placeholder="Fritext som visas under rubriken."
-                className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm resize-y"
-              />
-            </label>
+            {customSections.length === 0 ? (
+              <div className="text-[11px] text-[var(--muted)] italic py-2">
+                Inga sektioner — tryck "Lägg till sektion" för att börja.
+              </div>
+            ) : (
+              customSections.map((sec, idx) => (
+                <div
+                  key={sec.id}
+                  className="rounded-btn border border-white/5 p-3 space-y-3 bg-black/20"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase tracking-wider text-[var(--muted)]">
+                      Sektion {idx + 1}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCustomSections((prev) => prev.filter((s) => s.id !== sec.id))
+                      }
+                      className="rounded-btn text-[var(--muted)] hover:text-rose-300 hover:bg-rose-500/10 p-1"
+                      title="Ta bort sektion"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <label className="block">
+                    <span className="text-xs text-[var(--muted)]">Rubrik</span>
+                    <input
+                      value={sec.header}
+                      onChange={(e) =>
+                        setCustomSections((prev) =>
+                          prev.map((s) =>
+                            s.id === sec.id ? { ...s, header: e.target.value } : s,
+                          ),
+                        )
+                      }
+                      placeholder="t.ex. Om oss, Vår metod, Leveransplan…"
+                      className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-xs text-[var(--muted)]">Text</span>
+                    <textarea
+                      value={sec.text}
+                      onChange={(e) =>
+                        setCustomSections((prev) =>
+                          prev.map((s) =>
+                            s.id === sec.id ? { ...s, text: e.target.value } : s,
+                          ),
+                        )
+                      }
+                      rows={5}
+                      placeholder="Fritext som visas under rubriken."
+                      className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm resize-y"
+                    />
+                  </label>
+                </div>
+              ))
+            )}
           </div>
 
           <div className="glass rounded-card p-5 space-y-4">
