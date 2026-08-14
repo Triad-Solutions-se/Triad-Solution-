@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Who's In — Privacy Policy</title>
+<link rel="stylesheet" href="/whosin/style.css">
+</head>
+<body>
+<nav class="crumb"><a href="/whosin/index.html">Who's In</a> / Privacy Policy</nav>
+<main>
+<h1>Privacy Policy</h1>
+<p class="meta">Effective date: 13 August 2026 · Last updated: 13 August 2026</p>
+
+<h2>1. Who we are</h2>
+<p>Who's In ("the App", "we", "us") is operated by <strong>Triad Solutions</strong>, Gothenburg, Sweden ("the Controller"). We are the data controller for personal data processed through the App, as defined by the EU General Data Protection Regulation (GDPR).</p>
+<ul>
+<li><strong>Contact:</strong> <a href="mailto:rayan.ahmad97+whosin-privacy@gmail.com">rayan.ahmad97+whosin-privacy@gmail.com</a></li>
+<li><strong>Postal address:</strong> Triad Solutions, Gothenburg, Sweden (full postal address available on request via the contact above).</li>
+</ul>
+
+<h2>2. Scope</h2>
+<p>This policy describes how we collect, use, and share personal data when you download, install, or use Who's In on iOS or Android. It applies whether you use the App as a session organizer or as an invited participant.</p>
+
+<h2>3. Data we collect</h2>
+<h3>3.1 Account data (required)</h3>
+<ul>
+<li><strong>Email address</strong> — for login, account recovery, and transactional email.</li>
+<li><strong>Display name</strong> — shown to other members of any session you join.</li>
+<li><strong>Authentication identifiers</strong> — provided by Apple Sign In if you choose that method. Apple's email-relay address (if used) is stored so invites sent to it can be matched.</li>
+<li><strong>Account password (hashed)</strong> — never stored in plain text.</li>
+<li><strong>Acceptance of the End User License Agreement</strong> — required at signup; we store the timestamp.</li>
+</ul>
+<h3>3.2 Profile data (optional, user-controlled)</h3>
+<ul>
+<li>Profile photo</li>
+<li>Phone number</li>
+<li>Swish handle (Sweden) / Venmo handle (US) — used to render settlement deep links, not to move money</li>
+<li>Emergency contact</li>
+</ul>
+<h3>3.3 Special-category data (optional, explicit opt-in)</h3>
+<p><strong>Dietary notes</strong> and <strong>accessibility notes</strong> are GDPR Article 9 "special category" data. We only collect this if you explicitly opt in; the consent timestamp is recorded. Visible only to members of the same session.</p>
+<h3>3.4 Session data</h3>
+<p>For every session you create or join:</p>
+<ul>
+<li>Session name, type (trip / party / gathering), destination, dates, activity, per-person budget, ledger currency</li>
+<li>Membership and role (organizer, co-organizer, participant)</li>
+<li>Plan changes you propose or approve</li>
+<li>Pins (locations) and itinerary items</li>
+<li>Group chat messages and reactions</li>
+<li>Photo attachments to the chat and memory feed (with optional captions)</li>
+<li>Receipt photos uploaded for expense tracking, and OCR text extracted from them (total, currency, line items)</li>
+<li>Expenses, splits, and settlement records</li>
+<li>Availability windows you submit for date negotiation</li>
+</ul>
+<h3>3.5 Payment data</h3>
+<ul>
+<li>One-time consumable purchases (the session fee and any tier upgrade) are processed by <strong>Apple App Store</strong> or <strong>Google Play</strong>, via <strong>RevenueCat</strong> as our payment intermediary. We receive a transaction record (event id, product id, amount, currency, timestamp), not your payment instrument.</li>
+<li>We do not see, store, or process credit-card numbers or bank details.</li>
+<li>Settlements between participants happen <strong>outside</strong> the App via Swish or Venmo deep links. We do not move money on your behalf.</li>
+</ul>
+<h3>3.6 Device and diagnostic data</h3>
+<ul>
+<li><strong>Push notification token</strong> — to deliver invites, plan changes, and trial reminders via Expo Push.</li>
+<li><strong>Crash reports and error events</strong> — via Sentry. Stack traces and breadcrumbs are scrubbed of identifiers before transmission; the user ID is the only identifier we associate with errors.</li>
+<li><strong>Product analytics</strong> — via PostHog (EU Cloud), to measure conversion and feature usage. Events are pseudonymous (linked to your user ID, not your name or email).</li>
+<li><strong>Locale and device model</strong> — for compatibility diagnostics.</li>
+</ul>
+<h3>3.7 Moderation data</h3>
+<ul>
+<li>Reports you file against a message or photo, including the reason text</li>
+<li>Users you block</li>
+</ul>
+
+<h2>4. Purposes and legal bases</h2>
+<p>We process your data on the following GDPR Article 6 bases:</p>
+<div class="tablewrap"><table>
+<tr><th>Purpose</th><th>Data</th><th>Legal basis</th></tr>
+<tr><td>Operate the core service (sessions, plans, ledger, chat)</td><td>Account, session, payment</td><td>Contract (Art. 6(1)(b))</td></tr>
+<tr><td>Send transactional email and push (invites, trial expiry, settlement reminders)</td><td>Account, push token</td><td>Contract</td></tr>
+<tr><td>Process session-fee purchases</td><td>Payment</td><td>Contract</td></tr>
+<tr><td>Provide AI features (itinerary, date picker, budget, chat)</td><td>Session content you submit</td><td>Contract</td></tr>
+<tr><td>Display dietary/accessibility notes to your session</td><td>Special-category data</td><td>Explicit consent (Art. 9(2)(a))</td></tr>
+<tr><td>Detect and fix bugs, prevent abuse</td><td>Diagnostic, analytics</td><td>Legitimate interest (Art. 6(1)(f))</td></tr>
+<tr><td>Comply with legal obligations</td><td>Any of the above</td><td>Legal obligation (Art. 6(1)(c))</td></tr>
+<tr><td>Send marketing email (if introduced)</td><td>Account</td><td>Consent — not currently used</td></tr>
+</table></div>
+
+<h2>5. Recipients and processors</h2>
+<p>We share your data only with the processors listed below. Each is bound by a Data Processing Agreement and processes data only on our instructions.</p>
+<div class="tablewrap"><table>
+<tr><th>Processor</th><th>Role</th><th>Region</th></tr>
+<tr><td>Supabase</td><td>Hosting (Postgres database, authentication, storage, realtime, edge functions)</td><td>EU (Frankfurt)</td></tr>
+<tr><td>Apple / Google</td><td>App distribution and in-app purchase processing</td><td>Per-store</td></tr>
+<tr><td>RevenueCat</td><td>IAP receipt validation and webhook delivery</td><td>US</td></tr>
+<tr><td>Anthropic (Claude API)</td><td>AI inference for itinerary, chat, OCR</td><td>US</td></tr>
+<tr><td>Resend</td><td>Transactional email (invites, password resets)</td><td>US</td></tr>
+<tr><td>Sentry</td><td>Crash and error reporting</td><td>EU</td></tr>
+<tr><td>PostHog</td><td>Product analytics</td><td>EU</td></tr>
+<tr><td>Expo (Push)</td><td>Push notification routing</td><td>US</td></tr>
+</table></div>
+<p>Where a processor is in the United States, transfers are governed by the EU–US Data Privacy Framework where applicable, or by Standard Contractual Clauses (SCCs) signed with the processor.</p>
+<p>We do <strong>not</strong> sell your personal data.</p>
+
+<h2>6. Retention</h2>
+<div class="tablewrap"><table>
+<tr><th>Data</th><th>Retention</th></tr>
+<tr><td>Account data</td><td>Until you delete your account</td></tr>
+<tr><td>Active or completed session data</td><td>Indefinitely (so memories stay available)</td></tr>
+<tr><td>Trial sessions that go unpaid</td><td>Read-only after 5 days; hard-deleted after 90 days</td></tr>
+<tr><td>Receipt photos</td><td>With the parent session</td></tr>
+<tr><td>Memory photos</td><td>With the parent session</td></tr>
+<tr><td>Diagnostic logs</td><td>30 days</td></tr>
+<tr><td>RevenueCat transaction records</td><td>As long as required by tax and accounting law</td></tr>
+<tr><td>Reports and moderation actions</td><td>Up to 2 years for safety review</td></tr>
+</table></div>
+<p>When a session is deleted, all member-uploaded content (receipts, memory photos, messages) is deleted with it.</p>
+
+<h2>7. Your rights (GDPR)</h2>
+<ul>
+<li><strong>Access</strong> your data — export every record we hold about you as JSON + media zip from Settings → Data &amp; Privacy → Export my data.</li>
+<li><strong>Rectify</strong> inaccurate data — edit your profile from the app at any time.</li>
+<li><strong>Erase</strong> your data — Settings → Data &amp; Privacy → Delete account. Account deletion erases personal data; contributions to shared sessions (e.g. expense lines other members rely on) are <strong>anonymized</strong> as "Former member" so ledgers remain consistent.</li>
+<li><strong>Restrict</strong> or <strong>object</strong> to processing — email us at the contact above.</li>
+<li><strong>Portability</strong> — the export is provided in a structured, machine-readable format.</li>
+<li><strong>Withdraw consent</strong> at any time for dietary/accessibility notes.</li>
+</ul>
+<p>You also have the right to lodge a complaint with the Swedish data protection authority (<strong>Integritetsskyddsmyndigheten</strong>, <a href="https://www.imy.se">imy.se</a>) or your local supervisory authority in the EEA.</p>
+
+<h2>8. Security</h2>
+<ul>
+<li>Data in transit is encrypted with TLS.</li>
+<li>Data at rest is encrypted in our managed Postgres and Storage buckets.</li>
+<li>Receipt and memory photos sit in private buckets reachable only via short-lived signed URLs.</li>
+<li>Row-level security policies isolate every session: a non-member cannot read, write, or even enumerate another session's data.</li>
+<li>AI inference uses server-side keys; your prompts and AI responses are not used by the AI provider to train models, per their commercial terms.</li>
+<li>We log no personally identifying information in server logs.</li>
+</ul>
+<p>No system is perfectly secure. If you become aware of a vulnerability, contact <a href="mailto:rayan.ahmad97+whosin-security@gmail.com">rayan.ahmad97+whosin-security@gmail.com</a>.</p>
+
+<h2>9. Children</h2>
+<p>Who's In is not directed at children under 13. In the EU, users must be at least 16 (or your member state's lower threshold under GDPR Art. 8). If you believe a child has provided us data without consent, contact us and we will delete it.</p>
+
+<h2>10. Changes</h2>
+<p>We may update this policy. Material changes will be announced in-app at least 30 days before they take effect, with the option to delete your account before the change applies. The "Last updated" date above always reflects the most recent version.</p>
+
+<h2>11. Contact</h2>
+<ul>
+<li><strong>Privacy questions:</strong> <a href="mailto:rayan.ahmad97+whosin-privacy@gmail.com">rayan.ahmad97+whosin-privacy@gmail.com</a></li>
+<li><strong>Security disclosures:</strong> <a href="mailto:rayan.ahmad97+whosin-security@gmail.com">rayan.ahmad97+whosin-security@gmail.com</a></li>
+<li><strong>General support:</strong> <a href="mailto:rayan.ahmad97+whosin-support@gmail.com">rayan.ahmad97+whosin-support@gmail.com</a></li>
+</ul>
+</main>
+<footer>© 2026 Triad Solutions, Gothenburg, Sweden · <a href="/whosin/eula.html">EULA</a> · <a href="/whosin/index.html">Support</a></footer>
+</body>
+</html>
