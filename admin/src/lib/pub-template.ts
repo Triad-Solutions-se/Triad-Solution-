@@ -98,7 +98,7 @@ function textRewrites(ctx: PubSubCtx): [RegExp | string, string][] {
     ["Relaterat SaaS-avtal:", "Relaterat avtal:"],
     // Värdet på samma rad: "Ingår som Bilaga 2 till SaaS-avtal daterat …"
     [
-      /till\s+SaaS-avtal\s+(daterat)/g,
+      /till\s+(?:SaaS-)?avtal\s+(daterat)/g,
       `till avtal${numRef} $1`,
     ],
     // Generell fallback om mallen råkar säga "SaaS-avtalet" (bestämd form)
@@ -178,7 +178,11 @@ export function substituteBlocks(blocks: Block[], ctx: PubSubCtx): Block[] {
             return {
               label: sub(r.label),
               value: "",
-              segments: r.segments.map((seg) => ({ ...seg, text: sub(seg.text) })),
+              // Ifyllda platshållare ska inte längre ritas röda.
+              segments: r.segments.map((seg) => {
+                const text = sub(seg.text);
+                return { ...seg, text, red: seg.red && text === seg.text };
+              }),
             };
           }
           return { label: sub(r.label), value: sub(r.value) };
