@@ -256,10 +256,11 @@ export function signatureColumns(p: Pdf, leftTitle: string, rightTitle: string) 
 }
 
 export function renderBlocks(p: Pdf, blocks: Block[]) {
-  for (const b of blocks) {
+  for (const [i, b] of blocks.entries()) {
     switch (b.t) {
       case "h1": {
-        p.newPageIfNeeded(40);
+        // Håll ihop rubriken "Underskrifter" med signaturfälten på samma sida.
+        p.newPageIfNeeded(blocks[i + 1]?.t === "signatures" ? 200 : 40);
         p.cursor += 6;
         p.drawText(b.text, MARGIN, p.cursor, {
           font: p.fontBold,
