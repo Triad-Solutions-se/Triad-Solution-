@@ -317,11 +317,12 @@ export function drawContractCover(
   bigLabel: string, // "AVTAL" / "VILLKOR" / "PUB-AVTAL" (visas top-right)
   title: string,
   subtitle: string,
+  brandName = "", // leverantörens namn, visas som text när logga saknas
 ) {
   if (logo) {
     p.drawImage(logo, MARGIN, MARGIN, 60, 60);
   } else {
-    p.drawText("TRIAD SOLUTIONS", MARGIN, MARGIN + 18, {
+    p.drawText(brandName.toUpperCase(), MARGIN, MARGIN + 18, {
       font: p.fontBold,
       size: 18,
       color: BRAND,

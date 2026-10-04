@@ -6,7 +6,7 @@ import { normalizeSections } from "@/lib/offer-sections";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
-// Hämtar leverantörens (Triad) företagsuppgifter från company_settings.
+// Hämtar leverantörens (MCA Solutions AB) företagsuppgifter från company_settings.
 // Faller tillbaka på defaults om raden saknas.
 export async function fetchCompanyInfo(
   supabase: SupabaseServerClient,

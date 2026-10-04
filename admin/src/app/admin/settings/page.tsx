@@ -19,7 +19,7 @@ export default async function SettingsPage() {
   ]);
 
   const settings = {
-    name: data?.name ?? "Triad Solutions",
+    name: data?.name ?? "MCA Solutions AB",
     org_number: data?.org_number ?? "",
     address: data?.address ?? "",
     email: data?.email ?? "",

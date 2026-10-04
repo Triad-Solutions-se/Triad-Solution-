@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { generateOfferXlsx } from "@/lib/offer-xlsx";
 import { normalizeItems } from "@/lib/offer-items";
 import { normalizeSections } from "@/lib/offer-sections";
+import { fetchCompanyInfo } from "../contract-data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ export async function GET(
     return NextResponse.json({ error: "Offert hittades inte" }, { status: 404 });
   }
 
+  const company = await fetchCompanyInfo(supabase);
   const buffer = await generateOfferXlsx({
     offer_number: offer.offer_number,
     title: offer.title,
@@ -50,7 +52,7 @@ export async function GET(
     currency: offer.currency ?? "SEK",
     // Supabase nested embed returns either object or array depending on relation cardinality
     customer: Array.isArray(offer.customer) ? offer.customer[0] ?? null : (offer.customer as any) ?? null,
-  });
+  }, company);
 
   const safeName = (offer.customer && (Array.isArray(offer.customer) ? offer.customer[0]?.name : (offer.customer as any).name)) ?? "kund";
   const filename = `Offert_${offer.offer_number ?? id.slice(0, 8)}_${String(safeName).replace(/[^a-zA-Z0-9_-]/g, "_")}.xlsx`;

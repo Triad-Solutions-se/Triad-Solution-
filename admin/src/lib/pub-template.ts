@@ -223,7 +223,7 @@ export async function generatePubFromTemplatePdf(
     `PUB-avtal ${ctx.customer?.name ?? ""} ${ctx.offerNumber ?? ""}`.trim(),
   );
   doc.setAuthor(ctx.company.name);
-  doc.setCreator("Triad Admin");
+  doc.setCreator(ctx.company.name);
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
   const fontItalic = await doc.embedFont(StandardFonts.HelveticaOblique);
@@ -237,6 +237,7 @@ export async function generatePubFromTemplatePdf(
     "",
     "PERSONUPPGIFTSBITRÄDESAVTAL",
     templateName || "GDPR Artikel 28",
+    ctx.company.name,
   );
 
   const subbed = substituteBlocks(blocks, ctx);

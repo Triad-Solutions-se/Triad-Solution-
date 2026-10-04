@@ -235,11 +235,13 @@ export class Pdf {
   }
 }
 
-// Ladda Triad-logon (valfri — faller tillbaka till text om filen saknas, t.ex.
-// i serverless-miljö där public-mappen inte bundlas).
+// Ladda dokumentlogon (valfri — faller tillbaka till företagsnamnet som text om
+// filen saknas, t.ex. i serverless-miljö där public-mappen inte bundlas).
+// Lägg en ny logga som public/logos/document-logo.png för att visa den på
+// offerter, avtal och PUB-avtal.
 export async function loadLogo(doc: PDFDocument): Promise<PDFImage | null> {
   try {
-    const logoPath = path.resolve(process.cwd(), "public", "logos", "Logo_Color_with_text.png");
+    const logoPath = path.resolve(process.cwd(), "public", "logos", "document-logo.png");
     const buf = await fs.readFile(logoPath);
     return await doc.embedPng(buf);
   } catch {
@@ -278,7 +280,7 @@ export function drawOfferContent(
     // Logon är 1080x1080 (kvadratisk) — rita 70x70 för att behålla aspect ratio
     p.drawImage(logo, MARGIN, MARGIN, 70, 70);
   } else {
-    p.drawText("TRIAD SOLUTIONS", MARGIN, MARGIN + 22, {
+    p.drawText(company.name.toUpperCase(), MARGIN, MARGIN + 22, {
       font: fontBold, size: 22, color: BRAND,
     });
   }
@@ -465,7 +467,7 @@ export function drawOfferContent(
     p.cursor += 30;
 
     const sigW = (CONTENT_W - 30) / 2;
-    drawSignatureBlock(p, MARGIN, p.cursor, sigW, "Underskrift — För Triad Solutions");
+    drawSignatureBlock(p, MARGIN, p.cursor, sigW, `Underskrift — För ${company.name}`);
     drawSignatureBlock(p, MARGIN + sigW + 30, p.cursor, sigW, "Underskrift — För kunden");
 
     // Footer (bottom of current page)

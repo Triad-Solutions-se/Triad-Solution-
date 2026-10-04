@@ -16,7 +16,7 @@ async function newDoc(title: string, author: string) {
   const doc = await PDFDocument.create();
   doc.setTitle(title);
   doc.setAuthor(author);
-  doc.setCreator("Triad Admin");
+  doc.setCreator(author);
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
   const fontItalic = await doc.embedFont(StandardFonts.HelveticaOblique);

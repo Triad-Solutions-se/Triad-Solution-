@@ -35,7 +35,7 @@ export function CompanySettingsForm({ settings }: { settings: Settings }) {
     const { error } = await supabase
       .from("company_settings")
       .update({
-        name: f.name.trim() || "Triad Solutions",
+        name: f.name.trim() || "MCA Solutions AB",
         org_number: f.org_number.trim() || null,
         address: f.address.trim() || null,
         email: f.email.trim() || null,
@@ -81,7 +81,7 @@ export function CompanySettingsForm({ settings }: { settings: Settings }) {
           <span className="text-xs text-[var(--muted)]">Företagsnamn</span>
           <input
             {...bind("name")}
-            placeholder="Triad Solutions"
+            placeholder="MCA Solutions AB"
             className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
           />
         </label>
@@ -121,7 +121,7 @@ export function CompanySettingsForm({ settings }: { settings: Settings }) {
             <input
               {...bind("email")}
               type="email"
-              placeholder="info@triadsolutions.se"
+              placeholder="kontakt@mcasolutions.se"
               className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
             />
           </label>

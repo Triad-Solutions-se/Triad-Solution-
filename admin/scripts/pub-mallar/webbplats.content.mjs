@@ -12,8 +12,8 @@
 // REGLER (styrs av src/lib/docx-parse.ts + src/lib/pub-template.ts):
 //  - Text inom [HAKPARENTES] blir röd platshållare. Bara platshållarna i
 //    PUB_SUB_RULES fylls i automatiskt, och de är ORDNINGS-beroende:
-//    [ORG.NR] #1 = kund, #2 = Triad. [ÅÅÅÅ-MM-DD] #1 = avtalsdatum,
-//    #2 = startdatum. [TELEFONNUMMER] #1 = kund, #2 = Triad. Behåll ordningen.
+//    [ORG.NR] #1 = kund, #2 = leverantören. [ÅÅÅÅ-MM-DD] #1 = avtalsdatum,
+//    #2 = startdatum. [TELEFONNUMMER] #1 = kund, #2 = leverantören. Behåll ordningen.
 //  - Ett "p"-stycke på formen "Etikett: text" tolkas som meta-rad (grå ruta).
 //    Undvik därför kolon följt av text i vanliga stycken; använd { t: "meta" }
 //    när rutan är avsiktlig (t.ex. "Anmärkning:").
@@ -34,7 +34,7 @@ export const blocks = [
     t: "meta",
     rows: [
       ["Personuppgiftsansvarig (PUA)", "[KUNDENS FÖRETAGSNAMN], org.nr [ORG.NR]"],
-      ["Personuppgiftsbiträde (PUB)", "Triad Solutions AB, org.nr [ORG.NR]"],
+      ["Personuppgiftsbiträde (PUB)", "MCA Solutions AB, org.nr [ORG.NR]"],
       ["Avtalsdatum", "[ÅÅÅÅ-MM-DD]"],
       ["Relaterat avtal", "Ingår som bilaga till avtal daterat [ÅÅÅÅ-MM-DD]"],
     ],
@@ -317,7 +317,7 @@ export const blocks = [
     rows: [
       ["Namn", "Rayan Ahmad"],
       ["Roll", "Grundare / Tekniskt ansvarig"],
-      ["E-post", "kontakt@triadsolutions.se"],
+      ["E-post", "kontakt@mcasolutions.se"],
       ["Telefon", "[TELEFONNUMMER]"],
       ["Dataskyddsombud", "Ej utsett (kärnverksamheten utlöser inte krav enligt GDPR art. 37)"],
     ],

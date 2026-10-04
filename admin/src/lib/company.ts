@@ -1,4 +1,4 @@
-// Leverantörens (Triad Solutions) företagsuppgifter. Redigeras i portalen under
+// Leverantörens (MCA Solutions AB) företagsuppgifter. Redigeras i portalen under
 // Inställningar och lagras i tabellen `company_settings` (singleton, id = 1).
 // Används som "Leverantör" i SaaS-avtalet, "Personuppgiftsbiträde" i PUB-avtalet
 // och i offertens FRÅN-block.
@@ -16,10 +16,10 @@ export type CompanyInfo = {
 };
 
 export const DEFAULT_COMPANY: CompanyInfo = {
-  name: "Triad Solutions",
+  name: "MCA Solutions AB",
   orgNumber: "",
   address: "",
-  email: "info@triadsolutions.se",
+  email: "kontakt@mcasolutions.se",
   phone: "",
   dpo: "Ej utsett",
 };

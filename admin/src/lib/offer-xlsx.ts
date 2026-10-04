@@ -3,6 +3,7 @@
 // som attachment.
 
 import ExcelJS from "exceljs";
+import { type CompanyInfo, DEFAULT_COMPANY } from "./company";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { type OfferItem, itemsOrFallback } from "./offer-items";
@@ -59,9 +60,12 @@ function fmtDateSv(d: string | null | undefined): string {
   return new Date(d).toLocaleDateString("sv-SE");
 }
 
-export async function generateOfferXlsx(offer: OfferData): Promise<Uint8Array> {
+export async function generateOfferXlsx(
+  offer: OfferData,
+  company: CompanyInfo = DEFAULT_COMPANY,
+): Promise<Uint8Array> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Triad Solutions";
+  wb.creator = company.name;
   wb.title = `Offert ${offer.offer_number ?? ""}`.trim();
 
   const ws = wb.addWorksheet("Offert", {
@@ -152,7 +156,7 @@ export async function generateOfferXlsx(offer: OfferData): Promise<Uint8Array> {
   // Bevarar bildens aspect ratio så den inte sträcks — våra logo-filer är
   // 1080x1080 (ikon + text staplade i samma frame), så target-höjden styr.
   try {
-    const logoPath = path.resolve(process.cwd(), "public", "logos", "Logo_Color_with_text.png");
+    const logoPath = path.resolve(process.cwd(), "public", "logos", "document-logo.png");
     const buf = await fs.readFile(logoPath);
     const dims = readPngDimensions(buf);
     const targetHeight = 80;
@@ -161,7 +165,7 @@ export async function generateOfferXlsx(offer: OfferData): Promise<Uint8Array> {
     ws.addImage(logoId, { tl: { col: 1, row: 0 }, ext: { width, height: targetHeight } });
   } catch {
     // Fallback text om logo saknas
-    setMerge("B1:D2", "TRIAD SOLUTIONS", {
+    setMerge("B1:D2", company.name.toUpperCase(), {
       font: { name: FONT, size: 22, bold: true, color: { argb: BRAND } },
       alignment: { vertical: "middle", horizontal: "left" },
     });
@@ -176,26 +180,30 @@ export async function generateOfferXlsx(offer: OfferData): Promise<Uint8Array> {
   // ========================================
   // FRÅN / TILL
   // ========================================
+  // Leverantörens adress delas upp i gatuadress + postnr/ort ("Gata 1, 123 45 Ort").
+  const [street = "", ...restAddr] = (company.address || "").split(/\s*[,\n]\s*/);
+  const postalCity = restAddr.join(", ").trim();
+
   set("B6", "FRÅN", { font: fBrand });
   set("E6", "TILL", { font: fBrand });
   setRowHeight(6, 16);
 
-  setMerge("B7:D7", "Triad Solutions", { font: { name: FONT, size: 11, bold: true } });
+  setMerge("B7:D7", company.name, { font: { name: FONT, size: 11, bold: true } });
   setMerge("E7:F7", offer.customer?.name ?? "—", { font: { name: FONT, size: 11, bold: true } });
 
-  setMerge("B8:D8", "Organisationsnummer: XXXXXX-XXXX", { font: fGrey });
+  setMerge("B8:D8", `Organisationsnummer: ${company.orgNumber || "XXXXXX-XXXX"}`, { font: fGrey });
   setMerge("E8:F8", offer.customer?.contact_person ? `Att: ${offer.customer.contact_person}` : "—", { font: fGrey });
 
-  setMerge("B9:D9", "[Gatuadress]", { font: fGrey });
+  setMerge("B9:D9", street || "[Gatuadress]", { font: fGrey });
   setMerge("E9:F9", offer.customer?.email ?? "", { font: fGrey });
 
-  setMerge("B10:D10", "[Postnr] [Ort]", { font: fGrey });
+  setMerge("B10:D10", postalCity || "[Postnr] [Ort]", { font: fGrey });
   setMerge("E10:F10", offer.customer?.phone ?? "", { font: fGrey });
 
-  setMerge("B11:D11", "info@triadsolutions.se", { font: fGrey });
+  setMerge("B11:D11", company.email, { font: fGrey });
   setMerge("E11:F11", offer.customer?.website ?? "", { font: fGrey });
 
-  setMerge("B12:D12", "[Telefonnummer]", { font: fGrey });
+  setMerge("B12:D12", company.phone || "[Telefonnummer]", { font: fGrey });
   setMerge("E12:F12", "", { font: fGrey });
 
   setRowHeight(13, 14);
@@ -603,7 +611,7 @@ export async function generateOfferXlsx(offer: OfferData): Promise<Uint8Array> {
   ws.getCell(`F${SIG + 5}`).border = sigLine;
   setRowHeight(SIG + 5, 22);
 
-  setMerge(`B${SIG + 6}:C${SIG + 6}`, "Underskrift — För Triad Solutions", { font: fSmall });
+  setMerge(`B${SIG + 6}:C${SIG + 6}`, `Underskrift — För ${company.name}`, { font: fSmall });
   setMerge(`E${SIG + 6}:F${SIG + 6}`, "Underskrift — För kunden", { font: fSmall });
   setRowHeight(SIG + 6, 14);
 
