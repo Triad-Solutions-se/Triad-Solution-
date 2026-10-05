@@ -3822,12 +3822,8 @@
   const heroSticky    = document.getElementById('hero-sticky');
   const heroTitle     = document.getElementById('hero-title');
   const heroI         = document.getElementById('hero-i');
-  const heroMca       = document.getElementById('hero-mca');
   const heroRule      = document.getElementById('hero-rule');
   const heroSol       = document.getElementById('hero-sol');
-  // Intro animation: 'c' = fly through the C's opening, 'line' = open along the divider line.
-  const INTRO_MODE = new URLSearchParams(location.search).get('intro') === 'line' ? 'line' : 'c';
-  let unitsPerPx = 1, ruleFill = 1;
   const scrollHint    = document.getElementById('scroll-hint');
 
   let iOffsetX = 0, iOffsetY = 0;
@@ -3842,9 +3838,6 @@
     const y = ((vcy - tr.top)  / tr.height * 100).toFixed(2);
     heroTitle.style.transformOrigin = `${x}% ${y}%`;
     iOffsetX = (ir.left + ir.width  / 2) - vcx;
-    const svgBox = document.getElementById('hero-logo-svg');
-    unitsPerPx = svgBox.viewBox.baseVal.width / svgBox.getBoundingClientRect().width;
-    ruleFill = (window.innerWidth * 1.04) / (heroRule.width.baseVal.value / unitsPerPx);
     iOffsetY = (ir.top  + ir.height / 2) - vcy;
     onScroll(); // Re-apply with correct offsets
   }
@@ -3865,31 +3858,16 @@
     // Hero zoom + bg — translate so the I stays on viewport center
     // Use a smaller zoom factor on mobile to keep the animation snappy
     const zoomFactor = window.innerWidth < 768 ? 40 : 70;
-    if (INTRO_MODE === 'line') {
-      // Open along the line: the divider stretches to full width while MCA lifts
-      // away and SOLUTIONS drops away. No zoom, so nothing drifts sideways.
-      const q = Math.min(1, p / 0.75);
-      const e = 1 - Math.pow(1 - q, 3);                       // ease-out
-      const lift = e * unitsPerPx * window.innerHeight * 0.55; // SVG user units
-      heroTitle.style.transform = 'none';
-      heroMca.style.transform  = `translateY(${-lift}px)`;
-      heroMca.style.opacity    = Math.max(0, 1 - q * 1.6);
-      heroSol.style.transform  = `translateY(${lift * 0.8}px)`;
-      heroSol.style.opacity    = Math.max(0, 1 - q * 1.9);
-      heroRule.style.transform = `scaleX(${1 + e * (ruleFill - 1)})`;
-      heroRule.style.opacity   = q < 0.65 ? 1 : Math.max(0, 1 - (q - 0.65) / 0.35);
-    } else {
-      // Fly through the C: zoom into the centre of the C's opening (practically the
-      // centre of the logo). SOLUTIONS and the line fade first so the C leads.
-      // Exponential zoom = constant perceived speed through the opening
-      const s = Math.pow(zoomFactor + 1, p);
-      const k = Math.min(1, p / 0.12);
-      const ease = k * k * (3 - 2 * k);
-      heroTitle.style.transform = `scale(${s}) translate(${-iOffsetX * ease}px, ${-iOffsetY * ease}px)`;
-      const early = Math.max(0, 1 - p / 0.1);
-      heroSol.style.opacity = early;
-      heroRule.style.opacity = early;
-    }
+    // Fly through the C: zoom into the centre of the C's opening (practically the
+    // centre of the logo). SOLUTIONS and the line fade first so the C leads.
+    // Exponential zoom = constant perceived speed through the opening
+    const s = Math.pow(zoomFactor + 1, p);
+    const k = Math.min(1, p / 0.12);
+    const ease = k * k * (3 - 2 * k);
+    heroTitle.style.transform = `scale(${s}) translate(${-iOffsetX * ease}px, ${-iOffsetY * ease}px)`;
+    const early = Math.max(0, 1 - p / 0.1);
+    heroSol.style.opacity = early;
+    heroRule.style.opacity = early;
 
     // Fade out SVG text during the last 40% of the zoom
     const svgEl = document.getElementById('hero-logo-svg');
