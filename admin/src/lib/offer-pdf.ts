@@ -237,8 +237,8 @@ export class Pdf {
 
 // Ladda dokumentlogon (valfri — faller tillbaka till företagsnamnet som text om
 // filen saknas, t.ex. i serverless-miljö där public-mappen inte bundlas).
-// Lägg en ny logga som public/logos/document-logo.png för att visa den på
-// offerter, avtal och PUB-avtal.
+// Loggan ligger i public/logos/document-logo.png (kvadratisk, används på
+// offerter, avtal och PUB-avtal).
 export async function loadLogo(doc: PDFDocument): Promise<PDFImage | null> {
   try {
     const logoPath = path.resolve(process.cwd(), "public", "logos", "document-logo.png");

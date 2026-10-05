@@ -74,7 +74,7 @@ export function NewAppButton() {
             />
             <input
               {...bind("origin")}
-              placeholder="Origin (frivillig, ex: https://triadsolutions.se)"
+              placeholder="Origin (frivillig, ex: https://www.mcasolutions.se)"
               className="w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
             />
             <div className="flex justify-end gap-2">

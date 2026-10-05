@@ -17,7 +17,7 @@ export type Triage = {
   tokens: number;
 };
 
-const TRIAGE_SYSTEM = `Du är en snabb router för Triad Solutions interna AI-assistent "Supermind".
+const TRIAGE_SYSTEM = `Du är en snabb router för MCA Solutions interna AI-assistent "Supermind".
 Assistenten har verktyg för att läsa portaldata: projekt, uppgifter, kunder, offerter,
 ekonomi, möten och teamets kapacitet.
 

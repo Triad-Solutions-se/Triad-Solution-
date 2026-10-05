@@ -2,17 +2,17 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Triad Admin",
-  description: "Internt nav för Triad Solutions",
+  title: "MCA Admin",
+  description: "Internt nav för MCA Solutions",
   robots: { index: false, follow: false },
   icons: {
-    icon: "/admin/logos/Logo_Color_Icon.png",
-    shortcut: "/admin/logos/Logo_Color_Icon.png",
+    icon: "/admin/logos/mca-icon.svg",
+    shortcut: "/admin/logos/mca-icon-512.png",
     apple: "/admin/apple-touch-icon.png",
   },
   appleWebApp: {
     capable: true,
-    title: "Triad Admin",
+    title: "MCA Admin",
     statusBarStyle: "black-translucent",
   },
 };

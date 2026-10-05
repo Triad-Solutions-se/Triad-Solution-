@@ -39,12 +39,11 @@ const LOGOS_DIR = path.resolve(__dirname, "../public/logos");
 /** @type {Array<{file: string, label: string, background: 'light'|'dark'|'color', mime: string}>} */
 const LOGOS = [
   { file: "Logo.svg",                   label: "Logo (SVG)",        background: "color", mime: "image/svg+xml" },
-  { file: "Logo_Black_Icon.png",        label: "Svart ikon",        background: "light", mime: "image/png" },
-  { file: "Logo_Black_with_text.png",   label: "Svart med text",    background: "light", mime: "image/png" },
-  { file: "Logo_Color_Icon.png",        label: "Färg ikon",         background: "color", mime: "image/png" },
-  { file: "Logo_Color_with_text.png",   label: "Färg med text",     background: "color", mime: "image/png" },
-  { file: "Logo_White_Icon.png",        label: "Vit ikon",          background: "dark",  mime: "image/png" },
-  { file: "Logo_White_with_text.png",   label: "Vit med text",      background: "dark",  mime: "image/png" },
+    { file: "mca-logo-black.png",         label: "Svart logotyp",     background: "light", mime: "image/png" },
+  { file: "mca-icon-512.png",           label: "App-ikon",          background: "light", mime: "image/png" },
+  { file: "mca-logo-color.png",         label: "Färg logotyp",      background: "light", mime: "image/png" },
+  { file: "mca-logo-long-color.png",    label: "Färg lång",         background: "light", mime: "image/png" },
+  { file: "mca-logo-white.png",         label: "Vit logotyp",       background: "dark",  mime: "image/png" },
 ];
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {

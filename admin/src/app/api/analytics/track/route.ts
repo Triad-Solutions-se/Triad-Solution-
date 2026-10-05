@@ -5,12 +5,15 @@ import { parseUA, decodeEdgeHeader } from "./ua";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Allow the apex and any *.triadsolutions.se subdomain (white-label tenants).
+// Allow the apex and any subdomain of the company domains (white-label tenants).
+// triadsolutions.se stays allowed while products move over to mcasolutions.se.
 function isAllowedOrigin(origin: string): boolean {
   try {
     const u = new URL(origin);
     if (u.protocol !== "https:") return false;
     return (
+      u.hostname === "mcasolutions.se" ||
+      u.hostname.endsWith(".mcasolutions.se") ||
       u.hostname === "triadsolutions.se" ||
       u.hostname.endsWith(".triadsolutions.se")
     );

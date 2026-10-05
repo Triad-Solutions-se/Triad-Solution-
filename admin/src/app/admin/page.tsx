@@ -119,7 +119,7 @@ export default async function OverviewPage() {
 
   return (
     <>
-      <PageHeader title="Översikt" subtitle="Från idé till SaaS-bolag — Triad Solutions internt nav." />
+      <PageHeader title="Översikt" subtitle="Från idé till SaaS-bolag — MCA Solutions internt nav." />
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4 mb-8">
         <StatCard label="Öppna uppgifter" value={openTasksData.count ?? 0} href="/admin/tasks" icon={CheckSquare} color="teal" />
         <StatCard label="Projekt" value={projects.count ?? 0} href="/admin/projects" icon={FolderKanban} color="purple" />
