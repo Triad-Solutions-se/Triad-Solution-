@@ -1,6 +1,6 @@
 # Triad Admin
 
-Invite-only admin at `triadsolutions.se/admin`. Next.js 15 App Router + Supabase SSR + TipTap.
+Invite-only admin at `portal.mcasolutions.se/admin` (also reachable as `www.mcasolutions.se/admin`). Next.js 15 App Router + Supabase SSR + TipTap.
 
 ## Modules
 Översikt · Uppgifter (kanban) · Projekt · Möten (kalender + lista) · Kunder · Dokument (TipTap) · Ekonomi · Grafisk Profil · Mallar (Dokumentmallar + Offerter).
