@@ -10,6 +10,7 @@ import { ProjectFilesManager, type ProjectFile } from "./ProjectFilesManager";
 import { ProjectTimeline, type TimelineTask } from "./ProjectTimeline";
 import { ProjectTaskList, type ProjectTask } from "./ProjectTaskList";
 import { ProjectRepoHealth } from "./ProjectRepoHealth";
+import { ProjectTimerButton, ProjectTimeLog, type TimeEntry } from "./ProjectTimer";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ export default async function ProjectDashboardPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [projectRes, tasksRes, filesRes, profilesRes, customersRes] = await Promise.all([
+  const [projectRes, tasksRes, filesRes, profilesRes, customersRes, timeRes] = await Promise.all([
     supabase
       .from("projects")
       .select(
@@ -46,6 +47,11 @@ export default async function ProjectDashboardPage({
       .order("uploaded_at", { ascending: false }),
     supabase.from("profiles").select("id,display_name,email").order("display_name"),
     supabase.from("customers").select("id,name").order("name"),
+    supabase
+      .from("time_entries")
+      .select("id,profile_id,started_at,ended_at")
+      .eq("project_id", id)
+      .order("started_at", { ascending: false }),
   ]);
 
   const project = projectRes.data as any;
@@ -66,6 +72,7 @@ export default async function ProjectDashboardPage({
   })) as unknown as ProjectTask[];
   const files = (filesRes.data ?? []) as ProjectFile[];
   const customers = (customersRes.data ?? []) as Array<{ id: string; name: string }>;
+  const timeEntries = (timeRes.data ?? []) as TimeEntry[];
 
   // Sign all file paths in batch for inline previews/downloads.
   const previews = new Map<string, string>();
@@ -139,6 +146,7 @@ export default async function ProjectDashboardPage({
           )}
         </div>
         <div className="flex shrink-0 gap-2">
+          <ProjectTimerButton project={{ id: project.id, name: project.name }} />
           <Link
             href={`/admin/projects/${project.id}/leads`}
             className="inline-flex items-center gap-2 rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold transition-colors shadow-sm shadow-teal-500/20"
@@ -176,6 +184,10 @@ export default async function ProjectDashboardPage({
         </div>
 
         <aside className="space-y-6">
+          <Section title="Tid">
+            <ProjectTimeLog entries={timeEntries} profiles={profiles} renderedAt={Date.now()} />
+          </Section>
+
           <Section title="Projektinfo">
             <ProjectInfoEditor
               project={{
