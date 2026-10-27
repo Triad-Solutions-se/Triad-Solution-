@@ -47,10 +47,13 @@ export function AgreementEditor({
   agreement,
   templates,
   offers,
+  invoicesPanel,
 }: {
   agreement: Agreement;
   templates: { id: string; name: string; is_active: boolean }[];
   offers: { id: string; offer_number: string | null; title: string | null; customer: { id: string; name: string } | null }[];
+  // Kopplade fakturor + "Fakturera", renderas på servern.
+  invoicesPanel?: React.ReactNode;
 }) {
   const supabase = createClient();
   const router = useRouter();
@@ -316,6 +319,8 @@ export function AgreementEditor({
           </div>
         )}
       </div>
+
+      {invoicesPanel}
 
       {/* Delete */}
       <div className="glass rounded-card p-5 border border-rose-400/10">

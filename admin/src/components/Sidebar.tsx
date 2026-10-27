@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, CheckSquare, FolderKanban, Calendar, Users, FileText,
   Wallet, Palette, BookTemplate, BarChart3, Bug, LogOut, X,
-  PanelLeftClose, PanelLeftOpen, Settings, Sparkles,
+  PanelLeftClose, PanelLeftOpen, Settings, Sparkles, Receipt,
 } from "lucide-react";
 
 const nav = [
@@ -16,6 +16,7 @@ const nav = [
   { href: "/admin/customers", label: "Kunder", icon: Users },
   { href: "/admin/documents", label: "Dokument", icon: FileText },
   { href: "/admin/finance", label: "Ekonomi", icon: Wallet },
+  { href: "/admin/invoices", label: "Fakturor", icon: Receipt },
   { href: "/admin/analytics", label: "Analys", icon: BarChart3 },
   { href: "/admin/crashes", label: "Krascher", icon: Bug },
   { href: "/admin/brand", label: "Grafisk Profil", icon: Palette },

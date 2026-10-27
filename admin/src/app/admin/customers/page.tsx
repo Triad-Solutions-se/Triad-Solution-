@@ -1,9 +1,12 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/PageHeader";
 import { Chip } from "@/components/Chip";
 import { SortSelect } from "@/components/SortSelect";
 import { NewCustomerButton } from "./NewCustomerButton";
 import { EditCustomerButton } from "./EditCustomerButton";
+import { NewInvoiceButton } from "../invoices/NewInvoiceButton";
+import { effectiveStatus, fmtAmount, isOutstanding } from "@/lib/invoice";
 import { AlertTriangle, Search } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +36,21 @@ export default async function CustomersPage({
   else if (sort === "created_desc") q = q.order("created_at", { ascending: false });
   else if (sort === "created_asc") q = q.order("created_at", { ascending: true });
   else q = q.order("name");
-  const { data } = await q;
+  const [{ data }, { data: invoiceRows }] = await Promise.all([
+    q,
+    supabase.from("invoices").select("customer_id,status,amount_sek,due_date,credited_invoice_id"),
+  ]);
+
+  // Fakturaöversikt per kund: antal, obetalt belopp och om något har förfallit.
+  const invoiceStats = new Map<string, { count: number; outstanding: number; overdue: boolean }>();
+  for (const r of invoiceRows ?? []) {
+    if (!r.customer_id || r.credited_invoice_id) continue;
+    const st = invoiceStats.get(r.customer_id) ?? { count: 0, outstanding: 0, overdue: false };
+    st.count += 1;
+    if (isOutstanding(r)) st.outstanding += Number(r.amount_sek || 0);
+    if (effectiveStatus(r) === "overdue") st.overdue = true;
+    invoiceStats.set(r.customer_id, st);
+  }
 
   const customers = (data ?? []).filter((c: any) => {
     if (!query) return true;
@@ -90,6 +107,7 @@ export default async function CustomersPage({
                   </span>
                 )}
               </div>
+              <InvoiceSummary customerId={c.id} stats={invoiceStats.get(c.id)} />
             </div>
             <EditCustomerButton customer={c} />
           </div>
@@ -104,7 +122,7 @@ export default async function CustomersPage({
       {/* Desktop: table */}
       <div className="hidden sm:block glass rounded-xl border border-white/10 overflow-hidden">
         <div className="overflow-x-auto scroll-x-hint">
-          <table className="w-full text-sm min-w-[600px]">
+          <table className="w-full text-sm min-w-[760px]">
             <thead className="bg-white/[0.03] text-left text-[var(--muted)] text-xs uppercase tracking-wider">
               <tr>
                 <th className="p-3">Kund</th>
@@ -112,6 +130,7 @@ export default async function CustomersPage({
                 <th className="p-3">Kontaktperson</th>
                 <th className="p-3">Status</th>
                 <th className="p-3">Kontakt</th>
+                <th className="p-3">Fakturor</th>
                 <th className="p-3 text-right">Åtgärd</th>
               </tr>
             </thead>
@@ -152,8 +171,17 @@ export default async function CustomersPage({
                       {!c.email && !c.phone && "—"}
                     </div>
                   </td>
+                  <td className="p-3">
+                    <InvoiceSummary customerId={c.id} stats={invoiceStats.get(c.id)} />
+                  </td>
                   <td className="p-3 text-right">
-                    <div className="flex justify-end">
+                    <div className="flex justify-end gap-2">
+                      <NewInvoiceButton
+                        customers={[{ id: c.id, name: c.name }]}
+                        preset={{ customerId: c.id }}
+                        label="Fakturera"
+                        variant="small"
+                      />
                       <EditCustomerButton customer={c} />
                     </div>
                   </td>
@@ -161,7 +189,7 @@ export default async function CustomersPage({
               ))}
               {customers.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-sm text-[var(--muted)]">
+                  <td colSpan={7} className="p-8 text-center text-sm text-[var(--muted)]">
                     {query ? "Inga kunder matchar sökningen." : "Inga kunder än."}
                   </td>
                 </tr>
@@ -171,6 +199,28 @@ export default async function CustomersPage({
         </div>
       </div>
     </>
+  );
+}
+
+function InvoiceSummary({
+  customerId,
+  stats,
+}: {
+  customerId: string;
+  stats?: { count: number; outstanding: number; overdue: boolean };
+}) {
+  if (!stats) return <span className="text-xs text-[var(--muted)]">—</span>;
+  return (
+    <Link href={`/admin/invoices?customer=${customerId}`} className="text-xs hover:text-white flex flex-col gap-0.5">
+      <span className="text-[var(--muted)]">{stats.count} st</span>
+      {stats.outstanding !== 0 ? (
+        <span className={`font-mono ${stats.overdue ? "text-rose-300" : "text-sky-300"}`}>
+          {fmtAmount(stats.outstanding)} kr obetalt
+        </span>
+      ) : (
+        <span className="text-emerald-300/80">Inget obetalt</span>
+      )}
+    </Link>
   );
 }
 
