@@ -64,7 +64,7 @@ export function CompanySettingsForm({ settings }: { settings: Settings }) {
         </div>
         <p className="text-sm text-[var(--muted)] -mt-2">
           Dessa uppgifter fylls automatiskt in som <b>Leverantör</b> i SaaS-avtalet,{" "}
-          <b>Personuppgiftsbiträde</b> i PUB-avtalet och i offertens FRÅN-block.
+          <b>Personuppgiftsbiträde</b> i PUB-avtalet och i FRÅN-blocket på offerter och fakturor.
         </p>
 
         {incomplete && (

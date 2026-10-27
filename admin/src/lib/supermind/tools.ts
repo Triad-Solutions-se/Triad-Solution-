@@ -6,6 +6,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type Anthropic from "@anthropic-ai/sdk";
 import { getRepoScan } from "@/lib/github";
+import { effectiveStatus, isOutstanding } from "@/lib/invoice";
 import { summarizeProjectState } from "./models";
 
 // Statisk lista (stabil ordning) så att prompt-cachen håller — ändra inte
@@ -360,7 +361,7 @@ async function financeSummary(supabase: SupabaseClient): Promise<ToolResult> {
   const [incomeRes, expenseRes, invoiceRes] = await Promise.all([
     supabase.from("income").select("amount_sek,status"),
     supabase.from("expenses").select("amount_sek,status"),
-    supabase.from("invoices").select("amount_sek,status"),
+    supabase.from("invoices").select("amount_sek,status,due_date,credited_invoice_id"),
   ]);
   const sum = (rows: any[] | null, pred?: (r: any) => boolean) =>
     (rows ?? [])
@@ -374,8 +375,8 @@ async function financeSummary(supabase: SupabaseClient): Promise<ToolResult> {
       income_received_sek: sum(incomeRes.data, (r) => r.status === "received"),
       income_pending_sek: sum(incomeRes.data, (r) => r.status === "pending"),
       expense_total_sek: sum(expenseRes.data),
-      invoices_unpaid_sek: sum(invoiceRes.data, (r) => r.status === "sent" || r.status === "overdue"),
-      invoices_overdue_sek: sum(invoiceRes.data, (r) => r.status === "overdue"),
+      invoices_unpaid_sek: sum(invoiceRes.data, (r) => isOutstanding(r)),
+      invoices_overdue_sek: sum(invoiceRes.data, (r) => isOutstanding(r) && effectiveStatus(r) === "overdue"),
     },
   };
 }

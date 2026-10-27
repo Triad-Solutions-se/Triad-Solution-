@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ChevronLeft } from "lucide-react";
 import { AgreementEditor } from "./AgreementEditor";
+import { LINKED_INVOICE_SELECT, LinkedInvoices } from "../../../invoices/LinkedInvoices";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export default async function AgreementDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [agreementRes, templatesRes, offersRes] = await Promise.all([
+  const [agreementRes, templatesRes, offersRes, invoicesRes] = await Promise.all([
     supabase
       .from("agreements")
       .select(
@@ -33,6 +34,11 @@ export default async function AgreementDetailPage({
       .from("offers")
       .select("id,offer_number,title,customer:customers(id,name)")
       .order("offer_date", { ascending: false }),
+    supabase
+      .from("invoices")
+      .select(LINKED_INVOICE_SELECT)
+      .eq("agreement_id", id)
+      .order("issued_at", { ascending: false }),
   ]);
 
   const agreement = agreementRes.data as any;
@@ -52,6 +58,16 @@ export default async function AgreementDetailPage({
         agreement={agreement}
         templates={(templatesRes.data ?? []) as any[]}
         offers={(offersRes.data ?? []) as any[]}
+        invoicesPanel={
+          // Saknas agreement_id-kolumnen (migration 0034 ej körd) visas ingen panel.
+          invoicesRes.error ? null : (
+            <LinkedInvoices
+              invoices={(invoicesRes.data ?? []) as any[]}
+              customer={agreement.customer ? { id: agreement.customer.id, name: agreement.customer.name } : null}
+              preset={{ agreementId: agreement.id }}
+            />
+          )
+        }
       />
     </>
   );
