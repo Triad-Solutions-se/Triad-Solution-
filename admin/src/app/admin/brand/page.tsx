@@ -34,12 +34,12 @@ export default async function BrandPage() {
 
   return (
     <>
-      <PageHeader title="Grafisk Profil" subtitle="Triad Solutions visuella identitet." />
+      <PageHeader title="Grafisk Profil" subtitle="MCA Solutions visuella identitet." />
 
       <section className="glass rounded-card p-6 mb-6">
         <h2 className="font-heading text-xl font-semibold mb-4">Färgpalett</h2>
         <div className="grid md:grid-cols-4 gap-4">
-          <Swatch name="Triad Teal" hex="#00b4a8" usage="Logotyp, accent, knappar" />
+          <Swatch name="MCA Teal" hex="#00b4a8" usage="Logotyp, accent, knappar" />
           <Swatch name="Deep Navy" hex="#0a2540" usage="Bakgrunder, mörkt läge" />
           <Swatch name="Antracit" hex="#2b2d2f" usage="Brödtext, mörka ytor" />
           <Swatch name="Pure White" hex="#ffffff" usage="Bakgrunder, text mörk yta" dark />

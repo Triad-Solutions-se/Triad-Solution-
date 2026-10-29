@@ -1,4 +1,4 @@
-# https://www.triadsolutions.se/robots.txt
+# https://www.mcasolutions.se/robots.txt
 User-agent: *
 Allow: /
 Disallow: /admin
@@ -32,5 +32,5 @@ Allow: /
 User-agent: Applebot-Extended
 Allow: /
 
-Host: https://www.triadsolutions.se
-Sitemap: https://www.triadsolutions.se/sitemap.xml
+Host: https://www.mcasolutions.se
+Sitemap: https://www.mcasolutions.se/sitemap.xml

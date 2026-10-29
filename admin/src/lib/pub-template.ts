@@ -98,7 +98,7 @@ function textRewrites(ctx: PubSubCtx): [RegExp | string, string][] {
     ["Relaterat SaaS-avtal:", "Relaterat avtal:"],
     // Värdet på samma rad: "Ingår som Bilaga 2 till SaaS-avtal daterat …"
     [
-      /till\s+SaaS-avtal\s+(daterat)/g,
+      /till\s+(?:SaaS-)?avtal\s+(daterat)/g,
       `till avtal${numRef} $1`,
     ],
     // Generell fallback om mallen råkar säga "SaaS-avtalet" (bestämd form)
@@ -178,7 +178,11 @@ export function substituteBlocks(blocks: Block[], ctx: PubSubCtx): Block[] {
             return {
               label: sub(r.label),
               value: "",
-              segments: r.segments.map((seg) => ({ ...seg, text: sub(seg.text) })),
+              // Ifyllda platshållare ska inte längre ritas röda.
+              segments: r.segments.map((seg) => {
+                const text = sub(seg.text);
+                return { ...seg, text, red: seg.red && text === seg.text };
+              }),
             };
           }
           return { label: sub(r.label), value: sub(r.value) };
@@ -219,7 +223,7 @@ export async function generatePubFromTemplatePdf(
     `PUB-avtal ${ctx.customer?.name ?? ""} ${ctx.offerNumber ?? ""}`.trim(),
   );
   doc.setAuthor(ctx.company.name);
-  doc.setCreator("Triad Admin");
+  doc.setCreator(ctx.company.name);
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
   const fontItalic = await doc.embedFont(StandardFonts.HelveticaOblique);
@@ -233,6 +237,7 @@ export async function generatePubFromTemplatePdf(
     "",
     "PERSONUPPGIFTSBITRÄDESAVTAL",
     templateName || "GDPR Artikel 28",
+    ctx.company.name,
   );
 
   const subbed = substituteBlocks(blocks, ctx);

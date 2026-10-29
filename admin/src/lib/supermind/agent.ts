@@ -13,8 +13,8 @@ const MAX_ITERATIONS = 10;
 
 // Frusen systemprompt → cachas. Ändra inte per request (inget datum, inga
 // namn här) annars slås prompt-cachen sönder.
-const SYSTEM = `Du är "Supermind" — den AI-drivna driftshjärnan i Triad Solutions interna portal.
-Triad Solutions är ett svenskt teknik- och konsultbolag som grundats av tre ingenjörer
+const SYSTEM = `Du är "Supermind" — den AI-drivna driftshjärnan i MCA Solutions interna portal.
+MCA Solutions (MCA Solutions AB, tidigare Triad Solutions) är ett svenskt teknik- och konsultbolag som grundats av tre ingenjörer
 (Rayan, Sahil, Firas). Ditt övergripande mål är att hjälpa teamet att LANDA PROJEKT och
 TJÄNA PENGAR.
 

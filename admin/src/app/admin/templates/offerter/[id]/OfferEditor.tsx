@@ -58,9 +58,12 @@ const STATUSES = [
 export function OfferEditor({
   offer,
   customers,
+  aside,
 }: {
   offer: Offer;
   customers: Customer[];
+  // Extra kort i högerkolumnen (t.ex. kopplade fakturor), renderas på servern.
+  aside?: React.ReactNode;
 }) {
   const supabase = createClient();
   const router = useRouter();
@@ -676,6 +679,8 @@ export function OfferEditor({
               </div>
             </div>
           )}
+
+          {aside}
         </div>
       </div>
     </div>

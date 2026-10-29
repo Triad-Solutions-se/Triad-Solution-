@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, CheckSquare, FolderKanban, Calendar, Users, FileText,
   Wallet, Palette, BookTemplate, BarChart3, Bug, LogOut, X,
-  PanelLeftClose, PanelLeftOpen, Settings, Sparkles,
+  PanelLeftClose, PanelLeftOpen, Settings, Sparkles, Receipt,
 } from "lucide-react";
 
 const nav = [
@@ -16,6 +16,7 @@ const nav = [
   { href: "/admin/customers", label: "Kunder", icon: Users },
   { href: "/admin/documents", label: "Dokument", icon: FileText },
   { href: "/admin/finance", label: "Ekonomi", icon: Wallet },
+  { href: "/admin/invoices", label: "Fakturor", icon: Receipt },
   { href: "/admin/analytics", label: "Analys", icon: BarChart3 },
   { href: "/admin/crashes", label: "Krascher", icon: Bug },
   { href: "/admin/brand", label: "Grafisk Profil", icon: Palette },
@@ -60,12 +61,12 @@ export function Sidebar({
         <div className="flex items-center gap-3 min-w-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/admin/logos/Logo_White_Icon.png"
-            alt="Triad"
+            src="/admin/logos/mca-icon.svg"
+            alt="MCA Solutions"
             className="h-9 w-9 object-contain shrink-0"
           />
           <div className={hideWhenCollapsed}>
-            <div className="font-heading font-bold tracking-tight text-base">Triad</div>
+            <div className="font-heading font-bold tracking-tight text-base">MCA Solutions</div>
             <div className="text-[10px] uppercase tracking-widest text-[var(--muted)]">Admin</div>
           </div>
         </div>

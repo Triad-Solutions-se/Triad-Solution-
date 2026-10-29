@@ -1,12 +1,15 @@
 # Triad Admin
 
-Invite-only admin at `triadsolutions.se/admin`. Next.js 15 App Router + Supabase SSR + TipTap.
+Invite-only admin at `portal.mcasolutions.se/admin` (also reachable as `www.mcasolutions.se/admin`). Next.js 15 App Router + Supabase SSR + TipTap.
 
 ## Modules
 Översikt · Uppgifter (kanban) · Projekt · Möten (kalender + lista) · Kunder · Dokument (TipTap) · Ekonomi · Grafisk Profil · Mallar (Dokumentmallar + Offerter).
 
 ### Offerter (under Mallar)
 Skapa kundoffert med två fasta priskolumner — `project_price` (engångsavgift) och `monthly_price` (underhåll/månad). Live-uträkning av delsumma, moms och totaler i admin-UI:t. Export till Excel via `/admin/api/offers/[id]/export` — branded layout, live SUM-formler i kalkylbladet, A4 utskriftsklar. Statusflöde: utkast → skickad → accepterad/avslagen/utgången. Schema i `supabase/migrations/0015_offers.sql`; kör den migrationen i Supabase SQL-editorn för att aktivera modulen. Offertnummer auto-genereras per kalenderår (`YYYY-NNN`).
+
+### Fakturor
+Kundfakturor under `/admin/invoices`, kopplade till kund, offert och avtal. Skapa från fakturalistan, från en kund ("Fakturera" i kundlistan) eller från offert-/avtalssidan — engångskostnad och/eller månadsavgift hämtas från offerten, med leveransperiod. Fakturanummer (`YYYY-NNN` per kalenderår) och OCR-nummer (fakturanumrets siffror + längdsiffra + Luhn-kontrollsiffra) sätts av databasen och är unika. PDF via `/admin/api/invoices/[id]/pdf` med bankgiro, OCR, momsreg.nr, F-skatt och styrelsens säte. Statusflöde: utkast → skickad (låst) → betald, eller kreditera med kreditfaktura; "Förfallen" räknas fram efter förfallodagen. Bara utkast kan raderas. Bankgiro, momsreg.nr m.m. fylls i under Inställningar → Fakturering. Schema i `supabase/migrations/0034_invoice_system.sql`.
 
 ## Local setup
 ```bash

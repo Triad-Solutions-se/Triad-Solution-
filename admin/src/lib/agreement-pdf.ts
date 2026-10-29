@@ -29,7 +29,7 @@ export async function generateAgreementPdf(
   const title = `Avtal ${meta.agreementNumber ?? offer.offer_number ?? ""}`.trim();
   doc.setTitle(title);
   doc.setAuthor(company.name);
-  doc.setCreator("Triad Admin");
+  doc.setCreator(company.name);
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
   const fontItalic = await doc.embedFont(StandardFonts.HelveticaOblique);
@@ -47,7 +47,7 @@ export async function generateAgreementPdf(
 
   // === 2. Villkor på ny sida med försättsblad (utan top-right-label) ===
   p.newPage();
-  drawContractCover(p, logo, "", "VILLKOR", "Bilaga till avtalet");
+  drawContractCover(p, logo, "", "VILLKOR", "Bilaga till avtalet", company.name);
   const ctx = buildVillkorCtx(
     offer.customer ?? null,
     meta.agreementDate,

@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/PageHeader";
-import { FolderArchive } from "lucide-react";
+import { ChevronRight, FolderArchive } from "lucide-react";
+import { fmtDate } from "@/lib/date";
+import { fmtAmount, isOutstanding } from "@/lib/invoice";
 import { NewPaymentButton, PaymentsTable } from "./PaymentsSection";
 import { NewRecurringButton, RecurringTable } from "./RecurringSection";
 import { NewRecurringIncomeButton, RecurringIncomeTable } from "./RecurringIncomeSection";
 import { materializeRecurringIncome } from "./materializeRecurringIncome";
-import { NewInvoiceButton, InvoicesTable } from "./InvoicesSection";
+import { NewInvoiceButton } from "../invoices/NewInvoiceButton";
+import { InvoiceStatusChip } from "../invoices/InvoiceStatusChip";
 import { NewExpenseButton, ExpensesTable } from "./ExpensesSection";
 import { NewIncomeButton, IncomeTable } from "./IncomeSection";
 import {
@@ -112,9 +115,9 @@ export default async function FinancePage() {
     .filter((b) => !b.archived)
     .reduce((s, b) => s + b.currentBalance, 0);
 
-  // Outstanding receivables: unpaid invoices
+  // Outstanding receivables: sent, unpaid invoices (drafts and credit notes excluded)
   const outstanding = invoicesData
-    .filter((r: any) => r.status !== "paid" && r.status !== "credited")
+    .filter((r: any) => isOutstanding(r))
     .reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
 
   // Cashflow chart: use received income vs reimbursed/paid expenses for actual movement
@@ -158,12 +161,7 @@ export default async function FinancePage() {
               projects={projectList}
               bankAccounts={bankList}
             />
-            <NewInvoiceButton
-              customers={customerList}
-              projects={projectList}
-              bankAccounts={bankList}
-              existingNumbers={invoicesData.map((r: any) => r.number).filter(Boolean)}
-            />
+            <NewInvoiceButton customers={customerList} variant="secondary" />
             <NewIncomeButton
               customers={customerList}
               projects={projectList}
@@ -224,13 +222,55 @@ export default async function FinancePage() {
         />
       </Section>
 
-      <Section title="Fakturor">
-        <InvoicesTable
-          rows={invoicesData as any}
-          customers={customerList}
-          projects={projectList}
-          bankAccounts={bankList}
-        />
+      <Section
+        title="Fakturor"
+        right={
+          <Link href="/admin/invoices" className="text-xs text-teal-300 hover:text-teal-200 flex items-center gap-1">
+            Alla fakturor <ChevronRight size={14} />
+          </Link>
+        }
+      >
+        <table className="w-full text-sm min-w-[540px]">
+          <thead className="bg-white/[0.03] text-left text-[var(--muted)] text-xs uppercase tracking-wider">
+            <tr>
+              <th className="p-3">Fakturanummer</th>
+              <th className="p-3">Kund</th>
+              <th className="p-3">Utfärdad</th>
+              <th className="p-3">Förfaller</th>
+              <th className="p-3">Belopp</th>
+              <th className="p-3">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {invoicesData.slice(0, 10).map((r: any) => (
+              <tr key={r.id} className="hover:bg-white/[0.04] transition-colors">
+                <td className="p-3 font-mono">
+                  <Link href={`/admin/invoices/${r.id}`} className="hover:text-teal-300">
+                    {r.number}
+                  </Link>
+                </td>
+                <td className="p-3 text-[var(--muted)]">
+                  {r.customer_name ?? customerList.find((c) => c.id === r.customer_id)?.name ?? "—"}
+                </td>
+                <td className="p-3 text-[var(--muted)]">{fmtDate(r.issued_at)}</td>
+                <td className="p-3 text-[var(--muted)]">{r.credited_invoice_id ? "—" : fmtDate(r.due_date)}</td>
+                <td className="p-3 font-mono">
+                  {fmtAmount(r.amount_sek)} {r.currency ?? "SEK"}
+                </td>
+                <td className="p-3">
+                  <InvoiceStatusChip invoice={r} />
+                </td>
+              </tr>
+            ))}
+            {!invoicesData.length && (
+              <tr>
+                <td colSpan={6} className="p-8 text-center text-sm text-[var(--muted)]">
+                  Inga fakturor än.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </Section>
 
       <Section title="Intäkter">
@@ -281,11 +321,20 @@ function FinanceStat({
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  right,
+  children,
+}: {
+  title: string;
+  right?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <section className="glass rounded-xl border border-white/10 overflow-hidden mb-6">
       <header className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
         <h2 className="font-heading font-semibold">{title}</h2>
+        {right}
       </header>
       <div className="overflow-x-auto scroll-x-hint">{children}</div>
     </section>

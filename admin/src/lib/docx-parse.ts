@@ -367,6 +367,22 @@ class BlockBuilder {
     this.flush();
     this.blocks.push({ t: "table", headers, rows, widths });
   }
+  pushSignatures(left: string, right: string) {
+    this.flush();
+    this.blocks.push({ t: "signatures", left, right });
+  }
+  lastBlock(): Block | null {
+    return this.blocks[this.blocks.length - 1] ?? null;
+  }
+}
+
+// Första icke-tomma paragrafen i en cell (partens namn i signaturtabellen).
+function firstCellParagraph(tc: XNode): string {
+  for (const p of findAll(tc, "p")) {
+    const txt = joinedText(findChildren(p, "r").map(parseRun));
+    if (txt) return txt;
+  }
+  return "";
 }
 
 // Detektera om en paragraf ser ut som en "meta-rad" — kort label följd av
@@ -438,6 +454,23 @@ export function parseDocxBlocks(xml: string): ParseResult {
       // Tabell — använd första raden som header om bg är mörk.
       const rows = findChildren(child, "tr");
       if (rows.length === 0) continue;
+
+      // Tvåkolumnstabell direkt under rubriken "Underskrifter" → riktiga
+      // signaturfält (linjer för underskrift/namn/datum) i stället för tabell.
+      const firstRowCells = findChildren(rows[0], "tc");
+      const prev = bb.lastBlock();
+      if (
+        firstRowCells.length === 2 &&
+        prev?.t === "h1" &&
+        /^underskrift/i.test(prev.text)
+      ) {
+        bb.pushSignatures(
+          firstCellParagraph(firstRowCells[0]),
+          firstCellParagraph(firstRowCells[1]),
+        );
+        continue;
+      }
+
       const cellTexts: string[][] = rows.map((tr) =>
         findChildren(tr, "tc").map((tc) => cellText(tc)),
       );

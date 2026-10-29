@@ -256,10 +256,11 @@ export function signatureColumns(p: Pdf, leftTitle: string, rightTitle: string) 
 }
 
 export function renderBlocks(p: Pdf, blocks: Block[]) {
-  for (const b of blocks) {
+  for (const [i, b] of blocks.entries()) {
     switch (b.t) {
       case "h1": {
-        p.newPageIfNeeded(40);
+        // Håll ihop rubriken "Underskrifter" med signaturfälten på samma sida.
+        p.newPageIfNeeded(blocks[i + 1]?.t === "signatures" ? 200 : 40);
         p.cursor += 6;
         p.drawText(b.text, MARGIN, p.cursor, {
           font: p.fontBold,
@@ -316,11 +317,12 @@ export function drawContractCover(
   bigLabel: string, // "AVTAL" / "VILLKOR" / "PUB-AVTAL" (visas top-right)
   title: string,
   subtitle: string,
+  brandName = "", // leverantörens namn, visas som text när logga saknas
 ) {
   if (logo) {
     p.drawImage(logo, MARGIN, MARGIN, 60, 60);
   } else {
-    p.drawText("TRIAD SOLUTIONS", MARGIN, MARGIN + 18, {
+    p.drawText(brandName.toUpperCase(), MARGIN, MARGIN + 18, {
       font: p.fontBold,
       size: 18,
       color: BRAND,

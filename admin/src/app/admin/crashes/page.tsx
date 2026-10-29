@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Krascher — central crash feed for all Triad apps.
+ * Krascher — central crash feed for all MCA Solutions apps.
  * Reads crash_reports (+ analytics_apps for names) from this project's
  * database; reports are ingested by the report-crash edge function.
  * Grouped by fingerprint; status updates apply to the whole group.
