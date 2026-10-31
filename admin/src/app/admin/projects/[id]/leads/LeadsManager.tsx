@@ -14,6 +14,7 @@ import {
   CalendarClock,
   XCircle,
   RotateCcw,
+  Lightbulb,
 } from "lucide-react";
 import { Chip } from "@/components/Chip";
 import { Modal } from "@/components/Modal";
@@ -29,6 +30,7 @@ export type Lead = {
   phone: string | null;
   website: string | null;
   public_email: string | null;
+  sales_angle: string | null;
   status: string; // new | followup | meeting | nolead
   notes: string | null;
   created_at: string;
@@ -88,6 +90,9 @@ const HEADER_MAP: Record<string, keyof Omit<Lead, "id" | "project_id" | "status"
   "url": "website",
   "public email": "public_email",
   "email": "public_email",
+  "sales angle": "sales_angle",
+  "angle": "sales_angle",
+  "säljvinkel": "sales_angle",
 };
 
 export function LeadsManager({
@@ -127,7 +132,8 @@ export function LeadsManager({
         (l.neighborhood ?? "").toLowerCase().includes(q) ||
         (l.street_address ?? "").toLowerCase().includes(q) ||
         (l.phone ?? "").toLowerCase().includes(q) ||
-        (l.public_email ?? "").toLowerCase().includes(q)
+        (l.public_email ?? "").toLowerCase().includes(q) ||
+        (l.sales_angle ?? "").toLowerCase().includes(q)
       );
     });
   }, [leads, filter, query]);
@@ -188,6 +194,7 @@ export function LeadsManager({
         phone: p.phone ?? null,
         website: p.website ?? null,
         public_email: p.public_email ?? null,
+        sales_angle: p.sales_angle ?? null,
         status: "new",
       }));
       const { data, error } = await supabase
@@ -308,7 +315,7 @@ export function LeadsManager({
             <h3 className="font-heading text-lg font-semibold">Ladda upp leads</h3>
             <p className="text-xs text-[var(--muted)] mt-1">
               Excel (.xlsx), Numbers-export eller CSV. Förväntade kolumner:
-              <span className="text-white/80"> Fit tier, Business name, Industry / category, Neighborhood, Street address, Phone, Website, Public email</span>.
+              <span className="text-white/80"> Fit tier, Business name, Industry / category, Neighborhood, Street address, Phone, Website, Public email, Sales angle</span>.
             </p>
           </div>
 
@@ -452,6 +459,7 @@ function LeadRow({
               </a>
             )}
           </div>
+          {lead.sales_angle && <SalesAngle text={lead.sales_angle} />}
         </div>
 
         <div className="flex flex-wrap gap-1.5 shrink-0">
@@ -486,6 +494,37 @@ function LeadRow({
         </div>
       </div>
     </li>
+  );
+}
+
+// One line per point ("Nuläge: …", "Vinkel: …", "Öppning: …"); the label
+// before the colon is emphasised so the caller can scan it mid-call.
+function SalesAngle({ text }: { text: string }) {
+  const lines = text.split("\n").filter((l) => l.trim());
+  return (
+    <div className="mt-3 rounded-btn border border-teal-500/20 bg-teal-500/5 px-3 py-2">
+      <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-teal-300">
+        <Lightbulb size={12} />
+        Säljvinkel
+      </div>
+      <div className="space-y-1 text-xs leading-relaxed text-white/80">
+        {lines.map((line, i) => {
+          const m = line.match(/^([A-Za-zÅÄÖåäö ]{2,20}):\s*(.*)$/);
+          return (
+            <p key={i}>
+              {m ? (
+                <>
+                  <span className="font-semibold text-white">{m[1]}:</span>{" "}
+                  {m[2]}
+                </>
+              ) : (
+                line
+              )}
+            </p>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
