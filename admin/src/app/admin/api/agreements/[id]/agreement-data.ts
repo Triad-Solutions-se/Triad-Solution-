@@ -17,6 +17,7 @@ export type AgreementRow = {
   agreement_date: string;
   start_date: string;
   notes: string | null;
+  special_terms?: string | null; // saknas tills migration 0035 är körd
   offer_id: string | null;
   pub_template_id: string | null;
   customer_id: string | null;
@@ -43,11 +44,11 @@ export async function fetchAgreement(
   supabase: SupabaseServerClient,
   id: string,
 ): Promise<{ agreement: AgreementRow | null; error: string | null; status: number }> {
+  // "*" i stället för en kolumnlista så att avtal kan laddas ner även innan
+  // migration 0035 (special_terms) är körd.
   const { data, error } = await supabase
     .from("agreements")
-    .select(
-      "id,agreement_number,status,agreement_date,start_date,notes,offer_id,pub_template_id,customer_id",
-    )
+    .select("*")
     .eq("id", id)
     .maybeSingle();
   if (error) return { agreement: null, error: error.message, status: 500 };
@@ -121,15 +122,17 @@ export async function fetchCustomer(
     name: string | null;
     org_number: string | null;
     contact_person: string | null;
+    contact_role?: string | null; // saknas tills migration 0035 är körd
     email: string | null;
     phone: string | null;
     address: string | null;
   } | null;
   error: string | null;
 }> {
+  // "*" av samma skäl som i fetchAgreement (contact_role kom i 0035).
   const { data, error } = await supabase
     .from("customers")
-    .select("name,org_number,contact_person,email,phone,address")
+    .select("*")
     .eq("id", customerId)
     .maybeSingle();
   if (error) return { customer: null, error: error.message };

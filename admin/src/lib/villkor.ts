@@ -91,8 +91,8 @@ export function villkorBlocks(x: VillkorCtx, company: CompanyInfo): Block[] {
       t: "bullets",
       items: [
         '"Tjänsten" avser den lösning som Leverantören tillhandahåller och som beskrivs i (Projektbeskrivning).',
-        '"Kunden" avser det bolag som angivits ovan och som tecknar detta avtal.',
-        '"Leverantören" avser det bolag som angivits ovan och som tillhandahåller Tjänsten.',
+        '"Kunden" avser den organisation som angivits ovan och som tecknar detta avtal.',
+        '"Leverantören" avser den organisation som angivits ovan och som tillhandahåller Tjänsten.',
         '"Driftstörning" avser ett oplanerat avbrott i Tjänsten som påverkar Kundens möjlighet att använda den normalt.',
         '"Kritisk bugg" avser ett fel som omöjliggör normal användning av Tjänstens kärnfunktionalitet.',
         '"Personuppgifter" avser alla uppgifter som direkt eller indirekt kan identifiera en fysisk person, enligt definition i GDPR.',
@@ -109,7 +109,7 @@ export function villkorBlocks(x: VillkorCtx, company: CompanyInfo): Block[] {
     { t: "h2", text: "2.2 Nyttjanderätt" },
     {
       t: "p",
-      text: "Kunden erhåller en icke-exklusiv, tidsbegränsad och icke-överlåtbar nyttjanderätt till Tjänsten. Nyttjanderätten gäller enbart för Kundens interna verksamhet och får inte upplåtas till tredje part utan Leverantörens skriftliga medgivande.",
+      text: "Kunden erhåller en icke-exklusiv, tidsbegränsad och icke-överlåtbar nyttjanderätt till Tjänsten. Nyttjanderätten gäller för Kundens verksamhet, vilket omfattar att Kundens användare, medlemmar och besökare använder Tjänsten. Tjänsten får inte upplåtas till tredje part för dennes egen verksamhet utan Leverantörens skriftliga medgivande.",
     },
     { t: "h2", text: "2.3 Immateriella rättigheter" },
     {
@@ -203,7 +203,7 @@ export function villkorBlocks(x: VillkorCtx, company: CompanyInfo): Block[] {
     { t: "h1", text: "6. Dataskydd och personuppgifter" },
     {
       t: "p",
-      text: "Parterna ska följa tillämplig dataskyddslagstiftning, inklusive EU:s dataskyddsförordning (GDPR, 2016/679). En separat Personuppgiftsbiträdesavtal (PUB-avtal) ska tecknas och utgör en integrerad del av detta avtal. Vid konflikt mellan PUB-avtalet och detta avtal gäller PUB-avtalet avseende behandling av personuppgifter.",
+      text: "Parterna ska följa tillämplig dataskyddslagstiftning, inklusive EU:s dataskyddsförordning (GDPR, 2016/679). Ett separat personuppgiftsbiträdesavtal (PUB-avtal) ska tecknas och utgör en integrerad del av detta avtal. Vid konflikt mellan PUB-avtalet och detta avtal gäller PUB-avtalet avseende behandling av personuppgifter.",
     },
 
     { t: "h1", text: "7. Sekretess" },
@@ -272,7 +272,7 @@ export function villkorBlocks(x: VillkorCtx, company: CompanyInfo): Block[] {
     { t: "h1", text: "12. Ändringar av avtalet" },
     {
       t: "p",
-      text: "Ändringar och tillägg till detta avtal ska vara skriftliga och undertecknade av behöriga företrädare för båda parter för att vara giltiga. Leverantören förbehåller sig rätten att uppdatera allmänna villkor med 60 dagars skriftligt förvarning. Om Kunden inte accepterar förändringarna äger Kunden rätt att säga upp avtalet med 30 dagars varsel.",
+      text: "Ändringar och tillägg till detta avtal ska vara skriftliga och undertecknade av behöriga företrädare för båda parter för att vara giltiga. Utöver detta får Leverantören ändra Villkoren med 60 dagars skriftligt förvarning. Om Kunden inte accepterar ändringen äger Kunden rätt att säga upp avtalet med 30 dagars varsel, och de tidigare villkoren gäller fram till dess.",
     },
 
     { t: "h1", text: "13. Tvistelösning och tillämplig lag" },

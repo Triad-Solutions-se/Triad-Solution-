@@ -1,5 +1,6 @@
 // Avtal-PDF: Avtals-försättet (offert-layout, rebrandad som AVTAL) + Villkor
 // (från villkor.ts) i samma PDF. Villkor börjar på en ny sida med försättsblad.
+// Har avtalet egna särskilda villkor följer de som Bilaga 1 (special-terms.ts).
 
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import {
@@ -12,12 +13,14 @@ import {
 } from "./offer-pdf";
 import { renderBlocks, drawContractCover } from "./contract-blocks";
 import { villkorBlocks, buildVillkorCtx } from "./villkor";
+import { specialTermsBlocks } from "./special-terms";
 import type { CompanyInfo } from "./company";
 
 export type AgreementMeta = {
   agreementNumber: string | null;
   agreementDate: string; // ISO
   startDate: string; // ISO
+  specialTerms?: string | null; // Bilaga 1 – Särskilda villkor
 };
 
 export async function generateAgreementPdf(
@@ -54,6 +57,20 @@ export async function generateAgreementPdf(
     meta.startDate,
   );
   renderBlocks(p, villkorBlocks(ctx, company));
+
+  // === 3. Bilaga 1 – Särskilda villkor (bara om avtalet har sådana) ===
+  if (meta.specialTerms?.trim()) {
+    p.newPage();
+    drawContractCover(p, logo, "", "SÄRSKILDA VILLKOR", "Bilaga 1 till avtalet", company.name);
+    renderBlocks(
+      p,
+      specialTermsBlocks(
+        meta.specialTerms,
+        { agreementNumber: meta.agreementNumber, customerName: ctx.customerName },
+        company,
+      ),
+    );
+  }
 
   return await doc.save();
 }

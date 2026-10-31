@@ -22,6 +22,7 @@ type Agreement = {
   agreement_date: string;
   start_date: string;
   notes: string | null;
+  special_terms?: string | null; // saknas tills migration 0035 är körd
   offer_id: string | null;
   pub_template_id: string | null;
   customer_id: string | null;
@@ -65,11 +66,16 @@ export function AgreementEditor({
     start_date: agreement.start_date,
     status: agreement.status,
     notes: agreement.notes ?? "",
+    special_terms: agreement.special_terms ?? "",
   });
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState<"contract" | "pub" | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Raden hämtas med "*", så nyckeln finns först när migration 0035 är körd.
+  const supportsSpecialTerms = "special_terms" in agreement;
+  const hasSpecialTerms = supportsSpecialTerms && f.special_terms.trim() !== "";
 
   const customer = agreement.customer;
   const customerMissing =
@@ -87,6 +93,7 @@ export function AgreementEditor({
         start_date: f.start_date,
         status: f.status,
         notes: f.notes || null,
+        ...(supportsSpecialTerms ? { special_terms: f.special_terms.trim() || null } : {}),
       })
       .eq("id", agreement.id);
     setSaving(false);
@@ -280,6 +287,43 @@ export function AgreementEditor({
         </label>
       </div>
 
+      {/* Bilaga 1 – Särskilda villkor */}
+      <div className="glass rounded-card p-5 space-y-3">
+        <h3 className="font-heading text-base font-semibold">
+          Bilaga 1 – Särskilda villkor
+        </h3>
+        {supportsSpecialTerms ? (
+          <>
+            <p className="text-xs text-[var(--muted)]">
+              Avvikelser från Villkoren som bara gäller det här avtalet. Läggs som
+              Bilaga 1 efter Villkoren i avtals-PDF:en, med en inledning om att
+              bilagan har företräde framför Villkoren men att PUB-avtalet alltid
+              gäller för personuppgifter, och med egna underskrifter. Lämna tomt
+              om avtalet inte har särskilda villkor.
+            </p>
+            <p className="text-xs text-[var(--muted)]">
+              En rad per stycke. <code>## Rubrik</code> eller{" "}
+              <code>**Rubrik**</code> på egen rad blir en underrubrik, och rader
+              som börjar med <code>- </code> blir en punktlista. Skriv inte
+              rubriken eller inledningen själv.
+            </p>
+            <textarea
+              value={f.special_terms}
+              onChange={(e) =>
+                setF((p) => ({ ...p, special_terms: e.target.value }))
+              }
+              rows={12}
+              placeholder={"**S1. Rubrik**\nText för punkt S1.\n\n**S2. Rubrik**\nText för punkt S2."}
+              className="w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm font-mono resize-y"
+            />
+          </>
+        ) : (
+          <p className="text-xs text-amber-300">
+            Kräver databasmigration 0035_agreement_special_terms.
+          </p>
+        )}
+      </div>
+
       {/* Downloads */}
       <div className="glass rounded-card p-5 space-y-3">
         <div className="flex items-center justify-between">
@@ -287,7 +331,7 @@ export function AgreementEditor({
           <FileSignature size={16} className="text-teal-300" />
         </div>
         <p className="text-xs text-[var(--muted)]">
-          Två separata PDF-filer genereras: Avtalet + Villkor som en PDF, och PUB-avtalet som en separat PDF.
+          Två separata PDF-filer genereras: Avtalet + Villkor (och Bilaga 1 om den är ifylld) som en PDF, och PUB-avtalet som en separat PDF.
           Alla röda platshållare auto-fylls från offert, kund och datum.
         </p>
         <div className="flex flex-wrap gap-2">
@@ -297,7 +341,11 @@ export function AgreementEditor({
             className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold flex items-center gap-2 disabled:opacity-50 transition-colors"
           >
             <Download size={14} />
-            {downloading === "contract" ? "Genererar…" : "Avtal + Villkor (PDF)"}
+            {downloading === "contract"
+              ? "Genererar…"
+              : hasSpecialTerms
+                ? "Avtal + Villkor + Bilaga 1 (PDF)"
+                : "Avtal + Villkor (PDF)"}
           </button>
           <button
             onClick={() => download("pub")}

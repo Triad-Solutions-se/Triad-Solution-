@@ -13,7 +13,8 @@
 //  - Text inom [HAKPARENTES] blir röd platshållare. Bara platshållarna i
 //    PUB_SUB_RULES fylls i automatiskt, och de är ORDNINGS-beroende:
 //    [ORG.NR] #1 = kund, #2 = leverantören. [ÅÅÅÅ-MM-DD] #1 = avtalsdatum,
-//    #2 = startdatum. [TELEFONNUMMER] #1 = kund, #2 = leverantören. Behåll ordningen.
+//    #2 = huvudavtalets datum ("daterat …"). [TELEFONNUMMER] #1 = kund,
+//    #2 = leverantören. [ROLL/BEFATTNING] = kundkortets roll. Behåll ordningen.
 //  - Ett "p"-stycke på formen "Etikett: text" tolkas som meta-rad (grå ruta).
 //    Undvik därför kolon följt av text i vanliga stycken; använd { t: "meta" }
 //    när rutan är avsiktlig (t.ex. "Anmärkning:").

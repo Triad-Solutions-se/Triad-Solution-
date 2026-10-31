@@ -29,6 +29,7 @@ export type PubCustomer = {
   name: string | null;
   org_number: string | null;
   contact_person: string | null;
+  contact_role?: string | null; // saknas tills migration 0035 är körd
   email: string | null;
   phone: string | null;
 };
@@ -68,13 +69,13 @@ export const PUB_SUB_RULES: SubRule[] = [
 
   // === Datum ===
   // [ÅÅÅÅ-MM-DD] #1 = avtalsdatum (Avtalsdatum-raden i meta)
-  // [ÅÅÅÅ-MM-DD] #2 = startdatum (Relaterat SaaS-avtal "daterat …")
+  // [ÅÅÅÅ-MM-DD] #2 = huvudavtalets datum (Relaterat avtal "daterat …")
   { match: "[ÅÅÅÅ-MM-DD]", n: 1, value: (c) => fmtDateOrPlaceholder(c.agreementDate, "[ÅÅÅÅ-MM-DD]") },
-  { match: "[ÅÅÅÅ-MM-DD]", n: 2, value: (c) => fmtDateOrPlaceholder(c.startDate, "[ÅÅÅÅ-MM-DD]") },
+  { match: "[ÅÅÅÅ-MM-DD]", n: 2, value: (c) => fmtDateOrPlaceholder(c.agreementDate, "[ÅÅÅÅ-MM-DD]") },
 
   // === Kontaktperson hos kunden (Avsnitt 11) ===
   { match: "[NAMN]", n: 1, value: (c) => c.customer?.contact_person?.trim() || "[NAMN]" },
-  { match: "[ROLL/BEFATTNING]", n: 1, value: () => "[ROLL/BEFATTNING]" }, // ej i DB
+  { match: "[ROLL/BEFATTNING]", n: 1, value: (c) => c.customer?.contact_role?.trim() || "[ROLL/BEFATTNING]" },
   { match: "[E-POSTADRESS]", n: 1, value: (c) => c.customer?.email?.trim() || "[E-POSTADRESS]" },
   // [TELEFONNUMMER] #1 = kund, #2 = leverantör
   { match: "[TELEFONNUMMER]", n: 1, value: (c) => c.customer?.phone?.trim() || "[TELEFONNUMMER]" },
@@ -117,13 +118,17 @@ function applyRewrites(text: string, rewrites: [RegExp | string, string][]): str
 // Applicerar regler ordnings-baserat. Returnerar en substitueringsfunktion
 // som anropas en gång per textstycke (paragrafer, meta-segments, bullets,
 // tabellceller). Funktionen håller egen räknare över hur många gånger varje
-// placeholder redan substituerats.
+// placeholder redan substituerats. Sökningen fortsätter efter senaste
+// ersättningen: saknas ett värde skrivs platshållaren tillbaka, och den får
+// då inte matchas en gång till av nästa regel (då hamnade leverantörens
+// telefonnummer under kunden).
 export function makeSubstitutor(ctx: PubSubCtx): (text: string) => string {
   const counts: Map<string, number> = new Map();
   const rewrites = textRewrites(ctx);
 
   return (text: string): string => {
     let out = text;
+    let cursor = 0;
     // Hitta alla regler som matchar någon placeholder i texten, i den
     // ordning de förekommer i texten.
     while (true) {
@@ -133,7 +138,7 @@ export function makeSubstitutor(ctx: PubSubCtx): (text: string) => string {
       let earliestN = 0;
 
       for (const rule of PUB_SUB_RULES) {
-        const idx = out.indexOf(rule.match);
+        const idx = out.indexOf(rule.match, cursor);
         if (idx < 0) continue;
         // Detta är förekomst nr (counts[rule.match] || 0) + 1
         const nextN = (counts.get(rule.match) ?? 0) + 1;
@@ -147,6 +152,7 @@ export function makeSubstitutor(ctx: PubSubCtx): (text: string) => string {
       if (!earliestRule) break;
       const replacement = earliestRule.value(ctx);
       out = out.slice(0, earliest) + replacement + out.slice(earliest + earliestRule.match.length);
+      cursor = earliest + replacement.length;
       counts.set(earliestRule.match, earliestN);
     }
     return applyRewrites(out, rewrites);
