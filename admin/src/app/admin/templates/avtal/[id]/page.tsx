@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ChevronLeft } from "lucide-react";
 import { AgreementEditor } from "./AgreementEditor";
 import { LINKED_INVOICE_SELECT, LinkedInvoices } from "../../../invoices/LinkedInvoices";
+import { agreementGaps } from "../../../api/agreements/[id]/agreement-data";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,7 @@ export default async function AgreementDetailPage({
 
   const agreement = agreementRes.data as any;
   if (!agreement) notFound();
+  const missing = await agreementGaps(supabase, agreement);
 
   return (
     <>
@@ -56,6 +58,7 @@ export default async function AgreementDetailPage({
       </div>
       <AgreementEditor
         agreement={agreement}
+        missing={missing}
         templates={(templatesRes.data ?? []) as any[]}
         offers={(offersRes.data ?? []) as any[]}
         invoicesPanel={

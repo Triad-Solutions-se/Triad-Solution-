@@ -3,7 +3,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateAgreementPdf } from "@/lib/agreement-pdf";
-import { missingContractFields } from "@/lib/offer-validate";
+import { missingAgreementFields } from "@/lib/agreement-validate";
 import {
   agreementFileBase,
   fetchAgreement,
@@ -39,15 +39,15 @@ export async function GET(
     );
   }
 
-  const missing = missingContractFields(offer);
+  const company = await fetchCompanyInfo(supabase);
+
+  const missing = missingAgreementFields({ offer, company, agreement });
   if (missing.length > 0) {
     return NextResponse.json(
-      { error: `Offerten saknar obligatoriska fält för avtal: ${missing.join(", ")}.` },
+      { error: `Avtalet kan inte skapas. Saknas: ${missing.join(", ")}.` },
       { status: 400 },
     );
   }
-
-  const company = await fetchCompanyInfo(supabase);
 
   const buffer = await generateAgreementPdf(
     offer,
