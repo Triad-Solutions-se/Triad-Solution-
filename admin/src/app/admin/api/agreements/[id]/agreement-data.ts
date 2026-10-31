@@ -6,7 +6,7 @@ import type { OfferData } from "@/lib/offer-pdf";
 import type { CompanyInfo } from "@/lib/company";
 import { toCompanyInfo } from "@/lib/company";
 import type { Block } from "@/lib/contract-blocks";
-import { normalizeItems } from "@/lib/offer-items";
+import { fetchOfferForContract } from "../../offers/[id]/contract-data";
 import { missingAgreementFields } from "@/lib/agreement-validate";
 import { missingPubFields } from "@/lib/pub-template";
 
@@ -58,48 +58,15 @@ export async function fetchAgreement(
   return { agreement: data as AgreementRow, error: null, status: 200 };
 }
 
-// Återanvänder samma select som offer-contract route så fält och typer
-// matchar OfferData.
-const OFFER_SELECT =
-  "offer_number,title,reference,offer_date,valid_until,project_description,project_price,monthly_price,project_discount_pct,monthly_discount_pct,project_items,monthly_items,other_costs,vat_rate,currency,customer:customers(name,contact_person,email,phone,website,org_number,address)";
-
+// Samma urval och mappning som offertens egen export (fetchOfferForContract),
+// så att avtalet får med alla offertens fält, även de extra
+// informationssektionerna.
 export async function fetchOffer(
   supabase: SupabaseServerClient,
   offerId: string,
 ): Promise<{ offer: OfferData | null; error: string | null }> {
-  const { data, error } = await supabase
-    .from("offers")
-    .select(OFFER_SELECT)
-    .eq("id", offerId)
-    .maybeSingle();
-  if (error) return { offer: null, error: error.message };
-  if (!data) return { offer: null, error: "Offert hittades inte" };
-
-  const customer = Array.isArray(data.customer)
-    ? (data.customer[0] ?? null)
-    : ((data.customer as any) ?? null);
-
-  return {
-    offer: {
-      offer_number: data.offer_number,
-      title: data.title,
-      reference: data.reference,
-      offer_date: data.offer_date,
-      valid_until: data.valid_until,
-      project_description: data.project_description,
-      project_price: Number(data.project_price ?? 0),
-      monthly_price: Number(data.monthly_price ?? 0),
-      project_discount_pct: Number((data as any).project_discount_pct ?? 0),
-      monthly_discount_pct: Number((data as any).monthly_discount_pct ?? 0),
-      project_items: normalizeItems((data as any).project_items),
-      monthly_items: normalizeItems((data as any).monthly_items),
-      other_costs: (data as any).other_costs ?? null,
-      vat_rate: Number(data.vat_rate ?? 25),
-      currency: data.currency ?? "SEK",
-      customer,
-    },
-    error: null,
-  };
+  const { offer, error } = await fetchOfferForContract(supabase, offerId);
+  return { offer, error };
 }
 
 export async function fetchPubTemplate(
