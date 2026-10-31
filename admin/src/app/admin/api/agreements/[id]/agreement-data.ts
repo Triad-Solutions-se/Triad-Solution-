@@ -7,6 +7,8 @@ import type { CompanyInfo } from "@/lib/company";
 import { toCompanyInfo } from "@/lib/company";
 import type { Block } from "@/lib/contract-blocks";
 import { normalizeItems } from "@/lib/offer-items";
+import { missingAgreementFields } from "@/lib/agreement-validate";
+import { missingPubFields } from "@/lib/pub-template";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -138,6 +140,48 @@ export async function fetchCustomer(
   if (error) return { customer: null, error: error.message };
   if (!data) return { customer: null, error: "Kund hittades inte" };
   return { customer: data as any, error: null };
+}
+
+// Vad som saknas för avtalet respektive PUB-avtalet. Samma kontroller som
+// PDF-routerna gör innan de skapar en PDF; används av avtalssidan för att
+// visa listan och låsa nedladdningsknapparna.
+export async function agreementGaps(
+  supabase: SupabaseServerClient,
+  agreement: AgreementRow,
+): Promise<{ contract: string[]; pub: string[] }> {
+  const [company, offerRes, customerRes, templateRes] = await Promise.all([
+    fetchCompanyInfo(supabase),
+    agreement.offer_id
+      ? fetchOffer(supabase, agreement.offer_id)
+      : Promise.resolve({ offer: null, error: null }),
+    agreement.customer_id
+      ? fetchCustomer(supabase, agreement.customer_id)
+      : Promise.resolve({ customer: null, error: null }),
+    agreement.pub_template_id
+      ? fetchPubTemplate(supabase, agreement.pub_template_id)
+      : Promise.resolve({ template: null, error: null }),
+  ]);
+
+  const contract = missingAgreementFields({ offer: offerRes.offer, company, agreement });
+
+  const pub: string[] = [];
+  const blocks = templateRes.template?.extracted_blocks;
+  if (!agreement.pub_template_id) pub.push("PUB-mall (välj en PUB-mall på avtalet)");
+  else if (!blocks || blocks.length === 0) pub.push("PUB-mallens innehåll (ladda upp mallen på nytt)");
+  if (!customerRes.customer) pub.push("Kund (avtalet saknar kund)");
+  if (blocks && blocks.length > 0 && customerRes.customer) {
+    pub.push(
+      ...missingPubFields(blocks, {
+        customer: customerRes.customer,
+        company,
+        agreementDate: agreement.agreement_date,
+        startDate: agreement.start_date,
+        offerNumber: offerRes.offer?.offer_number ?? null,
+        agreementNumber: agreement.agreement_number ?? null,
+      }),
+    );
+  }
+  return { contract, pub };
 }
 
 export function agreementFileBase(

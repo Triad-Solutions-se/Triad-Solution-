@@ -46,11 +46,14 @@ const STATUSES = [
 
 export function AgreementEditor({
   agreement,
+  missing,
   templates,
   offers,
   invoicesPanel,
 }: {
   agreement: Agreement;
+  // Vad som saknas för respektive PDF, räknat på servern från sparade uppgifter.
+  missing: { contract: string[]; pub: string[] };
   templates: { id: string; name: string; is_active: boolean }[];
   offers: { id: string; offer_number: string | null; title: string | null; customer: { id: string; name: string } | null }[];
   // Kopplade fakturor + "Fakturera", renderas på servern.
@@ -78,8 +81,7 @@ export function AgreementEditor({
   const hasSpecialTerms = supportsSpecialTerms && f.special_terms.trim() !== "";
 
   const customer = agreement.customer;
-  const customerMissing =
-    !customer?.org_number?.trim() || !customer?.address?.trim();
+  const hasGaps = missing.contract.length > 0 || missing.pub.length > 0;
 
   async function save() {
     setSaving(true);
@@ -175,13 +177,36 @@ export function AgreementEditor({
         </div>
       </div>
 
-      {customerMissing && (
+      {hasGaps && (
         <div className="glass rounded-xl border border-amber-400/30 bg-amber-400/5 p-4 text-sm text-amber-200 flex items-start gap-2">
           <AlertTriangle size={16} className="shrink-0 mt-0.5" />
-          <div>
-            Kunden saknar organisationsnummer och/eller adress. Avtalet kan
-            fortfarande sparas, men dessa fält behövs för att skapa juridiskt
-            korrekta PDF:er. Komplettera kunden under Kunder.
+          <div className="space-y-2">
+            <div>
+              PDF:erna kan inte skapas förrän uppgifterna nedan är ifyllda.
+              Kunduppgifter fylls i under Kunder, offerten under Offerter och
+              leverantörens uppgifter under Inställningar. Listan uppdateras
+              när avtalet sparas eller sidan laddas om.
+            </div>
+            {missing.contract.length > 0 && (
+              <div>
+                <div className="font-semibold">Avtal + Villkor saknar</div>
+                <ul className="list-disc pl-5">
+                  {missing.contract.map((m) => (
+                    <li key={m}>{m}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {missing.pub.length > 0 && (
+              <div>
+                <div className="font-semibold">PUB-avtal saknar</div>
+                <ul className="list-disc pl-5">
+                  {missing.pub.map((m) => (
+                    <li key={m}>{m}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -337,7 +362,7 @@ export function AgreementEditor({
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => download("contract")}
-            disabled={downloading !== null || !f.offer_id}
+            disabled={downloading !== null || !f.offer_id || missing.contract.length > 0}
             className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold flex items-center gap-2 disabled:opacity-50 transition-colors"
           >
             <Download size={14} />
@@ -349,7 +374,7 @@ export function AgreementEditor({
           </button>
           <button
             onClick={() => download("pub")}
-            disabled={downloading !== null || !f.pub_template_id}
+            disabled={downloading !== null || !f.pub_template_id || missing.pub.length > 0}
             className="rounded-btn border border-white/10 hover:bg-white/[0.04] text-white px-4 py-2 text-sm font-semibold flex items-center gap-2 disabled:opacity-50 transition-colors"
           >
             <Download size={14} />

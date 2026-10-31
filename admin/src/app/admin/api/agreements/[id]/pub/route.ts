@@ -3,7 +3,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { generatePubFromTemplatePdf } from "@/lib/pub-template";
+import { generatePubFromTemplatePdf, missingPubFields } from "@/lib/pub-template";
 import {
   agreementFileBase,
   fetchAgreement,
@@ -72,18 +72,24 @@ export async function GET(
     );
   }
 
-  const buffer = await generatePubFromTemplatePdf(
-    blocks,
-    {
-      customer: customerRes.customer,
-      company: companyInfo,
-      agreementDate: agreement.agreement_date,
-      startDate: agreement.start_date,
-      offerNumber: offerRes.offer?.offer_number ?? null,
-      agreementNumber: agreement.agreement_number ?? null,
-    },
-    templateRes.template.name,
-  );
+  const ctx = {
+    customer: customerRes.customer,
+    company: companyInfo,
+    agreementDate: agreement.agreement_date,
+    startDate: agreement.start_date,
+    offerNumber: offerRes.offer?.offer_number ?? null,
+    agreementNumber: agreement.agreement_number ?? null,
+  };
+
+  const missing = missingPubFields(blocks, ctx);
+  if (missing.length > 0) {
+    return NextResponse.json(
+      { error: `PUB-avtalet kan inte skapas. Saknas: ${missing.join(", ")}.` },
+      { status: 400 },
+    );
+  }
+
+  const buffer = await generatePubFromTemplatePdf(blocks, ctx, templateRes.template.name);
 
   const filename = `PUB-avtal_${agreementFileBase(agreement, customerRes.customer.name)}.pdf`;
   const blob = new Blob([buffer as unknown as BlobPart], {

@@ -24,6 +24,7 @@ import {
   drawContractCover,
 } from "./contract-blocks";
 import type { CompanyInfo } from "./company";
+import { findPlaceholders } from "./agreement-validate";
 
 export type PubCustomer = {
   name: string | null;
@@ -58,34 +59,36 @@ type SubRule = {
   match: string;
   n: number; // 1 = första förekomsten, 2 = andra, etc.
   value: (ctx: PubSubCtx) => string;
+  // Vad som saknas när value() inte kan fylla i platshållaren.
+  label: string;
 };
 
 export const PUB_SUB_RULES: SubRule[] = [
   // === Kund-meta ===
-  { match: "[KUNDENS FÖRETAGSNAMN]", n: 1, value: (c) => c.customer?.name?.trim() || "[KUNDENS FÖRETAGSNAMN]" },
+  { match: "[KUNDENS FÖRETAGSNAMN]", n: 1, value: (c) => c.customer?.name?.trim() || "[KUNDENS FÖRETAGSNAMN]", label: "Kundens namn (kundkortet)" },
   // [ORG.NR] #1 = kund (PUA), #2 = leverantör (PUB)
-  { match: "[ORG.NR]", n: 1, value: (c) => c.customer?.org_number?.trim() || "[ORG.NR]" },
-  { match: "[ORG.NR]", n: 2, value: (c) => c.company.orgNumber || "[ORG.NR]" },
+  { match: "[ORG.NR]", n: 1, value: (c) => c.customer?.org_number?.trim() || "[ORG.NR]", label: "Kundens organisationsnummer (kundkortet)" },
+  { match: "[ORG.NR]", n: 2, value: (c) => c.company.orgNumber || "[ORG.NR]", label: "Leverantörens organisationsnummer (Inställningar)" },
 
   // === Datum ===
   // [ÅÅÅÅ-MM-DD] #1 = avtalsdatum (Avtalsdatum-raden i meta)
   // [ÅÅÅÅ-MM-DD] #2 = huvudavtalets datum (Relaterat avtal "daterat …")
-  { match: "[ÅÅÅÅ-MM-DD]", n: 1, value: (c) => fmtDateOrPlaceholder(c.agreementDate, "[ÅÅÅÅ-MM-DD]") },
-  { match: "[ÅÅÅÅ-MM-DD]", n: 2, value: (c) => fmtDateOrPlaceholder(c.agreementDate, "[ÅÅÅÅ-MM-DD]") },
+  { match: "[ÅÅÅÅ-MM-DD]", n: 1, value: (c) => fmtDateOrPlaceholder(c.agreementDate, "[ÅÅÅÅ-MM-DD]"), label: "Avtalsdatum" },
+  { match: "[ÅÅÅÅ-MM-DD]", n: 2, value: (c) => fmtDateOrPlaceholder(c.agreementDate, "[ÅÅÅÅ-MM-DD]"), label: "Avtalsdatum" },
 
   // === Kontaktperson hos kunden (Avsnitt 11) ===
-  { match: "[NAMN]", n: 1, value: (c) => c.customer?.contact_person?.trim() || "[NAMN]" },
-  { match: "[ROLL/BEFATTNING]", n: 1, value: (c) => c.customer?.contact_role?.trim() || "[ROLL/BEFATTNING]" },
-  { match: "[E-POSTADRESS]", n: 1, value: (c) => c.customer?.email?.trim() || "[E-POSTADRESS]" },
+  { match: "[NAMN]", n: 1, value: (c) => c.customer?.contact_person?.trim() || "[NAMN]", label: "Kundens kontaktperson (kundkortet)" },
+  { match: "[ROLL/BEFATTNING]", n: 1, value: (c) => c.customer?.contact_role?.trim() || "[ROLL/BEFATTNING]", label: "Kontaktpersonens roll (kundkortet)" },
+  { match: "[E-POSTADRESS]", n: 1, value: (c) => c.customer?.email?.trim() || "[E-POSTADRESS]", label: "Kundens e-post (kundkortet)" },
   // [TELEFONNUMMER] #1 = kund, #2 = leverantör
-  { match: "[TELEFONNUMMER]", n: 1, value: (c) => c.customer?.phone?.trim() || "[TELEFONNUMMER]" },
-  { match: "[TELEFONNUMMER]", n: 2, value: (c) => c.company.phone || "[TELEFONNUMMER]" },
+  { match: "[TELEFONNUMMER]", n: 1, value: (c) => c.customer?.phone?.trim() || "[TELEFONNUMMER]", label: "Kundens telefonnummer (kundkortet)" },
+  { match: "[TELEFONNUMMER]", n: 2, value: (c) => c.company.phone || "[TELEFONNUMMER]", label: "Leverantörens telefonnummer (Inställningar)" },
 
   // === DPO ===
-  { match: "[NAMN eller 'Ej utsett']", n: 1, value: () => "Ej utsett" },
+  { match: "[NAMN eller 'Ej utsett']", n: 1, value: () => "Ej utsett", label: "Kundens dataskyddsombud" },
 
   // === Övrigt som ibland finns i mallar ===
-  { match: "[ADRESS]", n: 1, value: (c) => c.customer?.name ? "" : "[ADRESS]" }, // kundadress hanteras i Villkor, ej i PUB
+  { match: "[ADRESS]", n: 1, value: (c) => c.customer?.name ? "" : "[ADRESS]", label: "Kundens namn (kundkortet)" }, // kundadress hanteras i Villkor, ej i PUB
 ];
 
 // Generella textomskrivningar (literal find/replace) som körs EFTER
@@ -157,6 +160,54 @@ export function makeSubstitutor(ctx: PubSubCtx): (text: string) => string {
     }
     return applyRewrites(out, rewrites);
   };
+}
+
+// All text i blocken, i samma ordning som substituteBlocks går igenom den
+// (ordningen avgör vilken regel en platshållare får).
+function blockTexts(blocks: Block[]): string[] {
+  const out: string[] = [];
+  for (const b of blocks) {
+    switch (b.t) {
+      case "h1":
+      case "h2":
+      case "p":
+      case "callout":
+        out.push(b.text);
+        break;
+      case "bullets":
+        out.push(...b.items);
+        break;
+      case "meta":
+        for (const r of b.rows) {
+          out.push(r.label);
+          if (r.segments) out.push(...r.segments.map((seg) => seg.text));
+          else out.push(r.value);
+        }
+        break;
+      case "table":
+        out.push(...b.headers, ...b.rows.flat());
+        break;
+    }
+  }
+  return out;
+}
+
+// Vad som saknas för att PUB-avtalet ska kunna skapas utan kvarvarande
+// platshållare. Tom lista = klart. En platshållare som ingen regel fyller i
+// betyder att mallen behöver rättas.
+export function missingPubFields(blocks: Block[], ctx: PubSubCtx): string[] {
+  const missing = new Set<string>();
+  const counts = new Map<string, number>();
+  for (const text of blockTexts(blocks)) {
+    for (const ph of findPlaceholders(text)) {
+      const n = (counts.get(ph) ?? 0) + 1;
+      counts.set(ph, n);
+      const rule = PUB_SUB_RULES.find((r) => r.match === ph && r.n === n);
+      if (!rule) missing.add(`Platshållaren ${ph} i PUB-mallen (portalen fyller inte i den)`);
+      else if (rule.value(ctx) === ph) missing.add(rule.label);
+    }
+  }
+  return [...missing];
 }
 
 // Walk blocks och kör substituteren. Returnerar en NY block-lista (immutable).
