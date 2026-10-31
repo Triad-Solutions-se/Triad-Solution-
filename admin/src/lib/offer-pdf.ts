@@ -465,7 +465,7 @@ export function drawOfferContent(
     p.newPageIfNeeded(80);
     p.cursor = drawSectionHeading(p, section.header || "EXTRA INFORMATION", p.cursor);
     if (section.text) {
-      const endY = p.drawWrapped(section.text, MARGIN, p.cursor, {
+      const endY = p.drawRichWrapped(section.text, MARGIN, p.cursor, {
         size: 10, color: BLACK, width: CONTENT_W,
       });
       p.cursor = endY + 8;
@@ -525,7 +525,7 @@ export function drawOfferContent(
   if (offer.other_costs && offer.other_costs.trim()) {
     p.newPageIfNeeded(80);
     p.cursor = drawSectionHeading(p, "ÖVRIGA KOSTNADER", p.cursor);
-    const endY = p.drawWrapped(offer.other_costs, MARGIN, p.cursor, {
+    const endY = p.drawRichWrapped(offer.other_costs, MARGIN, p.cursor, {
       size: 10, color: BLACK, width: CONTENT_W,
     });
     p.cursor = endY + 4;
