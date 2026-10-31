@@ -30,7 +30,8 @@ export default async function CustomersPage({
   const supabase = await createClient();
   let q = supabase
     .from("customers")
-    .select("id,name,org_number,address,contact_person,industry,status,email,phone,website,notes,created_at");
+    // "*" så att contact_role (migration 0035) följer med när kolumnen finns.
+    .select("*");
   if (sort === "status") q = q.order("status").order("name");
   else if (sort === "industry") q = q.order("industry", { nullsFirst: false }).order("name");
   else if (sort === "created_desc") q = q.order("created_at", { ascending: false });

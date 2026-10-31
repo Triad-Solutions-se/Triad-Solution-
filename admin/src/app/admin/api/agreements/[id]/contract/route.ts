@@ -1,4 +1,4 @@
-// GET /admin/api/agreements/[id]/contract — Avtal + Villkor som en PDF.
+// GET /admin/api/agreements/[id]/contract — Avtal + Villkor (+ ev. Bilaga 1) som en PDF.
 
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
@@ -55,6 +55,7 @@ export async function GET(
       agreementNumber: agreement.agreement_number,
       agreementDate: agreement.agreement_date,
       startDate: agreement.start_date,
+      specialTerms: agreement.special_terms ?? null,
     },
     company,
   );

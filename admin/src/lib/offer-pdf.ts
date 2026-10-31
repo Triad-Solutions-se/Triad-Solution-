@@ -92,6 +92,22 @@ export function safe(text: string): string {
   return out;
 }
 
+// Fritext (t.ex. projektbeskrivningen) skrivs ofta med markdown-fetstil.
+// Delar upp en rad i runs där **…** blir fetstil. En udda, oparad "**"
+// tas bort i stället för att skrivas ut.
+export type TextRun = { text: string; bold: boolean };
+export function boldRuns(line: string): TextRun[] {
+  const parts = line.split("**");
+  const runs: TextRun[] = [];
+  parts.forEach((text, i) => {
+    if (!text) return;
+    // Sista delen efter en oparad "**" är vanlig text.
+    const unpaired = parts.length % 2 === 0 && i === parts.length - 1;
+    runs.push({ text, bold: i % 2 === 1 && !unpaired });
+  });
+  return runs;
+}
+
 export type DrawOpts = {
   font?: PDFFont;
   size?: number;
@@ -215,6 +231,67 @@ export class Pdf {
     for (const line of lines) {
       this.drawText(line, x, y, opts);
       y += lineHeight;
+    }
+    return y;
+  }
+
+  // Som drawWrapped, men **text** ritas i fetstil i stället för att
+  // asteriskerna skrivs ut. Bryter sida när texten inte ryms.
+  drawRichWrapped(text: string, x: number, topY: number, opts: DrawOpts & { lineHeight?: number }) {
+    const size = opts.size ?? 10;
+    const lineHeight = opts.lineHeight ?? size * 1.35;
+    const maxWidth = opts.width ?? CONTENT_W;
+    const fontFor = (bold: boolean) => (bold ? this.fontBold : (opts.font ?? this.font));
+    const runWidth = (r: TextRun) => fontFor(r.bold).widthOfTextAtSize(safe(r.text), size);
+    const spaceW = fontFor(false).widthOfTextAtSize(" ", size);
+    let y = topY;
+    for (const para of text.split(/\r?\n/)) {
+      // Ett "ord" är runs utan mellanslag emellan, t.ex. **autogiro** + ",".
+      const words: TextRun[][] = [];
+      let word: TextRun[] = [];
+      for (const seg of boldRuns(para)) {
+        for (const piece of seg.text.split(/(\s+)/)) {
+          if (!piece) continue;
+          if (/^\s+$/.test(piece)) {
+            if (word.length) words.push(word);
+            word = [];
+          } else {
+            word.push({ text: piece, bold: seg.bold });
+          }
+        }
+      }
+      if (word.length) words.push(word);
+
+      const lines: TextRun[][][] = [];
+      let line: TextRun[][] = [];
+      let lineW = 0;
+      for (const w of words) {
+        const wW = w.reduce((acc, r) => acc + runWidth(r), 0);
+        if (line.length && lineW + spaceW + wW > maxWidth) {
+          lines.push(line);
+          line = [];
+          lineW = 0;
+        }
+        lineW += (line.length ? spaceW : 0) + wW;
+        line.push(w);
+      }
+      lines.push(line);
+
+      for (const l of lines) {
+        if (y + lineHeight > this.bottomLimit) {
+          this.newPage();
+          y = this.cursor;
+        }
+        let cx = x;
+        for (const w of l) {
+          for (const r of w) {
+            this.drawText(r.text, cx, y, { ...opts, font: fontFor(r.bold), size });
+            cx += runWidth(r);
+          }
+          cx += spaceW;
+        }
+        y += lineHeight;
+      }
     }
     return y;
   }
@@ -372,7 +449,7 @@ export function drawOfferContent(
   // ====== PROJEKTBESKRIVNING ======
   p.cursor = drawSectionHeading(p, "PROJEKTBESKRIVNING", p.cursor);
   if (offer.project_description) {
-    const endY = p.drawWrapped(offer.project_description, MARGIN, p.cursor, {
+    const endY = p.drawRichWrapped(offer.project_description, MARGIN, p.cursor, {
       size: 10, color: BLACK, width: CONTENT_W,
     });
     p.cursor = endY + 8;
