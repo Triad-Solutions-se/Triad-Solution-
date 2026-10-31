@@ -20,7 +20,8 @@ export function specialTermsIntro(ctx: SpecialTermsCtx, company: CompanyInfo): s
   return (
     `Bilagan hör till ${avtal} mellan ${company.name} (Leverantören) och ` +
     `${ctx.customerName} (Kunden). Vid motstridighet har bilagan företräde ` +
-    `framför Villkoren. PUB-avtalet har dock alltid företräde i frågor om ` +
+    `framför avtalets övriga delar, inklusive offertens texter och Villkoren. ` +
+    `PUB-avtalet har dock alltid företräde i frågor om ` +
     `behandling av personuppgifter.`
   );
 }

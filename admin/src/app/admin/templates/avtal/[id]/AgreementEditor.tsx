@@ -322,7 +322,8 @@ export function AgreementEditor({
             <p className="text-xs text-[var(--muted)]">
               Avvikelser från Villkoren som bara gäller det här avtalet. Läggs som
               Bilaga 1 efter Villkoren i avtals-PDF:en, med en inledning om att
-              bilagan har företräde framför Villkoren men att PUB-avtalet alltid
+              bilagan har företräde framför resten av avtalet (även offertens
+              texter och Villkoren) men att PUB-avtalet alltid
               gäller för personuppgifter, och med egna underskrifter. Lämna tomt
               om avtalet inte har särskilda villkor.
             </p>
