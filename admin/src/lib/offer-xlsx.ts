@@ -20,7 +20,6 @@ const FONT = "Calibri";
 
 const fNormal = { name: FONT, size: 10, color: { argb: "FF000000" } };
 const fGrey = { name: FONT, size: 10, color: { argb: GREY } };
-const fSmall = { name: FONT, size: 8, color: { argb: GREY }, bold: true };
 const fHeading = { name: FONT, size: 11, color: { argb: DARK }, bold: true };
 const fBrand = { name: FONT, size: 9, color: { argb: BRAND }, bold: true };
 
@@ -575,58 +574,16 @@ export async function generateOfferXlsx(
     });
   });
 
-  const SIG = V + 1 + villkor.length + 1;
-  setRowHeight(SIG - 1, 14);
-
-  // ========================================
-  // GODKÄNNANDE / SIGNATUR
-  // ========================================
-  set(`B${SIG}`, "GODKÄNNANDE", { font: fHeading });
-  sectionUnderline(SIG);
-  setRowHeight(SIG, 22);
-
-  setRowHeight(SIG + 1, 36);
-
-  const sigLine = { bottom: { style: "thin" as const, color: { argb: "FF000000" } } };
-
-  ws.mergeCells(`B${SIG + 2}:C${SIG + 2}`);
-  ws.getCell(`B${SIG + 2}`).border = sigLine;
-  ws.getCell(`C${SIG + 2}`).border = sigLine;
-  ws.mergeCells(`E${SIG + 2}:F${SIG + 2}`);
-  ws.getCell(`E${SIG + 2}`).border = sigLine;
-  ws.getCell(`F${SIG + 2}`).border = sigLine;
-  setRowHeight(SIG + 2, 22);
-
-  setRowHeight(SIG + 3, 14);
-  setMerge(`B${SIG + 3}:C${SIG + 3}`, "Ort och datum", { font: fSmall });
-  setMerge(`E${SIG + 3}:F${SIG + 3}`, "Ort och datum", { font: fSmall });
-
-  setRowHeight(SIG + 4, 36);
-
-  ws.mergeCells(`B${SIG + 5}:C${SIG + 5}`);
-  ws.getCell(`B${SIG + 5}`).border = sigLine;
-  ws.getCell(`C${SIG + 5}`).border = sigLine;
-  ws.mergeCells(`E${SIG + 5}:F${SIG + 5}`);
-  ws.getCell(`E${SIG + 5}`).border = sigLine;
-  ws.getCell(`F${SIG + 5}`).border = sigLine;
-  setRowHeight(SIG + 5, 22);
-
-  setMerge(`B${SIG + 6}:C${SIG + 6}`, `Underskrift — För ${company.name}`, { font: fSmall });
-  setMerge(`E${SIG + 6}:F${SIG + 6}`, "Underskrift — För kunden", { font: fSmall });
-  setRowHeight(SIG + 6, 14);
-
-  setMerge(`B${SIG + 7}:C${SIG + 7}`, "[Namnförtydligande]", { font: fGrey });
-  setMerge(`E${SIG + 7}:F${SIG + 7}`, "[Namnförtydligande]", { font: fGrey });
-  setRowHeight(SIG + 7, 14);
-
-  setRowHeight(SIG + 8, 20);
-  setMerge(`B${SIG + 9}:F${SIG + 9}`, "Tack för förtroendet!", {
+  // Offerten signeras inte — det är avtalet som skrivs under.
+  const END = V + 1 + villkor.length + 1;
+  setRowHeight(END - 1, 20);
+  setMerge(`B${END}:F${END}`, "Tack för förtroendet!", {
     font: { name: FONT, size: 11, italic: true, color: { argb: BRAND } },
     alignment: { vertical: "middle", horizontal: "center" },
   });
-  setRowHeight(SIG + 9, 22);
+  setRowHeight(END, 22);
 
-  ws.pageSetup.printArea = `A1:G${SIG + 9}`;
+  ws.pageSetup.printArea = `A1:G${END}`;
 
   // exceljs writeBuffer returns a Node Buffer at runtime; TS types disagree
   // between Node/edge Buffer variants, so cast to a runtime-compatible shape.

@@ -251,9 +251,9 @@ export async function loadLogo(doc: PDFDocument): Promise<PDFImage | null> {
 
 // Variant-konfiguration när drawOfferContent används för både offert och avtal.
 // "agreement" rebrandar headern till AVTAL, byter detalj-boxar (avtalsdatum/
-// startdatum istället för offertdatum/giltig till) och hoppar över de
-// inbyggda VILLKOR- och GODKÄNNANDE-sektionerna (de ersätts av Villkor-bilagan
-// som renderas separat).
+// startdatum istället för offertdatum/giltig till) och hoppar över offertens
+// tack-rad (villkor och underskrifter kommer i Villkor-bilagan som renderas
+// separat).
 export type OfferRenderVariant =
   | { kind: "offer" }
   | {
@@ -460,16 +460,8 @@ export function drawOfferContent(
     p.cursor += 22;
   }
 
-  // ====== GODKÄNNANDE (endast offert-variant) ======
+  // Offerten signeras inte — det är avtalet som skrivs under. Bara en tack-rad.
   if (!isAgreement) {
-    p.newPageIfNeeded(160);
-    p.cursor = drawSectionHeading(p, "GODKÄNNANDE", p.cursor);
-    p.cursor += 30;
-
-    const sigW = (CONTENT_W - 30) / 2;
-    drawSignatureBlock(p, MARGIN, p.cursor, sigW, `Underskrift — För ${company.name}`);
-    drawSignatureBlock(p, MARGIN + sigW + 30, p.cursor, sigW, "Underskrift — För kunden");
-
     // Footer (bottom of current page)
     p.drawText("Tack för förtroendet!", MARGIN, A4_H - MARGIN - 16, {
       font: fontItalic, size: 11, color: BRAND, width: CONTENT_W, align: "center",
@@ -484,17 +476,6 @@ export function drawSectionHeading(p: Pdf, label: string, topY: number): number 
   const lineY = topY + 16;
   p.drawLine(MARGIN, MARGIN + CONTENT_W, lineY, BRAND, 1.5);
   return lineY + 8;
-}
-
-function drawSignatureBlock(p: Pdf, x: number, topY: number, w: number, label: string) {
-  p.drawLine(x, x + w, topY, BLACK, 0.5);
-  p.drawText("Ort och datum", x, topY + 4, {
-    font: p.font, size: 8, color: GREY,
-  });
-  const sigY = topY + 40;
-  p.drawLine(x, x + w, sigY, BLACK, 0.5);
-  p.drawText(label, x, sigY + 4, { font: p.font, size: 8, color: GREY });
-  p.drawText("[Namnförtydligande]", x, sigY + 16, { font: p.font, size: 8, color: GREY });
 }
 
 // Prissektion med valbar mängd line items. Renderar:
