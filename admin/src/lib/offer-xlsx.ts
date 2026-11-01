@@ -8,6 +8,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { type OfferItem, itemsOrFallback } from "./offer-items";
 import { type CustomSection, sectionsForRender } from "./offer-sections";
+import { billingPhrase } from "./recurring";
 
 const BRAND = "FF00B4A8";
 const DARK = "FF0A2540";
@@ -45,6 +46,7 @@ export type OfferData = {
   other_costs?: string | null;
   vat_rate: number;
   currency: string;
+  billing_interval?: string | null; // migration 0036
   customer?: {
     name: string | null;
     contact_person?: string | null;
@@ -486,7 +488,7 @@ export async function generateOfferXlsx(
   // ÅTERKOMMANDE MÅNADSKOSTNAD
   const mon = emitSection({
     startRow: cursor,
-    heading: "ÅTERKOMMANDE MÅNADSKOSTNAD (faktureras månadsvis)",
+    heading: `ÅTERKOMMANDE MÅNADSKOSTNAD (${billingPhrase(offer.billing_interval)})`,
     items: monthlyItems,
     totalLabel: "PER MÅNAD (inkl. moms)",
     highlightColor: BRAND,

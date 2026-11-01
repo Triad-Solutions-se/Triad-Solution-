@@ -14,6 +14,7 @@ import {
   itemsOrFallback,
 } from "./offer-items";
 import { type CustomSection, sectionsForRender } from "./offer-sections";
+import { billingPhrase } from "./recurring";
 
 export const A4_W = 595.28;
 export const A4_H = 841.89;
@@ -57,6 +58,8 @@ export type OfferData = {
   other_costs?: string | null;
   vat_rate: number;
   currency: string;
+  // Hur den återkommande kostnaden faktureras (migration 0036), standard månadsvis.
+  billing_interval?: string | null;
   customer?: {
     name: string | null;
     contact_person?: string | null;
@@ -510,7 +513,7 @@ export function drawOfferContent(
     const monthTotals = computeSectionTotals(monthlyItems, vat);
     p.cursor = drawPricingSection(p, {
       title: "ÅTERKOMMANDE",
-      subtitle: "faktureras månadsvis",
+      subtitle: billingPhrase(offer.billing_interval),
       accent: BRAND,
       items: monthlyItems,
       vatRate: vat,

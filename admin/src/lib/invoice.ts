@@ -59,6 +59,8 @@ export type InvoiceRecord = {
   offer_id: string | null;
   agreement_id: string | null;
   project_id: string | null;
+  bank_account_id?: string | null;
+  recurring_income_id?: string | null; // migration 0036
   credited_invoice_id: string | null;
   sent_at: string | null;
   paid_at: string | null;

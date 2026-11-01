@@ -3,9 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { fmtDate } from "@/lib/date";
 import { PageHeader } from "@/components/PageHeader";
 import { SortSelect } from "@/components/SortSelect";
-import { AlertTriangle, ChevronRight, Search, X } from "lucide-react";
+import { AlertTriangle, ChevronRight, Repeat, Search, X } from "lucide-react";
 import { effectiveStatus, fmtAmount, isOutstanding, todayISO } from "@/lib/invoice";
 import { fetchInvoiceSettings } from "@/lib/invoice-data";
+import { materializeRecurring } from "@/lib/recurring-data";
 import { NewInvoiceButton } from "./NewInvoiceButton";
 import { InvoiceStatusChip } from "./InvoiceStatusChip";
 
@@ -54,7 +55,9 @@ export default async function InvoicesPage({
   const query = sp.q?.toLowerCase().trim() ?? "";
 
   const supabase = await createClient();
-  const [invoicesRes, customersRes, { settings, error: settingsError }] = await Promise.all([
+  // Fakturautkast från återkommande fakturering skapas innan listan hämtas.
+  const { invoicesCreated } = await materializeRecurring(supabase);
+  const [invoicesRes, customersRes, { settings, error: settingsError }, recurringRes] = await Promise.all([
     supabase
       .from("invoices")
       .select(
@@ -64,7 +67,10 @@ export default async function InvoicesPage({
       .order("number", { ascending: false }),
     supabase.from("customers").select("id,name").order("name"),
     fetchInvoiceSettings(supabase),
+    // Egen fråga så att listan fungerar även innan migration 0036 körts.
+    supabase.from("invoices").select("id").not("recurring_income_id", "is", null),
   ]);
+  const recurringIds = new Set((recurringRes.data ?? []).map((r: { id: string }) => r.id));
 
   const error = invoicesRes.error;
   const all = (error ? [] : invoicesRes.data ?? []) as Row[];
@@ -145,6 +151,18 @@ export default async function InvoicesPage({
         </div>
       )}
 
+      {invoicesCreated > 0 && (
+        <div className="glass rounded-xl border border-teal-400/30 bg-teal-400/5 p-4 text-sm text-teal-100 mb-4 flex items-start gap-2">
+          <Repeat size={16} className="shrink-0 mt-0.5" />
+          <span>
+            {invoicesCreated === 1
+              ? "1 nytt fakturautkast skapades från återkommande fakturering."
+              : `${invoicesCreated} nya fakturautkast skapades från återkommande fakturering.`}{" "}
+            Granska och skicka dem under Utkast.
+          </span>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-6">
         <Stat label="Obetalt" value={`${fmtAmount(sum(outstanding))} kr`} hint={`${outstanding.length} st`} color="blue" />
         <Stat label="Varav förfallet" value={`${fmtAmount(sum(overdue))} kr`} hint={`${overdue.length} st`} color="red" />
@@ -217,6 +235,11 @@ export default async function InvoicesPage({
                     {r.credited_invoice_id && (
                       <span className="ml-2 text-[10px] uppercase tracking-wider text-orange-300">Kredit</span>
                     )}
+                    {recurringIds.has(r.id) && (
+                      <span title="Skapad av återkommande fakturering" className="ml-2 inline-flex text-teal-300 align-middle">
+                        <Repeat size={12} />
+                      </span>
+                    )}
                   </td>
                   <td className="p-3 font-medium">{r.customer_name ?? "—"}</td>
                   <td className="p-3 font-mono text-xs text-[var(--muted)]">{r.ocr ?? "—"}</td>
@@ -262,6 +285,7 @@ export default async function InvoicesPage({
                 <span className="font-mono text-xs font-semibold">
                   {r.number}
                   {r.credited_invoice_id && <span className="ml-2 text-[10px] text-orange-300">KREDIT</span>}
+                  {recurringIds.has(r.id) && <Repeat size={11} className="ml-2 inline text-teal-300" />}
                 </span>
                 <InvoiceStatusChip invoice={r} />
               </div>

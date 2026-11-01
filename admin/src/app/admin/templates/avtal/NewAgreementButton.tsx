@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Plus } from "lucide-react";
+import { FileSignature, Plus } from "lucide-react";
 
 type Offer = {
   id: string;
@@ -28,16 +28,21 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 export function NewAgreementButton({
   offers,
   templates,
+  presetOfferId,
+  variant = "primary",
 }: {
   offers: Offer[];
   templates: Template[];
+  // Förvald offert, t.ex. när avtalet skapas från offertsidan.
+  presetOfferId?: string;
+  variant?: "primary" | "small";
 }) {
   const supabase = createClient();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [f, setF] = useState({
-    offer_id: "",
+    offer_id: presetOfferId ?? "",
     pub_template_id: "",
     agreement_date: todayISO(),
     start_date: todayISO(),
@@ -114,10 +119,14 @@ export function NewAgreementButton({
               ? "Ladda upp minst en PUB-mall först."
               : ""
         }
-        className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm shadow-teal-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+        className={
+          variant === "small"
+            ? "rounded-btn border border-white/10 hover:bg-white/10 px-2.5 py-1.5 text-xs flex items-center gap-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            : "rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm shadow-teal-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+        }
       >
-        <Plus size={16} />
-        Nytt avtal
+        {variant === "small" ? <FileSignature size={12} /> : <Plus size={16} />}
+        {variant === "small" ? "Skapa avtal" : "Nytt avtal"}
       </button>
 
       {open && (

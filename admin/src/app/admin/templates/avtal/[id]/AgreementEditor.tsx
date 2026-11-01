@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Chip } from "@/components/Chip";
@@ -50,6 +51,7 @@ export function AgreementEditor({
   templates,
   offers,
   invoicesPanel,
+  recurringPanel,
 }: {
   agreement: Agreement;
   // Vad som saknas för respektive PDF, räknat på servern från sparade uppgifter.
@@ -58,6 +60,8 @@ export function AgreementEditor({
   offers: { id: string; offer_number: string | null; title: string | null; customer: { id: string; name: string } | null }[];
   // Kopplade fakturor + "Fakturera", renderas på servern.
   invoicesPanel?: React.ReactNode;
+  // Återkommande fakturering kopplad till avtalet.
+  recurringPanel?: React.ReactNode;
 }) {
   const supabase = createClient();
   const router = useRouter();
@@ -98,11 +102,21 @@ export function AgreementEditor({
         ...(supportsSpecialTerms ? { special_terms: f.special_terms.trim() || null } : {}),
       })
       .eq("id", agreement.id);
-    setSaving(false);
     if (error) {
+      setSaving(false);
       setError(error.message);
       return;
     }
+    // Ett avslutat avtal ska inte fortsätta fakturera: pausa kopplade planer.
+    // Fel ignoreras (kolumnen finns först efter migration 0036).
+    if (f.status === "terminated" && agreement.status !== "terminated") {
+      await supabase
+        .from("recurring_income")
+        .update({ active: false })
+        .eq("agreement_id", agreement.id)
+        .eq("active", true);
+    }
+    setSaving(false);
     router.refresh();
   }
 
@@ -239,6 +253,14 @@ export function AgreementEditor({
                 </option>
               ))}
             </select>
+            {f.offer_id && (
+              <Link
+                href={`/admin/templates/offerter/${f.offer_id}`}
+                className="text-[11px] text-teal-300 hover:text-teal-200 mt-1 inline-block"
+              >
+                Öppna offerten →
+              </Link>
+            )}
           </label>
 
           <label className="block">
@@ -297,6 +319,11 @@ export function AgreementEditor({
                 </option>
               ))}
             </select>
+            {f.status === "terminated" && agreement.status !== "terminated" && (
+              <span className="text-[10px] text-amber-300 mt-1 block">
+                När du sparar pausas avtalets återkommande fakturering.
+              </span>
+            )}
           </label>
         </div>
 
@@ -393,6 +420,8 @@ export function AgreementEditor({
           </div>
         )}
       </div>
+
+      {recurringPanel}
 
       {invoicesPanel}
 

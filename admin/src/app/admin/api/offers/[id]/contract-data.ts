@@ -19,8 +19,9 @@ export async function fetchCompanyInfo(
   return toCompanyInfo(data);
 }
 
-const SELECT =
-  "offer_number,title,reference,offer_date,valid_until,project_description,custom_header,custom_text,custom_sections,project_price,monthly_price,project_discount_pct,monthly_discount_pct,project_items,monthly_items,other_costs,vat_rate,currency,customer:customers(name,contact_person,email,phone,website,org_number,address)";
+// "*" så att kolumner från senare migrationer (t.ex. billing_interval, 0036)
+// följer med när de finns utan att frågan går sönder innan de körts.
+const SELECT = "*,customer:customers(name,contact_person,email,phone,website,org_number,address)";
 
 // Hämtar en offert + kund i den form som offert-/avtalsgeneratorerna förväntar.
 // Delas av PDF- och PUB-routerna så att urval och mappning hålls i synk.
@@ -61,6 +62,7 @@ export async function fetchOfferForContract(
       other_costs: (offer as any).other_costs ?? null,
       vat_rate: Number(offer.vat_rate ?? 25),
       currency: offer.currency ?? "SEK",
+      billing_interval: (offer as any).billing_interval ?? null,
       customer,
     },
     error: null,

@@ -34,6 +34,7 @@ const SEK = (n: number) =>
 const FREQUENCY_LABEL: Record<string, string> = {
   monthly: "Månadsvis",
   quarterly: "Kvartalsvis",
+  semiannual: "Halvårsvis",
   yearly: "Årsvis",
 };
 
@@ -196,6 +197,7 @@ function RecurringFormModal({
           >
             <option value="monthly">Månadsvis</option>
             <option value="quarterly">Kvartalsvis</option>
+            <option value="semiannual">Halvårsvis</option>
             <option value="yearly">Årsvis</option>
           </select>
           <label className="text-xs text-[var(--muted)]">

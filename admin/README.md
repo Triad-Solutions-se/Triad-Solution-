@@ -11,6 +11,14 @@ Skapa kundoffert med två fasta priskolumner — `project_price` (engångsavgift
 ### Fakturor
 Kundfakturor under `/admin/invoices`, kopplade till kund, offert och avtal. Skapa från fakturalistan, från en kund ("Fakturera" i kundlistan) eller från offert-/avtalssidan — engångskostnad och/eller månadsavgift hämtas från offerten, med leveransperiod. Fakturanummer (`YYYY-NNN` per kalenderår) och OCR-nummer (fakturanumrets siffror + längdsiffra + Luhn-kontrollsiffra) sätts av databasen och är unika. PDF via `/admin/api/invoices/[id]/pdf` med bankgiro, OCR, momsreg.nr, F-skatt och styrelsens säte. Statusflöde: utkast → skickad (låst) → betald, eller kreditera med kreditfaktura; "Förfallen" räknas fram efter förfallodagen. Bara utkast kan raderas. Bankgiro, momsreg.nr m.m. fylls i under Inställningar → Fakturering. Schema i `supabase/migrations/0034_invoice_system.sql`.
 
+### Ekonomin hänger ihop
+Offert → avtal → fakturor → intäkter, med länkar åt båda håll (offertsidan visar sina avtal, avtalssidan sin offert, fakturan sitt avtal/sin offert/sin återkommande fakturering). Schema i `supabase/migrations/0036_economy_links_recurring_billing.sql`.
+
+- **Betalda fakturor bokförs som intäkter.** När en faktura registreras som betald (välj bankkonto i betalningsrutan) skapar en databastrigger en intäkt i Ekonomi med fakturans belopp inkl. moms, så Kassa, Intäkter och Cashflow stämmer utan dubbelregistrering. Ångrad betalning, återställt utkast eller kreditering tar bort intäkten. På sådana intäkter kan bara projekt och bankkonto ändras.
+- **Återkommande fakturering.** Under Ekonomi → Återkommande intäkt, eller "Lägg upp" på avtals-/offertsidan: kund, avtal/offert, frekvens (månadsvis, kvartalsvis, halvårsvis, årsvis), fakturarader per period (hämtas från offertens återkommande kostnad × periodens månader), moms, betalningsvillkor och förskott (utkast X dagar före perioden) eller efterskott (dagen efter). Ett fakturautkast per period skapas automatiskt när Ekonomi, Fakturor, en offert eller ett avtal öppnas, och dyker upp under Fakturor för granskning. "Fakturera nästa period nu" skapar nästa utkast direkt. Raderade utkast skapas inte igen. När ett avtal sätts till Avslutad pausas dess återkommande fakturering. Läget "Endast intäkt" fungerar som tidigare (intäktsrader utan faktura).
+- **Offertens faktureringsintervall** ("Underhållet faktureras") står i offert-PDF/Excel och avtalet och blir förval för avtalets återkommande fakturering.
+- Ekonomi visar "Återkommande / mån" (alla aktiva planer omräknade per månad), och kundlistan visar återkommande intäkt per kund.
+
 ## Local setup
 ```bash
 cd admin

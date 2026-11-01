@@ -18,7 +18,8 @@ export async function GET(
   const { data: offer, error } = await supabase
     .from("offers")
     .select(
-      "offer_number,title,reference,offer_date,valid_until,project_description,custom_header,custom_text,custom_sections,project_price,monthly_price,project_discount_pct,monthly_discount_pct,project_items,monthly_items,other_costs,vat_rate,currency,customer:customers(name,contact_person,email,phone,website)",
+      // "*" så att billing_interval (migration 0036) följer med när kolumnen finns.
+      "*,customer:customers(name,contact_person,email,phone,website)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -50,6 +51,7 @@ export async function GET(
     other_costs: (offer as any).other_costs ?? null,
     vat_rate: Number(offer.vat_rate ?? 25),
     currency: offer.currency ?? "SEK",
+    billing_interval: (offer as any).billing_interval ?? null,
     // Supabase nested embed returns either object or array depending on relation cardinality
     customer: Array.isArray(offer.customer) ? offer.customer[0] ?? null : (offer.customer as any) ?? null,
   }, company);

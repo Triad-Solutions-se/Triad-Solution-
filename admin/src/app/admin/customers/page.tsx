@@ -7,6 +7,7 @@ import { NewCustomerButton } from "./NewCustomerButton";
 import { EditCustomerButton } from "./EditCustomerButton";
 import { NewInvoiceButton } from "../invoices/NewInvoiceButton";
 import { effectiveStatus, fmtAmount, isOutstanding } from "@/lib/invoice";
+import { toMonthly } from "@/lib/recurring";
 import { AlertTriangle, Search } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -37,10 +38,18 @@ export default async function CustomersPage({
   else if (sort === "created_desc") q = q.order("created_at", { ascending: false });
   else if (sort === "created_asc") q = q.order("created_at", { ascending: true });
   else q = q.order("name");
-  const [{ data }, { data: invoiceRows }] = await Promise.all([
+  const [{ data }, { data: invoiceRows }, { data: recurringRows }] = await Promise.all([
     q,
     supabase.from("invoices").select("customer_id,status,amount_sek,due_date,credited_invoice_id"),
+    supabase.from("recurring_income").select("customer_id,amount_sek,frequency").eq("active", true),
   ]);
+
+  // Aktiva återkommande intäkter/fakturering per kund, omräknat till per månad.
+  const recurringMonthly = new Map<string, number>();
+  for (const r of recurringRows ?? []) {
+    if (!r.customer_id) continue;
+    recurringMonthly.set(r.customer_id, (recurringMonthly.get(r.customer_id) ?? 0) + toMonthly(r.amount_sek, r.frequency));
+  }
 
   // Fakturaöversikt per kund: antal, obetalt belopp och om något har förfallit.
   const invoiceStats = new Map<string, { count: number; outstanding: number; overdue: boolean }>();
@@ -108,7 +117,7 @@ export default async function CustomersPage({
                   </span>
                 )}
               </div>
-              <InvoiceSummary customerId={c.id} stats={invoiceStats.get(c.id)} />
+              <InvoiceSummary customerId={c.id} stats={invoiceStats.get(c.id)} monthly={recurringMonthly.get(c.id)} />
             </div>
             <EditCustomerButton customer={c} />
           </div>
@@ -173,7 +182,7 @@ export default async function CustomersPage({
                     </div>
                   </td>
                   <td className="p-3">
-                    <InvoiceSummary customerId={c.id} stats={invoiceStats.get(c.id)} />
+                    <InvoiceSummary customerId={c.id} stats={invoiceStats.get(c.id)} monthly={recurringMonthly.get(c.id)} />
                   </td>
                   <td className="p-3 text-right">
                     <div className="flex justify-end gap-2">
@@ -206,11 +215,16 @@ export default async function CustomersPage({
 function InvoiceSummary({
   customerId,
   stats,
+  monthly,
 }: {
   customerId: string;
   stats?: { count: number; outstanding: number; overdue: boolean };
+  monthly?: number;
 }) {
-  if (!stats) return <span className="text-xs text-[var(--muted)]">—</span>;
+  const recurring = monthly ? (
+    <span className="font-mono text-teal-300/90">{fmtAmount(Math.round(monthly))} kr/mån återkommande</span>
+  ) : null;
+  if (!stats) return recurring ? <span className="text-xs flex flex-col">{recurring}</span> : <span className="text-xs text-[var(--muted)]">—</span>;
   return (
     <Link href={`/admin/invoices?customer=${customerId}`} className="text-xs hover:text-white flex flex-col gap-0.5">
       <span className="text-[var(--muted)]">{stats.count} st</span>
@@ -221,6 +235,7 @@ function InvoiceSummary({
       ) : (
         <span className="text-emerald-300/80">Inget obetalt</span>
       )}
+      {recurring}
     </Link>
   );
 }

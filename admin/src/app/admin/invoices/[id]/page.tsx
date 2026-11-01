@@ -17,8 +17,19 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   if (!invoice) notFound();
   const inv = invoice as InvoiceRecord;
 
-  const [customersRes, offersRes, agreementsRes, projectsRes, creditsRes, originalRes, company, { settings }] =
-    await Promise.all([
+  const [
+    customersRes,
+    offersRes,
+    agreementsRes,
+    projectsRes,
+    creditsRes,
+    originalRes,
+    company,
+    { settings },
+    banksRes,
+    planRes,
+    incomeRes,
+  ] = await Promise.all([
       supabase.from("customers").select("id,name,org_number,address,contact_person,email").order("name"),
       supabase
         .from("offers")
@@ -37,6 +48,12 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         : Promise.resolve({ data: null }),
       fetchCompanyInfo(supabase),
       fetchInvoiceSettings(supabase),
+      supabase.from("bank_accounts").select("id,name").eq("archived", false).order("name"),
+      inv.recurring_income_id
+        ? supabase.from("recurring_income").select("id,description,frequency").eq("id", inv.recurring_income_id).maybeSingle()
+        : Promise.resolve({ data: null }),
+      // Fel (migration 0036 ej körd) → ingen "Bokförd"-länk.
+      supabase.from("income").select("id").eq("invoice_id", id).maybeSingle(),
     ]);
 
   return (
@@ -62,6 +79,9 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         original={(originalRes.data ?? null) as any}
         company={company}
         settings={settings}
+        bankAccounts={(banksRes.data ?? []) as any[]}
+        plan={(planRes.data ?? null) as any}
+        incomeBooked={!!incomeRes.data}
       />
     </>
   );
