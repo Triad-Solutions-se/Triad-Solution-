@@ -17,6 +17,7 @@ import {
   type SessionAccount,
   type Transaction,
 } from "./enable-banking";
+import { autoMatchInvoices } from "./bank-match-data";
 
 /** Banken som kopplas. Standard Lunar i Sverige; går att ändra via env. */
 export const BANK_NAME = process.env.ENABLE_BANKING_ASPSP || "Lunar";
@@ -332,6 +333,8 @@ export type SyncResult = {
   status: string;
   accounts: number;
   transactions: number;
+  /** Fakturor som markerades som betalda av en inbetalning i den här synken. */
+  matched: number;
   error?: string;
 };
 
@@ -340,7 +343,13 @@ export async function syncConnection(
   conn: BankConnection,
   psu?: PsuHeaders,
 ): Promise<SyncResult> {
-  const result: SyncResult = { connectionId: conn.id, status: conn.status, accounts: 0, transactions: 0 };
+  const result: SyncResult = {
+    connectionId: conn.id,
+    status: conn.status,
+    accounts: 0,
+    transactions: 0,
+    matched: 0,
+  };
   if (conn.status !== "active" || !conn.session_id) return result;
 
   if (conn.valid_until && new Date(conn.valid_until).getTime() < Date.now()) {
@@ -368,6 +377,13 @@ export async function syncConnection(
       .from("bank_connections")
       .update({ last_synced_at: new Date().toISOString(), last_error: null })
       .eq("id", conn.id);
+    // Avstämningen mot fakturor får inte fälla synken — förslagen syns ändå
+    // på Ekonomi-sidan och går att koppla för hand.
+    try {
+      result.matched = await autoMatchInvoices(admin);
+    } catch (e) {
+      console.error("bank-match:", e instanceof Error ? e.message : e);
+    }
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     const gone = e instanceof EnableBankingError && e.sessionGone;

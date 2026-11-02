@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/PageHeader";
-import { ChevronRight, FolderArchive } from "lucide-react";
+import { ChevronRight, FolderArchive, Landmark } from "lucide-react";
 import { fmtDate } from "@/lib/date";
 import { fmtAmount, isOutstanding } from "@/lib/invoice";
 import { NewPaymentButton, PaymentsTable } from "./PaymentsSection";
@@ -24,6 +24,8 @@ import { BankConnectionBar, type BankConnectionInfo } from "./BankConnectionBar"
 import { BankTransactionsTable, type BankTransaction } from "./BankTransactionsTable";
 import { enableBankingConfigured } from "@/lib/enable-banking";
 import { BANK_NAME } from "@/lib/bank-sync";
+import { type BankInvoiceMatch, type MatchInvoice, describeMatches } from "@/lib/bank-match";
+import { MATCH_COLUMNS } from "@/lib/bank-match-data";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +51,7 @@ export default async function FinancePage() {
     agreements,
     bankConnections,
     bankTransactions,
+    bankMatches,
   ] = await Promise.all([
     supabase.from("expenses").select("*").order("date", { ascending: false }),
     supabase.from("income").select("*").order("date", { ascending: false }),
@@ -77,10 +80,11 @@ export default async function FinancePage() {
       .order("created_at", { ascending: false }),
     supabase
       .from("bank_transactions")
-      .select("id,bank_account_id,status,booking_date,amount,currency,counterparty,description")
+      .select("id,bank_account_id,status,booking_date,amount,currency,counterparty,description,reference")
       .order("booking_date", { ascending: false, nullsFirst: true })
       .order("created_at", { ascending: false })
       .limit(100),
+    supabase.from("bank_invoice_matches").select(MATCH_COLUMNS),
   ]);
 
   const expensesData = expenses.data ?? [];
@@ -103,6 +107,14 @@ export default async function FinancePage() {
     connectionList.filter((c) => c.status === "active" || c.status === "expired").map((c) => c.id),
   );
   const bankTxList = (bankTransactions.data ?? []) as BankTransaction[];
+  // Avstämning inbetalning → faktura (migration 0040). Utan tabellen visas inga förslag.
+  const matchingEnabled = bankSyncEnabled && !bankMatches.error;
+  const matchList = (bankMatches.data ?? []) as BankInvoiceMatch[];
+  const txMatches = matchingEnabled
+    ? describeMatches(bankTxList, invoicesData as MatchInvoice[], matchList)
+    : {};
+  const suggestionCount = Object.values(txMatches).filter((m) => m.suggestions.length > 0).length;
+  const paidViaBank = new Set(matchList.filter((m) => m.status === "applied").map((m) => m.invoice_id));
 
   const totalExp = expensesData.reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
   const totalInc = incomeData.reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
@@ -221,10 +233,22 @@ export default async function FinancePage() {
       </Section>
 
       {bankSyncEnabled && (bankTxList.length > 0 || connection?.status === "active") && (
-        <Section title="Banktransaktioner">
+        <Section
+          title="Banktransaktioner"
+          right={
+            suggestionCount > 0 && (
+              <span className="text-xs text-teal-300">
+                {suggestionCount === 1
+                  ? "1 inbetalning kan vara en fakturabetalning"
+                  : `${suggestionCount} inbetalningar kan vara fakturabetalningar`}
+              </span>
+            )
+          }
+        >
           <BankTransactionsTable
             rows={bankTxList}
             accounts={bankList.map((b) => ({ id: b.id, name: b.name, color: b.color }))}
+            matches={txMatches}
           />
         </Section>
       )}
@@ -298,7 +322,14 @@ export default async function FinancePage() {
                   {fmtAmount(r.amount_sek)} {r.currency ?? "SEK"}
                 </td>
                 <td className="p-3">
-                  <InvoiceStatusChip invoice={r} />
+                  <span className="inline-flex items-center gap-1.5">
+                    <InvoiceStatusChip invoice={r} />
+                    {r.status === "paid" && paidViaBank.has(r.id) && (
+                      <span title="Betald — kopplad till en inbetalning från banken" className="text-teal-300">
+                        <Landmark size={13} />
+                      </span>
+                    )}
+                  </span>
                 </td>
               </tr>
             ))}

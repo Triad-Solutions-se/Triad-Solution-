@@ -1,5 +1,7 @@
 import { Chip } from "@/components/Chip";
 import { fmtDate } from "@/lib/date";
+import type { TxMatchInfo } from "@/lib/bank-match";
+import { BankInvoiceMatch } from "./BankInvoiceMatch";
 
 export type BankTransaction = {
   id: string;
@@ -10,6 +12,7 @@ export type BankTransaction = {
   currency: string;
   counterparty: string | null;
   description: string | null;
+  reference: string | null;
 };
 
 const money = (n: number, currency: string) =>
@@ -18,9 +21,12 @@ const money = (n: number, currency: string) =>
 export function BankTransactionsTable({
   rows,
   accounts,
+  matches = {},
 }: {
   rows: BankTransaction[];
   accounts: { id: string; name: string; color: string | null }[];
+  /** Fakturakopplingar per inbetalning (migration 0040). Tomt = avstämningen är av. */
+  matches?: Record<string, TxMatchInfo>;
 }) {
   const showAccount = new Set(rows.map((r) => r.bank_account_id)).size > 1;
   return (
@@ -37,11 +43,15 @@ export function BankTransactionsTable({
         {rows.map((r) => {
           const amount = Number(r.amount);
           const account = accounts.find((a) => a.id === r.bank_account_id);
+          const match = matches[r.id];
+          const details = [r.counterparty ? r.description : null, r.reference && `Ref ${r.reference}`]
+            .filter(Boolean)
+            .join(" · ");
           return (
             <tr key={r.id} className="hover:bg-white/[0.04] transition-colors">
-              <td className="p-3 text-[var(--muted)] whitespace-nowrap">{fmtDate(r.booking_date)}</td>
+              <td className="p-3 text-[var(--muted)] whitespace-nowrap align-top">{fmtDate(r.booking_date)}</td>
               {showAccount && (
-                <td className="p-3 text-[var(--muted)] whitespace-nowrap">
+                <td className="p-3 text-[var(--muted)] whitespace-nowrap align-top">
                   <span
                     className="inline-block h-2 w-2 rounded-full mr-2 align-middle"
                     style={{ background: account?.color ?? "#14b8a6" }}
@@ -56,12 +66,13 @@ export function BankTransactionsTable({
                   </span>
                   {r.status !== "BOOK" && <Chip tone="yellow">Reserverad</Chip>}
                 </div>
-                {r.counterparty && r.description && (
-                  <div className="text-xs text-[var(--muted)] truncate max-w-[28rem]">{r.description}</div>
+                {details && (
+                  <div className="text-xs text-[var(--muted)] truncate max-w-[28rem]">{details}</div>
                 )}
+                {match && <BankInvoiceMatch transactionId={r.id} info={match} />}
               </td>
               <td
-                className={`p-3 text-right font-mono whitespace-nowrap ${
+                className={`p-3 text-right font-mono whitespace-nowrap align-top ${
                   amount < 0 ? "text-rose-300" : "text-emerald-300"
                 }`}
               >
