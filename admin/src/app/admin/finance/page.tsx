@@ -35,6 +35,23 @@ const SEK = (n: number) =>
 const sumAmount = (rows: any[]) => rows.reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
+const BANK_TX_COLUMNS = "id,bank_account_id,status,booking_date,amount,currency,counterparty,description,reference";
+
+/** Senaste banktransaktionerna, med kvitto om migration 0041 är körd (annars utan). */
+async function loadBankTransactions(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const query = (columns: string) =>
+    supabase
+      .from("bank_transactions")
+      .select(columns)
+      .order("booking_date", { ascending: false, nullsFirst: true })
+      .order("created_at", { ascending: false })
+      .limit(100)
+      .returns<BankTransaction[]>();
+  const withReceipts = await query(`${BANK_TX_COLUMNS},receipt_path`);
+  if (!withReceipts.error) return { ...withReceipts, receipts: true };
+  return { ...(await query(BANK_TX_COLUMNS)), receipts: false };
+}
+
 export default async function FinancePage() {
   const supabase = await createClient();
   // Skapa income-rader och fakturautkast för passerade förfallodatum på
@@ -81,12 +98,7 @@ export default async function FinancePage() {
       .select("id,aspsp_name,status,valid_until,last_synced_at,last_error")
       .in("status", ["active", "expired", "error"])
       .order("created_at", { ascending: false }),
-    supabase
-      .from("bank_transactions")
-      .select("id,bank_account_id,status,booking_date,amount,currency,counterparty,description,reference")
-      .order("booking_date", { ascending: false, nullsFirst: true })
-      .order("created_at", { ascending: false })
-      .limit(100),
+    loadBankTransactions(supabase),
     supabase.from("bank_invoice_matches").select(MATCH_COLUMNS),
   ]);
 
@@ -109,7 +121,7 @@ export default async function FinancePage() {
   const liveConnections = new Set(
     connectionList.filter((c) => c.status === "active" || c.status === "expired").map((c) => c.id),
   );
-  const bankTxList = (bankTransactions.data ?? []) as BankTransaction[];
+  const bankTxList = bankTransactions.data ?? [];
   // Avstämning inbetalning → faktura (migration 0040). Utan tabellen visas inga förslag.
   const matchingEnabled = bankSyncEnabled && !bankMatches.error;
   const matchList = (bankMatches.data ?? []) as BankInvoiceMatch[];
@@ -274,6 +286,7 @@ export default async function FinancePage() {
             rows={bankTxList}
             accounts={bankList.map((b) => ({ id: b.id, name: b.name, color: b.color }))}
             matches={txMatches}
+            receipts={bankTransactions.receipts}
           />
         </Section>
       )}
