@@ -26,7 +26,7 @@ Miljövariabler i Vercel (triad-admin):
 - `RESEND_API_KEY` — från Resend, med domänen mcasolutions.se verifierad (DNS-poster för SPF/DKIM).
 - `INVOICE_EMAIL_FROM` — t.ex. `MCA Solutions <faktura@mcasolutions.se>`. Svar går till företagets e-post under Inställningar.
 - `INVOICE_EMAIL_BCC` (valfri) — kopia av varje fakturamejl.
-- `CRON_SECRET` — valfri lång slumpsträng; Vercel skickar den till cron-routen.
+- `CRON_SECRET` — valfri lång slumpsträng; Vercel skickar den till cron-routerna (samma hemlighet som banksynken använder).
 - `SUPABASE_SERVICE_ROLE_KEY` — finns redan (används av analytics).
 
 ## Local setup
