@@ -4,6 +4,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generatePubFromTemplatePdf, missingPubFields } from "@/lib/pub-template";
+import { villkorOptions } from "@/lib/villkor";
 import {
   agreementFileBase,
   fetchAgreement,
@@ -79,6 +80,7 @@ export async function GET(
     startDate: agreement.start_date,
     offerNumber: offerRes.offer?.offer_number ?? null,
     agreementNumber: agreement.agreement_number ?? null,
+    customerSignatories: villkorOptions(agreement).customerSignatories,
   };
 
   const missing = missingPubFields(blocks, ctx);

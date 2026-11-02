@@ -22,7 +22,7 @@ export type VillkorCtx = {
 export type VillkorOptions = {
   priceAdjustment: boolean; // false = ingen årlig prisjustering i punkt 8
   slaCredits: boolean; // false = ingen kredit vid driftstörning i punkt 3.1
-  customerSignatories: number; // underskrifter för Kunden (Villkor + Bilaga 1)
+  customerSignatories: number; // underskrifter för Kunden (Villkor, Bilaga 1, PUB)
 };
 
 export function villkorOptions(agreement: {
