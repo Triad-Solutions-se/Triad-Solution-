@@ -2,6 +2,7 @@ import { Chip } from "@/components/Chip";
 import { fmtDate } from "@/lib/date";
 import type { TxMatchInfo } from "@/lib/bank-match";
 import { BankInvoiceMatch } from "./BankInvoiceMatch";
+import { BankReceipt } from "./BankReceipt";
 
 export type BankTransaction = {
   id: string;
@@ -13,6 +14,8 @@ export type BankTransaction = {
   counterparty: string | null;
   description: string | null;
   reference: string | null;
+  /** Bifogat kvitto i finance-bucketen (migration 0041). */
+  receipt_path?: string | null;
 };
 
 const money = (n: number, currency: string) =>
@@ -22,20 +25,25 @@ export function BankTransactionsTable({
   rows,
   accounts,
   matches = {},
+  receipts = false,
 }: {
   rows: BankTransaction[];
   accounts: { id: string; name: string; color: string | null }[];
   /** Fakturakopplingar per inbetalning (migration 0040). Tomt = avstämningen är av. */
   matches?: Record<string, TxMatchInfo>;
+  /** Visa kvittokolumnen (migration 0041 är körd). */
+  receipts?: boolean;
 }) {
   const showAccount = new Set(rows.map((r) => r.bank_account_id)).size > 1;
+  const columns = 3 + (showAccount ? 1 : 0) + (receipts ? 1 : 0);
   return (
-    <table className="w-full text-sm min-w-[540px]">
+    <table className={`w-full text-sm ${receipts ? "min-w-[640px]" : "min-w-[540px]"}`}>
       <thead className="bg-white/[0.03] text-left text-[var(--muted)] text-xs uppercase tracking-wider">
         <tr>
           <th className="p-3">Datum</th>
           {showAccount && <th className="p-3">Konto</th>}
           <th className="p-3">Motpart / text</th>
+          {receipts && <th className="p-3">Kvitto</th>}
           <th className="p-3 text-right">Belopp</th>
         </tr>
       </thead>
@@ -71,6 +79,16 @@ export function BankTransactionsTable({
                 )}
                 {match && <BankInvoiceMatch transactionId={r.id} info={match} />}
               </td>
+              {receipts && (
+                <td className="p-3 align-top">
+                  <BankReceipt
+                    transactionId={r.id}
+                    path={r.receipt_path ?? null}
+                    booked={r.status === "BOOK"}
+                    outgoing={amount < 0}
+                  />
+                </td>
+              )}
               <td
                 className={`p-3 text-right font-mono whitespace-nowrap align-top ${
                   amount < 0 ? "text-rose-300" : "text-emerald-300"
@@ -84,7 +102,7 @@ export function BankTransactionsTable({
         })}
         {!rows.length && (
           <tr>
-            <td colSpan={showAccount ? 4 : 3} className="p-8 text-center text-sm text-[var(--muted)]">
+            <td colSpan={columns} className="p-8 text-center text-sm text-[var(--muted)]">
               Inga transaktioner från banken än.
             </td>
           </tr>
