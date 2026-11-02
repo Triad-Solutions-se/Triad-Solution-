@@ -16,6 +16,7 @@ import {
   newEmptySection,
   sectionsOrLegacy,
 } from "@/lib/offer-sections";
+import { FREQUENCIES, frequencyInfo } from "@/lib/recurring";
 
 type Customer = { id: string; name: string; org_number?: string | null; address?: string | null };
 
@@ -41,6 +42,7 @@ type Offer = {
   other_costs?: string | null;
   vat_rate: number;
   currency: string;
+  billing_interval?: string | null; // saknas tills migration 0036 är körd
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -78,9 +80,13 @@ export function OfferEditor({
     other_costs: offer.other_costs ?? "",
     vat_rate: String(offer.vat_rate ?? 25),
     currency: offer.currency ?? "SEK",
+    billing_interval: offer.billing_interval ?? "monthly",
     status: offer.status,
     notes: offer.notes ?? "",
   });
+  // Raden hämtas med "*", så nyckeln finns först när migration 0036 är körd.
+  const supportsBillingInterval = "billing_interval" in offer;
+  const billing = frequencyInfo(f.billing_interval);
 
   // Items är egen state — komplexare än textfält, så vi håller dem separat.
   // Faller tillbaka till legacy-priset första gången editorn öppnas på en
@@ -149,6 +155,7 @@ export function OfferEditor({
       other_costs: f.other_costs || null,
       vat_rate: Number(f.vat_rate) || 25,
       currency: f.currency,
+      ...(supportsBillingInterval ? { billing_interval: f.billing_interval } : {}),
       status: f.status,
       notes: f.notes || null,
     };
@@ -229,6 +236,7 @@ export function OfferEditor({
       other_costs: f.other_costs || null,
       vat_rate: Number(f.vat_rate) || 25,
       currency: f.currency,
+      ...(supportsBillingInterval ? { billing_interval: f.billing_interval } : {}),
       status: "draft",
       notes: f.notes || null,
     };
@@ -510,6 +518,24 @@ export function OfferEditor({
                   <option value="USD">USD</option>
                 </select>
               </label>
+              {supportsBillingInterval && (
+                <label className="block col-span-2">
+                  <span className="text-xs text-[var(--muted)]">Underhållet faktureras</span>
+                  <select
+                    {...bind("billing_interval")}
+                    className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
+                  >
+                    {FREQUENCIES.map((fr) => (
+                      <option key={fr.value} value={fr.value}>
+                        {fr.label} i förskott
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-[10px] text-[var(--muted)] mt-1 block">
+                    Står i offerten och avtalet, och blir förval när avtalets återkommande fakturering läggs upp.
+                  </span>
+                </label>
+              )}
             </div>
           </div>
 
@@ -644,6 +670,14 @@ export function OfferEditor({
                   tone="teal"
                 />
               </div>
+              {billing.months > 1 && (
+                <RowLine
+                  label={`Per faktura (${billing.per}) inkl. moms`}
+                  value={fmt(monthTotals.total * billing.months)}
+                  unit={f.currency}
+                  small
+                />
+              )}
               <RowLine
                 label="Årskostnad (×12)"
                 value={fmt(monthTotals.total * 12)}

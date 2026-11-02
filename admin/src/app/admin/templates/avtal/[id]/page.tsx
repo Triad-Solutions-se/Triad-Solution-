@@ -5,6 +5,9 @@ import { ChevronLeft } from "lucide-react";
 import { AgreementEditor } from "./AgreementEditor";
 import { LINKED_INVOICE_SELECT, LinkedInvoices } from "../../../invoices/LinkedInvoices";
 import { agreementGaps } from "../../../api/agreements/[id]/agreement-data";
+import { LinkedRecurring } from "../../../finance/RecurringIncomeSection";
+import { materializeRecurring } from "@/lib/recurring-data";
+import type { RecurringPlan } from "@/lib/recurring";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +18,9 @@ export default async function AgreementDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  await materializeRecurring(supabase);
 
-  const [agreementRes, templatesRes, offersRes, invoicesRes] = await Promise.all([
+  const [agreementRes, templatesRes, offersRes, invoicesRes, plansRes] = await Promise.all([
     supabase
       .from("agreements")
       .select(
@@ -40,6 +44,7 @@ export default async function AgreementDetailPage({
       .select(LINKED_INVOICE_SELECT)
       .eq("agreement_id", id)
       .order("issued_at", { ascending: false }),
+    supabase.from("recurring_income").select("*").eq("agreement_id", id).order("created_at"),
   ]);
 
   const agreement = agreementRes.data as any;
@@ -68,6 +73,16 @@ export default async function AgreementDetailPage({
               invoices={(invoicesRes.data ?? []) as any[]}
               customer={agreement.customer ? { id: agreement.customer.id, name: agreement.customer.name } : null}
               preset={{ agreementId: agreement.id }}
+            />
+          )
+        }
+        recurringPanel={
+          // Saknas agreement_id-kolumnen (migration 0036 ej körd) visas ingen panel.
+          plansRes.error ? null : (
+            <LinkedRecurring
+              plans={(plansRes.data ?? []) as RecurringPlan[]}
+              preset={{ customerId: agreement.customer?.id, agreementId: agreement.id }}
+              hint="Lägg upp återkommande fakturering så skapas ett fakturautkast för avtalets löpande avgift varje period — månadsvis, kvartalsvis, halvårsvis eller årsvis."
             />
           )
         }

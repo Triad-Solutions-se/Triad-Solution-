@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { TrendingUp } from "lucide-react";
@@ -21,10 +22,19 @@ type Income = {
   customer_id: string | null;
   project_id: string | null;
   bank_account_id: string | null;
+  // Migration 0031 / 0036 — saknas tills de körts.
+  recurring_income_id?: string | null;
+  invoice_id?: string | null;
 };
 
 const SEK = (n: number) =>
   new Intl.NumberFormat("sv-SE", { style: "currency", currency: "SEK", maximumFractionDigits: 0 }).format(n);
+
+const INCOME_STATUS: Record<string, string> = {
+  pending: "Väntar",
+  received: "Mottagen",
+  late: "Försenad",
+};
 
 const emptyForm = {
   description: "",
@@ -44,6 +54,7 @@ function IncomeFormModal({
   projects,
   bankAccounts,
   initial,
+  invoiceNumber,
 }: {
   open: boolean;
   onClose: () => void;
@@ -51,12 +62,16 @@ function IncomeFormModal({
   projects: ProjectOpt[];
   bankAccounts: BankOpt[];
   initial?: Income | null;
+  invoiceNumber?: string | null;
 }) {
   const supabase = createClient();
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const isEdit = !!initial;
+  // Intäkter från betalda fakturor styrs av fakturan (trigger i migration
+  // 0036) — bara projekt och bankkonto kan sättas här.
+  const linkedInvoiceId = initial?.invoice_id ?? null;
   const [f, setF] = useState(() =>
     initial
       ? {
@@ -76,7 +91,9 @@ function IncomeFormModal({
     e.preventDefault();
     if (!f.description.trim()) return;
     setSaving(true);
-    const payload = {
+    const payload = linkedInvoiceId
+      ? { project_id: f.project_id || null, bank_account_id: f.bank_account_id || null }
+      : {
       description: f.description,
       amount_sek: Number(f.amount_sek || 0),
       source: f.source || null,
@@ -85,7 +102,7 @@ function IncomeFormModal({
       customer_id: f.customer_id || null,
       project_id: f.project_id || null,
       bank_account_id: f.bank_account_id || null,
-    };
+        };
     const { error } =
       isEdit && initial
         ? await supabase.from("income").update(payload).eq("id", initial.id)
@@ -133,6 +150,21 @@ function IncomeFormModal({
         <h3 className="font-heading text-lg font-semibold">
           {isEdit ? "Redigera intäkt" : "Ny intäkt"}
         </h3>
+        {linkedInvoiceId ? (
+          <div className="rounded-btn border border-teal-400/20 bg-teal-400/5 p-3 text-sm space-y-1">
+            <div className="font-medium">{f.description}</div>
+            <div className="font-mono text-xs">
+              {SEK(Number(f.amount_sek || 0))} · mottagen {fmtDate(f.date)}
+            </div>
+            <div className="text-xs text-[var(--muted)]">
+              Bokförd automatiskt när fakturan registrerades som betald. Belopp, datum och kund följer{" "}
+              <Link href={`/admin/invoices/${linkedInvoiceId}`} className="underline hover:text-white">
+                faktura {invoiceNumber ?? ""}
+              </Link>
+              .
+            </div>
+          </div>
+        ) : (
         <input
           autoFocus
           required
@@ -140,7 +172,10 @@ function IncomeFormModal({
           placeholder="Beskrivning"
           className="w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2"
         />
+        )}
         <div className="grid grid-cols-2 gap-3">
+          {!linkedInvoiceId && (
+          <>
           <input
             {...bind("amount_sek")}
             type="number"
@@ -177,9 +212,11 @@ function IncomeFormModal({
               </option>
             ))}
           </select>
+          </>
+          )}
           <select
             {...bind("project_id")}
-            className="rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
+            className={`rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm ${linkedInvoiceId ? "col-span-2" : ""}`}
           >
             <option value="">Projekt…</option>
             {projects.map((p) => (
@@ -202,7 +239,7 @@ function IncomeFormModal({
         </div>
         <div className="flex justify-between gap-2">
           <div>
-            {isEdit && (
+            {isEdit && !linkedInvoiceId && (
               <button
                 type="button"
                 onClick={remove}
@@ -272,11 +309,13 @@ export function IncomeTable({
   customers,
   projects,
   bankAccounts,
+  invoiceNumbers = {},
 }: {
   rows: Income[];
   customers: CustomerOpt[];
   projects: ProjectOpt[];
   bankAccounts: BankOpt[];
+  invoiceNumbers?: Record<string, string>;
 }) {
   const [edit, setEdit] = useState<Income | null>(null);
   const projectName = (id: string | null) => (id ? projects.find((p) => p.id === id)?.name ?? null : null);
@@ -305,7 +344,17 @@ export function IncomeTable({
             >
               <td className="p-3">
                 <div className="font-medium">{r.description}</div>
-                {r.source && <div className="text-xs text-[var(--muted)]">{r.source}</div>}
+                {r.invoice_id ? (
+                  <div className="mt-0.5">
+                    <Chip tone="teal">Från faktura</Chip>
+                  </div>
+                ) : r.recurring_income_id ? (
+                  <div className="mt-0.5">
+                    <Chip tone="purple">Återkommande</Chip>
+                  </div>
+                ) : (
+                  r.source && <div className="text-xs text-[var(--muted)]">{r.source}</div>
+                )}
               </td>
               <td className="p-3 text-[var(--muted)]">{customerName(r.customer_id) ?? "—"}</td>
               <td className="p-3 text-[var(--muted)]">{projectName(r.project_id) ?? "—"}</td>
@@ -314,7 +363,7 @@ export function IncomeTable({
               <td className="p-3 font-mono">{SEK(Number(r.amount_sek || 0))}</td>
               <td className="p-3">
                 <Chip tone={r.status === "received" ? "green" : r.status === "pending" ? "yellow" : "red"}>
-                  {r.status}
+                  {INCOME_STATUS[r.status] ?? r.status}
                 </Chip>
               </td>
             </tr>
@@ -336,6 +385,7 @@ export function IncomeTable({
           projects={projects}
           bankAccounts={bankAccounts}
           initial={edit}
+          invoiceNumber={edit.invoice_id ? invoiceNumbers[edit.invoice_id] ?? null : null}
         />
       )}
     </>

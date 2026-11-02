@@ -7,6 +7,7 @@ import { Chip } from "@/components/Chip";
 import { DateInput } from "@/components/DateInput";
 import { fmtDate } from "@/lib/date";
 import type { CompanyInfo } from "@/lib/company";
+import { frequencyInfo } from "@/lib/recurring";
 import {
   AlertTriangle,
   Ban,
@@ -18,6 +19,7 @@ import {
   Mail,
   Plus,
   RefreshCw,
+  Repeat,
   RotateCcw,
   Save,
   Send,
@@ -64,6 +66,7 @@ type OfferOpt = OfferPricing & { id: string; offer_number: string | null; title:
 type AgreementOpt = { id: string; agreement_number: string | null; customer_id: string | null; offer_id: string | null };
 type ProjectOpt = { id: string; name: string; customer_id: string | null };
 type InvoiceRef = { id: string; number: string; status: string; paid_at?: string | null };
+type PlanRef = { id: string; description: string; frequency: string };
 
 const input =
   "w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed";
@@ -84,6 +87,9 @@ export function InvoiceEditor({
   original,
   company,
   settings,
+  bankAccounts,
+  plan,
+  incomeBooked,
 }: {
   invoice: InvoiceRecord;
   customers: CustomerOpt[];
@@ -94,6 +100,11 @@ export function InvoiceEditor({
   original: InvoiceRef | null;
   company: CompanyInfo;
   settings: InvoiceSettings;
+  bankAccounts: { id: string; name: string }[];
+  // Återkommande fakturering som skapade fakturan (migration 0036).
+  plan: PlanRef | null;
+  // Om betalningen finns som intäkt i Ekonomi (trigger i migration 0036).
+  incomeBooked: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -128,6 +139,10 @@ export function InvoiceEditor({
   const [error, setError] = useState<string | null>(null);
   const [payOpen, setPayOpen] = useState(false);
   const [payDate, setPayDate] = useState(todayISO());
+  // Kontot betalningen kom in på — följer med till intäkten i Ekonomi.
+  const [payBank, setPayBank] = useState(
+    invoice.bank_account_id ?? (bankAccounts.length === 1 ? bankAccounts[0].id : ""),
+  );
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -353,7 +368,12 @@ export function InvoiceEditor({
   function registerPayment() {
     if (!payDate) return;
     run("pay", async () => {
-      if (await update({ status: "paid", paid_at: payDate })) setPayOpen(false);
+      const ok = await update({
+        status: "paid",
+        paid_at: payDate,
+        ...(bankAccounts.length > 0 ? { bank_account_id: payBank || null } : {}),
+      });
+      if (ok) setPayOpen(false);
     });
   }
 
@@ -550,6 +570,11 @@ export function InvoiceEditor({
               <span>Skapad {fmtDate(invoice.created_at)}</span>
               {invoice.sent_at && <span>· Skickad {fmtDate(invoice.sent_at)}</span>}
               {invoice.paid_at && <span>· Betald {fmtDate(invoice.paid_at)}</span>}
+              {status === "paid" && incomeBooked && (
+                <Link href="/admin/finance" className="hover:text-white underline-offset-2 hover:underline">
+                  · Bokförd som intäkt i Ekonomi
+                </Link>
+              )}
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -601,6 +626,21 @@ export function InvoiceEditor({
                   <div className="w-40">
                     <DateInput value={payDate} onChange={setPayDate} ariaLabel="Betaldatum" />
                   </div>
+                  {bankAccounts.length > 0 && (
+                    <select
+                      value={payBank}
+                      onChange={(e) => setPayBank(e.target.value)}
+                      aria-label="Bankkonto"
+                      className="rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
+                    >
+                      <option value="">Bankkonto…</option>
+                      {bankAccounts.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <button
                     onClick={registerPayment}
                     disabled={!!busy || !payDate}
@@ -916,6 +956,25 @@ export function InvoiceEditor({
             <p className="text-[10px] text-[var(--muted)]">
               Avtals- och offertnummer skrivs ut på fakturan under &quot;Avser&quot;.
             </p>
+            {(linkedAgreement || linkedOffer || plan) && (
+              <div className="flex flex-wrap gap-2">
+                {linkedAgreement && (
+                  <Link href={`/admin/templates/avtal/${linkedAgreement.id}`} className={linkChip}>
+                    Avtal {linkedAgreement.agreement_number ?? ""}
+                  </Link>
+                )}
+                {linkedOffer && (
+                  <Link href={`/admin/templates/offerter/${linkedOffer.id}`} className={linkChip}>
+                    Offert {linkedOffer.offer_number ?? ""}
+                  </Link>
+                )}
+                {plan && (
+                  <Link href="/admin/finance" className={linkChip} title="Skapad av återkommande fakturering">
+                    <Repeat size={11} /> {plan.description} · {frequencyInfo(plan.frequency).label.toLowerCase()}
+                  </Link>
+                )}
+              </div>
+            )}
           </Card>
 
           <Card title="Interna anteckningar">
@@ -1078,6 +1137,9 @@ export function InvoiceEditor({
 
 const smallBtn =
   "rounded-btn bg-white/5 hover:bg-white/10 border border-white/10 px-2 py-1 text-[11px] flex items-center gap-1";
+
+const linkChip =
+  "inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 px-2.5 py-1 text-[11px] transition-colors";
 
 function Card({ title, right, children }: { title: string; right?: React.ReactNode; children: React.ReactNode }) {
   return (
