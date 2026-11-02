@@ -2,9 +2,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Landmark } from "lucide-react";
+import { Landmark, Link2 } from "lucide-react";
 import { Modal } from "@/components/Modal";
 import { Chip } from "@/components/Chip";
+import { startBankConnect } from "./BankConnectionBar";
 
 export type BankAccount = {
   id: string;
@@ -16,12 +17,18 @@ export type BankAccount = {
   color: string | null;
   archived: boolean;
   notes: string | null;
+  // Bankkoppling (0039_bank_sync) — saknas tills migrationen är körd.
+  connection_id?: string | null;
+  synced_balance?: number | string | null;
+  synced_at?: string | null;
 };
 
 export type BankAccountWithBalance = BankAccount & {
   currentBalance: number;
   inflow: number;
   outflow: number;
+  /** Saldot banken senast rapporterade, om kontot är kopplat. */
+  bankBalance: number | null;
 };
 
 const SEK = (n: number) =>
@@ -42,15 +49,18 @@ function BankAccountFormModal({
   open,
   onClose,
   initial,
+  canConnect = false,
 }: {
   open: boolean;
   onClose: () => void;
   initial?: BankAccount | null;
+  canConnect?: boolean;
 }) {
   const supabase = createClient();
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [connecting, setConnecting] = useState(false);
   const isEdit = !!initial;
   const [f, setF] = useState(() =>
     initial
@@ -106,6 +116,17 @@ function BankAccountFormModal({
     }
     onClose();
     router.refresh();
+  }
+
+  async function connect() {
+    if (!initial) return;
+    setConnecting(true);
+    try {
+      await startBankConnect(initial.id);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
+      setConnecting(false);
+    }
   }
 
   function bind<K extends keyof typeof f>(k: K) {
@@ -175,6 +196,22 @@ function BankAccountFormModal({
           placeholder="Anteckningar"
           className="w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
         />
+        {isEdit && initial?.connection_id && (
+          <p className="text-xs text-emerald-300">
+            Kopplat till banken — saldo och transaktioner hämtas automatiskt.
+          </p>
+        )}
+        {isEdit && !initial?.connection_id && canConnect && (
+          <button
+            type="button"
+            onClick={connect}
+            disabled={connecting}
+            className="w-full rounded-btn border border-teal-500/30 bg-teal-500/10 hover:bg-teal-500/20 px-3 py-2 text-sm text-teal-200 flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <Link2 size={14} />
+            {connecting ? "Öppnar banken…" : "Koppla till banken (BankID)"}
+          </button>
+        )}
         <div className="flex justify-between gap-2">
           <div>
             {isEdit && (
@@ -226,7 +263,13 @@ export function NewBankAccountButton() {
   );
 }
 
-export function BankAccountsGrid({ accounts }: { accounts: BankAccountWithBalance[] }) {
+export function BankAccountsGrid({
+  accounts,
+  canConnect = false,
+}: {
+  accounts: BankAccountWithBalance[];
+  canConnect?: boolean;
+}) {
   const [edit, setEdit] = useState<BankAccount | null>(null);
   if (!accounts.length) {
     return (
@@ -239,7 +282,8 @@ export function BankAccountsGrid({ accounts }: { accounts: BankAccountWithBalanc
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
         {accounts.map((a) => {
-          const negative = a.currentBalance < 0;
+          const shown = a.bankBalance ?? a.currentBalance;
+          const negative = shown < 0;
           return (
             <button
               key={a.id}
@@ -254,6 +298,7 @@ export function BankAccountsGrid({ accounts }: { accounts: BankAccountWithBalanc
                 <div className="flex items-center justify-between gap-2">
                   <div className="font-medium truncate">{a.name}</div>
                   {a.archived && <Chip tone="gray">Arkiverat</Chip>}
+                  {!a.archived && a.bankBalance !== null && <Chip tone="teal">Från banken</Chip>}
                 </div>
                 <div className="text-xs text-[var(--muted)] mt-0.5 truncate">
                   {[a.bank, a.account_number].filter(Boolean).join(" • ") || "—"}
@@ -263,8 +308,13 @@ export function BankAccountsGrid({ accounts }: { accounts: BankAccountWithBalanc
                     negative ? "text-rose-300" : "text-emerald-300"
                   }`}
                 >
-                  {SEK(a.currentBalance)}
+                  {SEK(shown)}
                 </div>
+                {a.bankBalance !== null && (
+                  <div className="text-[11px] text-[var(--muted)] mt-0.5">
+                    Beräknat i portalen: <span className="font-mono">{SEK(a.currentBalance)}</span>
+                  </div>
+                )}
                 <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-[var(--muted)]">
                   <span>
                     In:{" "}
@@ -281,7 +331,12 @@ export function BankAccountsGrid({ accounts }: { accounts: BankAccountWithBalanc
         })}
       </div>
       {edit && (
-        <BankAccountFormModal open={!!edit} onClose={() => setEdit(null)} initial={edit} />
+        <BankAccountFormModal
+          open={!!edit}
+          onClose={() => setEdit(null)}
+          initial={edit}
+          canConnect={canConnect}
+        />
       )}
     </>
   );

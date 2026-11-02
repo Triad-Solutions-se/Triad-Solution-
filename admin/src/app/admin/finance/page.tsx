@@ -19,6 +19,10 @@ import {
   type BankAccountWithBalance,
 } from "./BankAccountsSection";
 import { CashflowChart } from "./CashflowChart";
+import { BankConnectionBar, type BankConnectionInfo } from "./BankConnectionBar";
+import { BankTransactionsTable, type BankTransaction } from "./BankTransactionsTable";
+import { enableBankingConfigured } from "@/lib/enable-banking";
+import { BANK_NAME } from "@/lib/bank-sync";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +45,8 @@ export default async function FinancePage() {
     bankAccounts,
     projects,
     customers,
+    bankConnections,
+    bankTransactions,
   ] = await Promise.all([
     supabase.from("expenses").select("*").order("date", { ascending: false }),
     supabase.from("income").select("*").order("date", { ascending: false }),
@@ -61,6 +67,17 @@ export default async function FinancePage() {
     supabase.from("bank_accounts").select("*").order("archived").order("name"),
     supabase.from("projects").select("id,name").order("name"),
     supabase.from("customers").select("id,name").order("name"),
+    supabase
+      .from("bank_connections")
+      .select("id,aspsp_name,status,valid_until,last_synced_at,last_error")
+      .in("status", ["active", "expired", "error"])
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("bank_transactions")
+      .select("id,bank_account_id,status,booking_date,amount,currency,counterparty,description")
+      .order("booking_date", { ascending: false, nullsFirst: true })
+      .order("created_at", { ascending: false })
+      .limit(100),
   ]);
 
   const expensesData = expenses.data ?? [];
@@ -73,6 +90,14 @@ export default async function FinancePage() {
   const bankList = (bankAccounts.data ?? []) as BankAccount[];
   const projectList = (projects.data ?? []) as { id: string; name: string }[];
   const customerList = (customers.data ?? []) as { id: string; name: string }[];
+  // Bankkopplingen visas när migrationen 0039 är körd och Enable Banking är konfigurerat.
+  const bankSyncEnabled = !bankConnections.error && enableBankingConfigured();
+  const connectionList = (bankConnections.data ?? []) as BankConnectionInfo[];
+  const connection = connectionList[0] ?? null;
+  const liveConnections = new Set(
+    connectionList.filter((c) => c.status === "active" || c.status === "expired").map((c) => c.id),
+  );
+  const bankTxList = (bankTransactions.data ?? []) as BankTransaction[];
 
   const totalExp = expensesData.reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
   const totalInc = incomeData.reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
@@ -103,17 +128,23 @@ export default async function FinancePage() {
       .filter((r: any) => r.bank_account_id === b.id && r.status === "paid")
       .reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
     const outflow = expOut + payOut;
+    const synced =
+      b.connection_id && liveConnections.has(b.connection_id) && b.synced_balance != null
+        ? Number(b.synced_balance)
+        : null;
     return {
       ...b,
       starting_balance: start,
       inflow,
       outflow,
       currentBalance: start + inflow - outflow,
+      bankBalance: synced,
     };
   });
+  // Kassa: bankens saldo för kopplade konton, annars portalens beräknade.
   const totalCash = bankWithBalance
     .filter((b) => !b.archived)
-    .reduce((s, b) => s + b.currentBalance, 0);
+    .reduce((s, b) => s + (b.bankBalance ?? b.currentBalance), 0);
 
   // Outstanding receivables: sent, unpaid invoices (drafts and credit notes excluded)
   const outstanding = invoicesData
@@ -185,8 +216,18 @@ export default async function FinancePage() {
       </Section>
 
       <Section title="Bankkonton & kassa">
-        <BankAccountsGrid accounts={bankWithBalance} />
+        {bankSyncEnabled && <BankConnectionBar connection={connection} bankName={BANK_NAME} />}
+        <BankAccountsGrid accounts={bankWithBalance} canConnect={bankSyncEnabled} />
       </Section>
+
+      {bankSyncEnabled && (bankTxList.length > 0 || connection?.status === "active") && (
+        <Section title="Banktransaktioner">
+          <BankTransactionsTable
+            rows={bankTxList}
+            accounts={bankList.map((b) => ({ id: b.id, name: b.name, color: b.color }))}
+          />
+        </Section>
+      )}
 
       <div className="text-xs text-[var(--muted)] mb-4 -mt-2">
         Återkommande intäkter / mån:{" "}
