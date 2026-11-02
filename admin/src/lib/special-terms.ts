@@ -13,6 +13,7 @@ import type { CompanyInfo } from "./company";
 export type SpecialTermsCtx = {
   agreementNumber: string | null;
   customerName: string;
+  customerSignatories?: number; // underskrifter för Kunden, standard 1
 };
 
 export function specialTermsIntro(ctx: SpecialTermsCtx, company: CompanyInfo): string {
@@ -75,6 +76,7 @@ export function specialTermsBlocks(
       t: "signatures",
       left: `För Leverantören (${company.name})`,
       right: `För Kunden (${ctx.customerName})`,
+      rightCount: ctx.customerSignatories ?? 1,
     },
   ];
 }
