@@ -26,6 +26,7 @@ import { enableBankingConfigured } from "@/lib/enable-banking";
 import { BANK_NAME } from "@/lib/bank-sync";
 import { type BankInvoiceMatch, type MatchInvoice, describeMatches } from "@/lib/bank-match";
 import { MATCH_COLUMNS } from "@/lib/bank-match-data";
+import { type BankCashRow, buildCashflow } from "@/lib/cashflow";
 
 export const dynamic = "force-dynamic";
 
@@ -34,12 +35,17 @@ const SEK = (n: number) =>
 
 const sumAmount = (rows: any[]) => rows.reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const CASHFLOW_MONTHS = 12;
 
 export default async function FinancePage() {
   const supabase = await createClient();
   // Skapa income-rader och fakturautkast för passerade förfallodatum på
   // återkommande intäkter innan datan hämtas, så tabellerna nedan visar dem.
   await materializeRecurring(supabase);
+  // Första dagen i cashflow-diagrammets tidsfönster (samma 12 månader som CashflowChart).
+  const now = new Date();
+  const windowStart = new Date(now.getFullYear(), now.getMonth() - (CASHFLOW_MONTHS - 1), 1);
+  const windowStartISO = `${windowStart.getFullYear()}-${String(windowStart.getMonth() + 1).padStart(2, "0")}-01`;
   const [
     expenses,
     income,
@@ -55,6 +61,7 @@ export default async function FinancePage() {
     bankConnections,
     bankTransactions,
     bankMatches,
+    bankCashTx,
   ] = await Promise.all([
     supabase.from("expenses").select("*").order("date", { ascending: false }),
     supabase.from("income").select("*").order("date", { ascending: false }),
@@ -88,6 +95,11 @@ export default async function FinancePage() {
       .order("created_at", { ascending: false })
       .limit(100),
     supabase.from("bank_invoice_matches").select(MATCH_COLUMNS),
+    supabase
+      .from("bank_transactions")
+      .select("bank_account_id,booking_date,amount")
+      .eq("status", "BOOK")
+      .gte("booking_date", windowStartISO),
   ]);
 
   const expensesData = expenses.data ?? [];
@@ -192,16 +204,50 @@ export default async function FinancePage() {
 
   const unreimbursed = sumAmount(expensesData.filter((r: any) => r.status !== "reimbursed"));
 
-  // Cashflow chart: use received income vs reimbursed/paid expenses for actual movement
-  const realizedIncome = incomeData.filter((r: any) => r.status === "received");
-  const realizedExpenses = [
-    ...expensesData
-      .filter((r: any) => r.status === "reimbursed")
-      .map((r: any) => ({ date: r.date, amount_sek: r.amount_sek })),
-    ...paymentsData
-      .filter((r: any) => r.status === "paid")
-      .map((r: any) => ({ date: r.paid_at ?? r.due_date, amount_sek: r.amount_sek })),
-  ];
+  // Cashflow: bankens bokförda transaktioner för kopplade konton, portalens
+  // poster (mottagna intäkter, återbetalda utlägg, betalda betalningar) för
+  // resten. Bankhistoriken börjar vid kontots första bokförda transaktion.
+  const syncedIds = bankWithBalance.filter((b) => b.bankBalance != null).map((b) => b.id);
+  const firstBooked = await Promise.all(
+    syncedIds.map((id) =>
+      supabase
+        .from("bank_transactions")
+        .select("booking_date")
+        .eq("bank_account_id", id)
+        .eq("status", "BOOK")
+        .not("booking_date", "is", null)
+        .order("booking_date", { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+    ),
+  );
+  const historyStart = new Map<string, string>();
+  syncedIds.forEach((id, i) => {
+    const date = firstBooked[i].data?.booking_date;
+    if (date) historyStart.set(id, date);
+  });
+  const cashflow = buildCashflow({
+    income: incomeData
+      .filter((r: any) => r.status === "received")
+      .map((r: any) => ({ date: r.date, amount_sek: r.amount_sek, bank_account_id: r.bank_account_id })),
+    outgoing: [
+      ...expensesData
+        .filter((r: any) => r.status === "reimbursed")
+        .map((r: any) => ({ date: r.date, amount_sek: r.amount_sek, bank_account_id: r.bank_account_id })),
+      ...paymentsData
+        .filter((r: any) => r.status === "paid")
+        .map((r: any) => ({
+          date: r.paid_at ?? r.due_date,
+          amount_sek: r.amount_sek,
+          bank_account_id: r.bank_account_id,
+        })),
+    ],
+    bankTx: (bankCashTx.data ?? []) as BankCashRow[],
+    historyStart,
+  });
+  const cashflowHint = historyStart.size
+    ? `Pengar som faktiskt har rört sig: bankens transaktioner för kopplade konton (även insättningar som aktiekapital), portalens poster för övriga konton och före ${fmtDate([...historyStart.values()].sort()[0])}.`
+    : "Bara pengar som faktiskt har rört sig: mottagna intäkter (även betalda fakturor), återbetalda utlägg och betalda betalningar.";
 
   return (
     <>
@@ -245,11 +291,8 @@ export default async function FinancePage() {
         />
       </div>
 
-      <Section
-        title="Cashflow"
-        hint="Bara pengar som faktiskt har rört sig: mottagna intäkter (även betalda fakturor), återbetalda utlägg och betalda betalningar."
-      >
-        <CashflowChart income={realizedIncome} expenses={realizedExpenses} months={12} />
+      <Section title="Cashflow" hint={cashflowHint}>
+        <CashflowChart income={cashflow.income} expenses={cashflow.expenses} months={CASHFLOW_MONTHS} />
       </Section>
 
       <Section title="Bankkonton & kassa" right={<NewBankAccountButton variant="small" />}>
