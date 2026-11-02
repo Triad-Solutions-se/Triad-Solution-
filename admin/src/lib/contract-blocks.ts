@@ -29,7 +29,7 @@ export type Block =
   | { t: "callout"; kind: "info" | "warn"; text: string }
   | { t: "meta"; rows: MetaRow[] }
   | { t: "table"; headers: string[]; rows: string[][]; widths: number[] }
-  | { t: "signatures"; left: string; right: string; rightCount?: number }
+  | { t: "signatures"; left: string; right: string; leftCount?: number; rightCount?: number }
   | { t: "space"; h: number };
 
 // En metarad: label + value. Value kan innehålla "röda" segment som markeras
@@ -163,25 +163,46 @@ function drawSegments(
   size: number,
   lineHeight: number,
 ) {
+  // Grannar med samma stil (t.ex. en ifylld platshållare efter vanlig text)
+  // slås ihop, så att de också ritas som en radbit.
+  const merged: typeof segments = [];
+  for (const seg of segments) {
+    const last = merged[merged.length - 1];
+    if (last && !!last.red === !!seg.red && !!last.bold === !!seg.bold) {
+      last.text += seg.text;
+    } else {
+      merged.push({ ...seg });
+    }
+  }
   let cx = x;
   let cy = topY;
-  for (const seg of segments) {
+  for (const seg of merged) {
     const font = seg.bold ? p.fontBold : p.font;
     const color = seg.red ? ROSE : BLACK;
-    // Bryt segmentet ord-för-ord
-    const words = seg.text.split(/(\s+)/);
-    for (const word of words) {
+    // Bryt segmentet ord-för-ord, men rita varje radbit i ett anrop. Ritas
+    // orden ett och ett på uträknade positioner krymper mellanslagen när
+    // läsaren ersätter Helvetica med ett något bredare typsnitt.
+    let run = "";
+    let runX = cx;
+    const flush = () => {
+      if (run) p.drawText(run, runX, cy, { font, size, color });
+      run = "";
+    };
+    for (const word of seg.text.split(/(\s+)/)) {
       if (!word) continue;
       const w = font.widthOfTextAtSize(word, size);
       if (cx + w > x + maxWidth && cx > x) {
+        flush();
         cy += lineHeight;
         cx = x;
+        runX = x;
         // Ledande whitespace i ny rad: hoppa över
         if (/^\s+$/.test(word)) continue;
       }
-      p.drawText(word, cx, cy, { font, size, color });
+      run += word;
       cx += w;
     }
+    flush();
   }
 }
 
@@ -239,9 +260,10 @@ export function signatureColumns(
   leftTitle: string,
   rightTitle: string,
   rightCount = 1,
+  leftCount = 1,
 ) {
   const extraSigner = 124; // höjd för varje undertecknare utöver den första
-  p.newPageIfNeeded(150 + (rightCount - 1) * extraSigner);
+  p.newPageIfNeeded(150 + (Math.max(leftCount, rightCount) - 1) * extraSigner);
   const colW = (CONTENT_W - 30) / 2;
   const startY = p.cursor;
   const draw = (x: number, title: string, count: number) => {
@@ -260,7 +282,7 @@ export function signatureColumns(
     }
     return y + 16;
   };
-  const endL = draw(MARGIN, leftTitle, 1);
+  const endL = draw(MARGIN, leftTitle, leftCount);
   const endR = draw(MARGIN + colW + 30, rightTitle, rightCount);
   p.cursor = Math.max(endL, endR);
 }
@@ -311,7 +333,7 @@ export function renderBlocks(p: Pdf, blocks: Block[]) {
         tableBlock(p, b.headers, b.rows, b.widths);
         break;
       case "signatures":
-        signatureColumns(p, b.left, b.right, b.rightCount);
+        signatureColumns(p, b.left, b.right, b.rightCount, b.leftCount);
         break;
       case "space":
         p.cursor += b.h;
