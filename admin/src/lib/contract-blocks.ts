@@ -29,7 +29,7 @@ export type Block =
   | { t: "callout"; kind: "info" | "warn"; text: string }
   | { t: "meta"; rows: MetaRow[] }
   | { t: "table"; headers: string[]; rows: string[][]; widths: number[] }
-  | { t: "signatures"; left: string; right: string }
+  | { t: "signatures"; left: string; right: string; rightCount?: number }
   | { t: "space"; h: number };
 
 // En metarad: label + value. Value kan innehålla "röda" segment som markeras
@@ -232,26 +232,36 @@ export function tableBlock(
   p.cursor += 10;
 }
 
-export function signatureColumns(p: Pdf, leftTitle: string, rightTitle: string) {
-  p.newPageIfNeeded(150);
+// Två kolumner med underskriftsrader. Kundens kolumn kan ha flera
+// undertecknare under varandra (t.ex. två firmatecknare i förening).
+export function signatureColumns(
+  p: Pdf,
+  leftTitle: string,
+  rightTitle: string,
+  rightCount = 1,
+) {
+  const extraSigner = 124; // höjd för varje undertecknare utöver den första
+  p.newPageIfNeeded(150 + (rightCount - 1) * extraSigner);
   const colW = (CONTENT_W - 30) / 2;
   const startY = p.cursor;
-  const draw = (x: number, title: string) => {
+  const draw = (x: number, title: string, count: number) => {
     let y = startY;
     p.drawText(title, x, y, { font: p.fontBold, size: 10, color: DARK, width: colW });
-    y += 50;
-    p.drawLine(x, x + colW, y, BLACK, 0.5);
-    p.drawText("Underskrift", x, y + 4, { size: 8, color: GREY });
-    y += 36;
-    p.drawLine(x, x + colW, y, BLACK, 0.5);
-    p.drawText("Namn och befattning", x, y + 4, { size: 8, color: GREY });
-    y += 36;
-    p.drawLine(x, x + colW, y, BLACK, 0.5);
-    p.drawText("Datum och ort", x, y + 4, { size: 8, color: GREY });
+    for (let i = 0; i < count; i++) {
+      y += i === 0 ? 50 : 52;
+      p.drawLine(x, x + colW, y, BLACK, 0.5);
+      p.drawText("Underskrift", x, y + 4, { size: 8, color: GREY });
+      y += 36;
+      p.drawLine(x, x + colW, y, BLACK, 0.5);
+      p.drawText("Namn och befattning", x, y + 4, { size: 8, color: GREY });
+      y += 36;
+      p.drawLine(x, x + colW, y, BLACK, 0.5);
+      p.drawText("Datum och ort", x, y + 4, { size: 8, color: GREY });
+    }
     return y + 16;
   };
-  const endL = draw(MARGIN, leftTitle);
-  const endR = draw(MARGIN + colW + 30, rightTitle);
+  const endL = draw(MARGIN, leftTitle, 1);
+  const endR = draw(MARGIN + colW + 30, rightTitle, rightCount);
   p.cursor = Math.max(endL, endR);
 }
 
@@ -301,7 +311,7 @@ export function renderBlocks(p: Pdf, blocks: Block[]) {
         tableBlock(p, b.headers, b.rows, b.widths);
         break;
       case "signatures":
-        signatureColumns(p, b.left, b.right);
+        signatureColumns(p, b.left, b.right, b.rightCount);
         break;
       case "space":
         p.cursor += b.h;
