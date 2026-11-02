@@ -42,6 +42,7 @@ export type PubSubCtx = {
   startDate: string | null;
   offerNumber: string | null;
   agreementNumber: string | null; // AVT-YYYY-NNN — vävs in i "Relaterat avtal"-raden
+  customerSignatories?: number; // underskrifter för Kunden, standard 1
 };
 
 // Hjälpfunktioner för fallback-värden (placeholders behålls om data saknas)
@@ -255,9 +256,18 @@ export function substituteBlocks(blocks: Block[], ctx: PubSubCtx): Block[] {
           rows: b.rows.map((row) => row.map((c) => sub(c))),
         });
         break;
-      case "signatures":
-        out.push({ ...b });
+      case "signatures": {
+        // Mallen anger inte vilken kolumn som är Kundens, så den känns igen på
+        // rubriken ("Personuppgiftsansvarig (Kunden)").
+        const n = ctx.customerSignatories ?? 1;
+        const isCustomer = (title: string) => /kund/i.test(title);
+        out.push({
+          ...b,
+          ...(isCustomer(b.left) ? { leftCount: n } : {}),
+          ...(isCustomer(b.right) ? { rightCount: n } : {}),
+        });
         break;
+      }
       case "space":
         out.push({ ...b });
         break;

@@ -20,6 +20,9 @@ export type AgreementRow = {
   start_date: string;
   notes: string | null;
   special_terms?: string | null; // saknas tills migration 0035 är körd
+  price_adjustment?: boolean; // saknas tills migration 0036 är körd
+  sla_credits?: boolean;
+  customer_signatories?: number;
   offer_id: string | null;
   pub_template_id: string | null;
   customer_id: string | null;
