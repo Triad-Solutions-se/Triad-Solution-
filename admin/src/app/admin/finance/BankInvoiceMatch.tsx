@@ -98,7 +98,7 @@ export function BankInvoiceMatch({ transactionId, info }: { transactionId: strin
             <button
               onClick={() => apply(s.invoiceId)}
               disabled={!!busy}
-              className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-2 py-1 text-[11px] font-semibold flex items-center gap-1 disabled:opacity-50 transition-colors"
+              className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-2 py-1 text-[11px] font-semibold flex items-center gap-1 disabled:opacity-50 transition-colors"
             >
               <CheckCircle2 size={11} />
               {busy === `apply:${s.invoiceId}` ? "Markerar…" : "Markera som betald"}
