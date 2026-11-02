@@ -13,6 +13,7 @@
 // periodslut.
 
 import { type OfferItem } from "./offer-items";
+import { fmtDate } from "./date";
 import {
   type InvoiceLine,
   addDaysISO,
@@ -85,6 +86,34 @@ export function periodAt(anchor: string, freq: string | null | undefined, k: num
     start: occurrenceISO(anchor, months, k),
     end: addDaysISO(occurrenceISO(anchor, months, k + 1), -1),
   };
+}
+
+const MONTHS_SHORT = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+const MONTHS_LONG = [
+  "januari", "februari", "mars", "april", "maj", "juni",
+  "juli", "augusti", "september", "oktober", "november", "december",
+];
+
+// "juli 2026", "jul–sep 2026" eller "nov 2026 – jan 2027" när perioden är hela
+// månader, annars datumintervallet ("15/07/26 – 14/08/26").
+export function periodName(p: Period): string {
+  const [sy, sm, sd] = p.start.split("-").map(Number);
+  const [ey, em] = p.end.split("-").map(Number);
+  if (sd !== 1 || !addDaysISO(p.end, 1).endsWith("-01")) return `${fmtDate(p.start)} – ${fmtDate(p.end)}`;
+  if (sy === ey && sm === em) return `${MONTHS_LONG[sm - 1]} ${sy}`;
+  if (sy === ey) return `${MONTHS_SHORT[sm - 1]}–${MONTHS_SHORT[em - 1]} ${sy}`;
+  return `${MONTHS_SHORT[sm - 1]} ${sy} – ${MONTHS_SHORT[em - 1]} ${ey}`;
+}
+
+// Månaderna för en uppsättning datum: "jul, aug, sep 2026" eller
+// "dec 2025, jan 2026".
+export function monthList(dates: string[]): string {
+  const months = [...new Set(dates.map((d) => d.slice(0, 7)))].sort();
+  const name = (m: string) => MONTHS_SHORT[Number(m.slice(5, 7)) - 1];
+  if (new Set(months.map((m) => m.slice(0, 4))).size === 1) {
+    return `${months.map(name).join(", ")} ${months[0]?.slice(0, 4) ?? ""}`.trim();
+  }
+  return months.map((m) => `${name(m)} ${m.slice(0, 4)}`).join(", ");
 }
 
 // Index för första perioden som börjar på eller efter `date`.
