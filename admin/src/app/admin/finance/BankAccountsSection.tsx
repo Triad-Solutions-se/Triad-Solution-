@@ -6,6 +6,7 @@ import { Landmark, Link2 } from "lucide-react";
 import { Modal } from "@/components/Modal";
 import { Chip } from "@/components/Chip";
 import { startBankConnect } from "./BankConnectionBar";
+import { NEW_BUTTON_CLS, type NewButtonVariant } from "./button-styles";
 
 export type BankAccount = {
   id: string;
@@ -247,16 +248,19 @@ function BankAccountFormModal({
   );
 }
 
-export function NewBankAccountButton() {
+export function NewBankAccountButton({
+  label = "Nytt konto",
+  variant = "secondary",
+}: {
+  label?: string;
+  variant?: NewButtonVariant;
+} = {}) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="rounded-btn border border-white/10 hover:bg-white/5 px-3 py-2 text-sm font-medium flex items-center gap-2"
-      >
-        <Landmark size={16} />
-        Nytt konto
+      <button onClick={() => setOpen(true)} className={NEW_BUTTON_CLS[variant]}>
+        <Landmark size={variant === "small" ? 12 : 16} />
+        {label}
       </button>
       {open && <BankAccountFormModal open={open} onClose={() => setOpen(false)} />}
     </>

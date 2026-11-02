@@ -7,6 +7,7 @@ import { Modal } from "@/components/Modal";
 import { DateInput } from "@/components/DateInput";
 import { Chip } from "@/components/Chip";
 import { fmtDate } from "@/lib/date";
+import { NEW_BUTTON_CLS, type NewButtonVariant } from "./button-styles";
 
 type Profile = { id: string; display_name: string | null; email: string | null };
 type ProjectOpt = { id: string; name: string };
@@ -300,20 +301,21 @@ export function NewRecurringButton({
   profiles,
   projects,
   bankAccounts,
+  label = "Återkommande",
+  variant = "secondary",
 }: {
   profiles: Profile[];
   projects: ProjectOpt[];
   bankAccounts: BankOpt[];
+  label?: string;
+  variant?: NewButtonVariant;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="rounded-btn border border-white/10 hover:bg-white/5 px-3 py-2 text-sm font-medium flex items-center gap-2"
-      >
-        <Repeat size={16} />
-        Återkommande
+      <button onClick={() => setOpen(true)} className={NEW_BUTTON_CLS[variant]}>
+        <Repeat size={variant === "small" ? 12 : 16} />
+        {label}
       </button>
       {open && (
         <RecurringFormModal

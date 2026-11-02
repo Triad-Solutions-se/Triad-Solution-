@@ -99,16 +99,16 @@ export function CashflowChart({
           <div className="text-xs uppercase tracking-wider text-[var(--muted)]">Cashflow senaste {months} mån</div>
           <div className="font-heading text-2xl font-bold mt-1">
             <span className={totalNet >= 0 ? "text-emerald-300" : "text-rose-300"}>{SEK(totalNet)}</span>
-            <span className="text-sm font-normal text-[var(--muted)] ml-2">netto</span>
+            <span className="text-sm font-normal text-[var(--muted)] ml-2">netto (in − ut)</span>
           </div>
         </div>
-        <div className="flex items-center gap-4 text-xs">
+        <div className="flex flex-wrap items-center gap-4 text-xs">
           <span className="flex items-center gap-2 text-[var(--muted)]">
-            <span className="inline-block w-3 h-3 rounded-sm bg-emerald-400" /> Intäkter
+            <span className="inline-block w-3 h-3 rounded-sm bg-emerald-400" /> In
             <span className="font-mono text-emerald-300 ml-1">{SEK(totalIn)}</span>
           </span>
           <span className="flex items-center gap-2 text-[var(--muted)]">
-            <span className="inline-block w-3 h-3 rounded-sm bg-rose-400" /> Utlägg
+            <span className="inline-block w-3 h-3 rounded-sm bg-rose-400" /> Ut
             <span className="font-mono text-rose-300 ml-1">{SEK(totalOut)}</span>
           </span>
           <span className="flex items-center gap-2 text-[var(--muted)]">
