@@ -12,7 +12,7 @@ import {
   type OfferData,
 } from "./offer-pdf";
 import { renderBlocks, drawContractCover } from "./contract-blocks";
-import { villkorBlocks, buildVillkorCtx } from "./villkor";
+import { villkorBlocks, buildVillkorCtx, villkorOptions, type VillkorOptions } from "./villkor";
 import { specialTermsBlocks } from "./special-terms";
 import type { CompanyInfo } from "./company";
 
@@ -21,6 +21,7 @@ export type AgreementMeta = {
   agreementDate: string; // ISO
   startDate: string; // ISO
   specialTerms?: string | null; // Bilaga 1 – Särskilda villkor
+  options?: VillkorOptions; // prisjustering, SLA-kredit, kundens underskrifter
 };
 
 export async function generateAgreementPdf(
@@ -56,7 +57,8 @@ export async function generateAgreementPdf(
     meta.agreementDate,
     meta.startDate,
   );
-  renderBlocks(p, villkorBlocks(ctx, company));
+  const options = meta.options ?? villkorOptions({});
+  renderBlocks(p, villkorBlocks(ctx, company, options));
 
   // === 3. Bilaga 1 – Särskilda villkor (bara om avtalet har sådana) ===
   if (meta.specialTerms?.trim()) {
@@ -66,7 +68,11 @@ export async function generateAgreementPdf(
       p,
       specialTermsBlocks(
         meta.specialTerms,
-        { agreementNumber: meta.agreementNumber, customerName: ctx.customerName },
+        {
+          agreementNumber: meta.agreementNumber,
+          customerName: ctx.customerName,
+          customerSignatories: options.customerSignatories,
+        },
         company,
       ),
     );

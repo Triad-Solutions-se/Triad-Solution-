@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateAgreementPdf } from "@/lib/agreement-pdf";
 import { missingAgreementFields } from "@/lib/agreement-validate";
+import { villkorOptions } from "@/lib/villkor";
 import {
   agreementFileBase,
   fetchAgreement,
@@ -56,6 +57,7 @@ export async function GET(
       agreementDate: agreement.agreement_date,
       startDate: agreement.start_date,
       specialTerms: agreement.special_terms ?? null,
+      options: villkorOptions(agreement),
     },
     company,
   );

@@ -23,6 +23,9 @@ type Agreement = {
   start_date: string;
   notes: string | null;
   special_terms?: string | null; // saknas tills migration 0035 är körd
+  price_adjustment?: boolean; // saknas tills migration 0036 är körd
+  sla_credits?: boolean;
+  customer_signatories?: number;
   offer_id: string | null;
   pub_template_id: string | null;
   customer_id: string | null;
@@ -70,6 +73,9 @@ export function AgreementEditor({
     status: agreement.status,
     notes: agreement.notes ?? "",
     special_terms: agreement.special_terms ?? "",
+    price_adjustment: agreement.price_adjustment ?? true,
+    sla_credits: agreement.sla_credits ?? true,
+    customer_signatories: agreement.customer_signatories ?? 1,
   });
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState<"contract" | "pub" | null>(null);
@@ -79,6 +85,8 @@ export function AgreementEditor({
   // Raden hämtas med "*", så nyckeln finns först när migration 0035 är körd.
   const supportsSpecialTerms = "special_terms" in agreement;
   const hasSpecialTerms = supportsSpecialTerms && f.special_terms.trim() !== "";
+  // Samma sak för valen från migration 0036.
+  const supportsOptions = "price_adjustment" in agreement;
 
   const customer = agreement.customer;
   const hasGaps = missing.contract.length > 0 || missing.pub.length > 0;
@@ -96,6 +104,13 @@ export function AgreementEditor({
         status: f.status,
         notes: f.notes || null,
         ...(supportsSpecialTerms ? { special_terms: f.special_terms.trim() || null } : {}),
+        ...(supportsOptions
+          ? {
+              price_adjustment: f.price_adjustment,
+              sla_credits: f.sla_credits,
+              customer_signatories: f.customer_signatories,
+            }
+          : {}),
       })
       .eq("id", agreement.id);
     setSaving(false);
@@ -310,6 +325,75 @@ export function AgreementEditor({
             className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm resize-y"
           />
         </label>
+      </div>
+
+      {/* Val i Villkoren */}
+      <div className="glass rounded-card p-5 space-y-3">
+        <h3 className="font-heading text-base font-semibold">Villkor</h3>
+        {supportsOptions ? (
+          <>
+            <p className="text-xs text-[var(--muted)]">
+              Gäller bara det här avtalet. Avsnitten behåller sin numrering.
+            </p>
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={f.price_adjustment}
+                onChange={(e) =>
+                  setF((p) => ({ ...p, price_adjustment: e.target.checked }))
+                }
+                className="mt-1"
+              />
+              <span>
+                Årlig prisjustering (punkt 8)
+                <span className="block text-xs text-[var(--muted)]">
+                  Avmarkera när priset ska ligga fast, t.ex. när utrymme för
+                  leverantörernas prishöjningar redan ingår i priset.
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={f.sla_credits}
+                onChange={(e) =>
+                  setF((p) => ({ ...p, sla_credits: e.target.checked }))
+                }
+                className="mt-1"
+              />
+              <span>
+                Kredit vid driftstörning (punkt 3.1)
+                <span className="block text-xs text-[var(--muted)]">
+                  Avmarkerad står tillgänglighetsmålet kvar, men driftstörning
+                  ger ingen kredit eller annan ersättning.
+                </span>
+              </span>
+            </label>
+            <label className="block max-w-xs">
+              <span className="text-xs text-[var(--muted)]">
+                Underskrifter för kunden
+              </span>
+              <select
+                value={f.customer_signatories}
+                onChange={(e) =>
+                  setF((p) => ({
+                    ...p,
+                    customer_signatories: Number(e.target.value),
+                  }))
+                }
+                className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm"
+              >
+                <option value={1}>1 firmatecknare</option>
+                <option value={2}>2 firmatecknare</option>
+                <option value={3}>3 firmatecknare</option>
+              </select>
+            </label>
+          </>
+        ) : (
+          <p className="text-xs text-amber-300">
+            Kräver databasmigration 0036_agreement_options.
+          </p>
+        )}
       </div>
 
       {/* Bilaga 1 – Särskilda villkor */}

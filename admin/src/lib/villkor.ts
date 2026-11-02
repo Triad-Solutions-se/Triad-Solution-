@@ -17,6 +17,26 @@ export type VillkorCtx = {
   startDate: string; // sv-SE
 };
 
+// Avtalsspecifika val (agreements-kolumnerna från migration 0036). Saknas
+// kolumnerna gäller standardvärdena, dvs. Villkoren som de alltid sett ut.
+export type VillkorOptions = {
+  priceAdjustment: boolean; // false = ingen årlig prisjustering i punkt 8
+  slaCredits: boolean; // false = ingen kredit vid driftstörning i punkt 3.1
+  customerSignatories: number; // underskrifter för Kunden (Villkor + Bilaga 1)
+};
+
+export function villkorOptions(agreement: {
+  price_adjustment?: boolean | null;
+  sla_credits?: boolean | null;
+  customer_signatories?: number | null;
+}): VillkorOptions {
+  return {
+    priceAdjustment: agreement.price_adjustment ?? true,
+    slaCredits: agreement.sla_credits ?? true,
+    customerSignatories: Math.min(3, Math.max(1, agreement.customer_signatories ?? 1)),
+  };
+}
+
 export function buildVillkorCtx(
   customer: {
     name?: string | null;
@@ -65,7 +85,43 @@ function kundRow(x: VillkorCtx): MetaRow {
   };
 }
 
-export function villkorBlocks(x: VillkorCtx, company: CompanyInfo): Block[] {
+// Kreditstegen och förbehållet i punkt 3.1, eller (utan kredit) ett förbehåll
+// om att målet inte ger någon ersättning.
+function slaCompensation(slaCredits: boolean): Block[] {
+  if (!slaCredits) {
+    return [
+      {
+        t: "callout",
+        kind: "warn",
+        text: "Tillgänglighetsmålet är ett mål och inte ett åtagande. Driftstörning ger inte Kunden rätt till kredit, avdrag på avgiften eller annan ersättning, om inte något av undantagen i punkt 5.3 föreligger.",
+      },
+    ];
+  }
+  return [
+    {
+      t: "table",
+      headers: ["Tillgänglighet", "Tillåten nedtid/månad", "Kompensation"],
+      widths: [0.3, 0.32, 0.38],
+      rows: [
+        [">= 99,5 %", "<= 3,6 timmar", "Ingen"],
+        ["99,0 – 99,49 %", "3,6 – 7,2 timmar", "5 % kredit på månadsavgift"],
+        ["98,0 – 98,99 %", "7,2 – 14,4 timmar", "10 % kredit på månadsavgift"],
+        ["< 98,0 %", "> 14,4 timmar", "20 % kredit på månadsavgift"],
+      ],
+    },
+    {
+      t: "callout",
+      kind: "warn",
+      text: "Kredit utgör Kundens enda kompensation vid driftstörning och ger inte rätt till ytterligare skadestånd, om inte grov vårdslöshet föreligger.",
+    },
+  ];
+}
+
+export function villkorBlocks(
+  x: VillkorCtx,
+  company: CompanyInfo,
+  o: VillkorOptions = villkorOptions({}),
+): Block[] {
   return [
     {
       t: "meta",
@@ -127,22 +183,7 @@ export function villkorBlocks(x: VillkorCtx, company: CompanyInfo): Block[] {
       t: "p",
       text: "Leverantören strävar efter en driftstabilitet om 99,5 % mätt per kalendermånad, exklusive planerat underhåll och händelser utanför Leverantörens kontroll (force majeure).",
     },
-    {
-      t: "table",
-      headers: ["Tillgänglighet", "Tillåten nedtid/månad", "Kompensation"],
-      widths: [0.3, 0.32, 0.38],
-      rows: [
-        [">= 99,5 %", "<= 3,6 timmar", "Ingen"],
-        ["99,0 – 99,49 %", "3,6 – 7,2 timmar", "5 % kredit på månadsavgift"],
-        ["98,0 – 98,99 %", "7,2 – 14,4 timmar", "10 % kredit på månadsavgift"],
-        ["< 98,0 %", "> 14,4 timmar", "20 % kredit på månadsavgift"],
-      ],
-    },
-    {
-      t: "callout",
-      kind: "warn",
-      text: "Kredit utgör Kundens enda kompensation vid driftstörning och ger inte rätt till ytterligare skadestånd, om inte grov vårdslöshet föreligger.",
-    },
+    ...slaCompensation(o.slaCredits),
     { t: "h2", text: "3.2 Planerat underhåll" },
     {
       t: "p",
@@ -225,13 +266,20 @@ export function villkorBlocks(x: VillkorCtx, company: CompanyInfo): Block[] {
       text: "(iii) ska röjas enligt lag, domstolsbeslut eller myndighetsbeslut.",
     },
 
+    // Avsnittet står kvar utan prisjustering så att numreringen (som Bilaga 1
+    // hänvisar till) inte ändras.
     { t: "h1", text: "8. Pris och betalning" },
-    {
-      t: "bullets",
-      items: [
-        "Prisjustering sker årligen i januari månad med max 5 % eller i enlighet med KPI (konsumentprisindex), det lägre värdet tillämpas. Kunden meddelas skriftligen senast 60 dagar i förväg.",
-      ],
-    },
+    o.priceAdjustment
+      ? {
+          t: "bullets",
+          items: [
+            "Prisjustering sker årligen i januari månad med max 5 % eller i enlighet med KPI (konsumentprisindex), det lägre värdet tillämpas. Kunden meddelas skriftligen senast 60 dagar i förväg.",
+          ],
+        }
+      : {
+          t: "p",
+          text: "Avgifterna framgår av avtalet. Någon årlig prisjustering görs inte.",
+        },
 
     { t: "h1", text: "9. Avtalstid och uppsägning" },
     { t: "h2", text: "9.1 Avtalstid" },
@@ -297,6 +345,7 @@ export function villkorBlocks(x: VillkorCtx, company: CompanyInfo): Block[] {
       t: "signatures",
       left: `För Leverantören (${company.name})`,
       right: `För Kunden (${x.customerName})`,
+      rightCount: o.customerSignatories,
     },
   ];
 }
