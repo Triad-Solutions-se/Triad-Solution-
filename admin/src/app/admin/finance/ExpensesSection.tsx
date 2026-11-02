@@ -7,6 +7,7 @@ import { Modal } from "@/components/Modal";
 import { DateInput } from "@/components/DateInput";
 import { Chip } from "@/components/Chip";
 import { fmtDate } from "@/lib/date";
+import { NEW_BUTTON_CLS, type NewButtonVariant } from "./button-styles";
 
 type ProjectOpt = { id: string; name: string };
 type BankOpt = { id: string; name: string };
@@ -250,19 +251,20 @@ function ExpenseFormModal({
 export function NewExpenseButton({
   projects,
   bankAccounts,
+  label = "Nytt utlägg",
+  variant = "secondary",
 }: {
   projects: ProjectOpt[];
   bankAccounts: BankOpt[];
+  label?: string;
+  variant?: NewButtonVariant;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="rounded-btn border border-white/10 hover:bg-white/5 px-3 py-2 text-sm font-medium flex items-center gap-2"
-      >
-        <Receipt size={16} />
-        Nytt utlägg
+      <button onClick={() => setOpen(true)} className={NEW_BUTTON_CLS[variant]}>
+        <Receipt size={variant === "small" ? 12 : 16} />
+        {label}
       </button>
       {open && (
         <ExpenseFormModal

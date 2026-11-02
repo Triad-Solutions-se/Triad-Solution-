@@ -7,6 +7,7 @@ import { Modal } from "@/components/Modal";
 import { DateInput } from "@/components/DateInput";
 import { Chip } from "@/components/Chip";
 import { fmtDate } from "@/lib/date";
+import { NEW_BUTTON_CLS, type NewButtonVariant } from "./button-styles";
 
 type Profile = { id: string; display_name: string | null; email: string | null };
 type ProjectOpt = { id: string; name: string };
@@ -274,20 +275,21 @@ export function NewPaymentButton({
   profiles,
   projects,
   bankAccounts,
+  label = "Ny betalning",
+  variant = "primary",
 }: {
   profiles: Profile[];
   projects: ProjectOpt[];
   bankAccounts: BankOpt[];
+  label?: string;
+  variant?: NewButtonVariant;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-3 py-2 text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm shadow-teal-500/20"
-      >
-        <Plus size={16} />
-        Ny betalning
+      <button onClick={() => setOpen(true)} className={NEW_BUTTON_CLS[variant]}>
+        <Plus size={variant === "small" ? 12 : 16} />
+        {label}
       </button>
       {open && (
         <PaymentFormModal

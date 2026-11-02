@@ -8,6 +8,7 @@ import { Modal } from "@/components/Modal";
 import { DateInput } from "@/components/DateInput";
 import { Chip } from "@/components/Chip";
 import { fmtDate } from "@/lib/date";
+import { NEW_BUTTON_CLS, type NewButtonVariant } from "./button-styles";
 
 type ProjectOpt = { id: string; name: string };
 type CustomerOpt = { id: string; name: string };
@@ -276,20 +277,21 @@ export function NewIncomeButton({
   customers,
   projects,
   bankAccounts,
+  label = "Ny intäkt",
+  variant = "secondary",
 }: {
   customers: CustomerOpt[];
   projects: ProjectOpt[];
   bankAccounts: BankOpt[];
+  label?: string;
+  variant?: NewButtonVariant;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="rounded-btn border border-white/10 hover:bg-white/5 px-3 py-2 text-sm font-medium flex items-center gap-2"
-      >
-        <TrendingUp size={16} />
-        Ny intäkt
+      <button onClick={() => setOpen(true)} className={NEW_BUTTON_CLS[variant]}>
+        <TrendingUp size={variant === "small" ? 12 : 16} />
+        {label}
       </button>
       {open && (
         <IncomeFormModal
@@ -317,7 +319,22 @@ export function IncomeTable({
   bankAccounts: BankOpt[];
   invoiceNumbers?: Record<string, string>;
 }) {
+  const router = useRouter();
   const [edit, setEdit] = useState<Income | null>(null);
+  const [confirming, setConfirming] = useState<string | null>(null);
+
+  // "Bekräfta": pengarna har kommit in. Datumet behålls; det går att ändra i formuläret.
+  async function confirmReceived(r: Income) {
+    setConfirming(r.id);
+    const { error } = await createClient().from("income").update({ status: "received" }).eq("id", r.id);
+    setConfirming(null);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    router.refresh();
+  }
+
   const projectName = (id: string | null) => (id ? projects.find((p) => p.id === id)?.name ?? null : null);
   const customerName = (id: string | null) => (id ? customers.find((c) => c.id === id)?.name ?? null : null);
   const bankName = (id: string | null) => (id ? bankAccounts.find((b) => b.id === id)?.name ?? null : null);
@@ -362,9 +379,25 @@ export function IncomeTable({
               <td className="p-3 text-[var(--muted)]">{fmtDate(r.date)}</td>
               <td className="p-3 font-mono">{SEK(Number(r.amount_sek || 0))}</td>
               <td className="p-3">
-                <Chip tone={r.status === "received" ? "green" : r.status === "pending" ? "yellow" : "red"}>
-                  {INCOME_STATUS[r.status] ?? r.status}
-                </Chip>
+                <div className="flex items-center gap-2">
+                  <Chip tone={r.status === "received" ? "green" : r.status === "pending" ? "yellow" : "red"}>
+                    {INCOME_STATUS[r.status] ?? r.status}
+                  </Chip>
+                  {r.status !== "received" && !r.invoice_id && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        confirmReceived(r);
+                      }}
+                      disabled={confirming === r.id}
+                      title="Markera som mottagen — pengarna har kommit in"
+                      className="rounded-btn border border-white/10 hover:bg-white/10 px-2 py-1 text-[11px] whitespace-nowrap transition-colors disabled:opacity-50"
+                    >
+                      {confirming === r.id ? "Sparar…" : "Bekräfta"}
+                    </button>
+                  )}
+                </div>
               </td>
             </tr>
           ))}

@@ -26,6 +26,7 @@ import {
   normalizeLines,
   offerMonthlyItems,
   periodLabel,
+  round2,
   todayISO,
 } from "@/lib/invoice";
 import {
@@ -71,6 +72,8 @@ type PlanInvoice = {
   currency: string | null;
   credited_invoice_id: string | null;
 };
+// Faktura som en plan har skapat, som Ekonomi-sidan skickar till planlistan.
+export type PlanInvoiceRef = PlanInvoice & { recurring_income_id: string | null };
 
 export type RecurringPreset = { customerId?: string; agreementId?: string; offerId?: string };
 export type AgreementRef = { id: string; agreement_number: string | null };
@@ -111,22 +114,37 @@ function dueNowCount(plan: RecurringPlan, today: string): number {
   return n;
 }
 
+// Raden en intäktsplan får när den byter till fakturering: à-priset exkl.
+// moms räknas fram ur planens belopp, så att kunden betalar samma som förut.
+function planAmountLine(plan: RecurringPlan): InvoiceLine[] {
+  const amount = Number(plan.amount_sek || 0);
+  if (!(amount > 0)) return [];
+  const vat = Number(plan.vat_rate ?? 25);
+  const unit = plan.frequency === "monthly" ? "mån" : plan.frequency === "yearly" ? "år" : "st";
+  return [{ ...newEmptyLine(), description: plan.description ?? "", unit, unit_price: round2(amount / (1 + vat / 100)) }];
+}
+
 function RecurringPlanModal({
   initial,
   preset,
+  initialMode,
   onClose,
 }: {
   initial?: RecurringPlan | null;
   preset?: RecurringPreset;
+  // "invoice" öppnar en befintlig intäktsplan direkt i faktureringsläget.
+  initialMode?: "invoice" | "income";
   onClose: () => void;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const isEdit = !!initial;
+  // En befintlig plan som bara skapar intäktsrader och kan byta till fakturering.
+  const converting = !!initial && !initial.create_invoices;
   const today = todayISO();
 
   const [mode, setMode] = useState<"invoice" | "income">(
-    initial ? (initial.create_invoices ? "invoice" : "income") : "invoice",
+    initialMode ?? (initial ? (initial.create_invoices ? "invoice" : "income") : "invoice"),
   );
   const [f, setF] = useState(() => ({
     description: initial?.description ?? "",
@@ -160,7 +178,10 @@ function RecurringPlanModal({
     auto_send: initial ? initial.auto_send === true : true,
     email_to: initial?.email_to ?? "",
   }));
-  const [lines, setLines] = useState<InvoiceLine[]>(() => normalizeLines(initial?.items));
+  const [lines, setLines] = useState<InvoiceLine[]>(() => {
+    const existing = normalizeLines(initial?.items);
+    return existing.length === 0 && converting && mode === "invoice" ? planAmountLine(initial!) : existing;
+  });
 
   const [customers, setCustomers] = useState<(Opt & { email?: string | null })[]>([]);
   const [projects, setProjects] = useState<Opt[]>([]);
@@ -288,6 +309,11 @@ function RecurringPlanModal({
   function setFrequency(freq: string) {
     setLines((ls) => rescaleLines(ls, f.frequency, freq));
     setF((p) => ({ ...p, frequency: freq }));
+  }
+
+  function switchMode(value: "invoice" | "income") {
+    setMode(value);
+    if (value === "invoice" && converting && lines.length === 0) setLines(planAmountLine(initial!));
   }
 
   function updateLine(id: string, patch: Partial<InvoiceLine>) {
@@ -511,7 +537,7 @@ function RecurringPlanModal({
               <button
                 key={value}
                 type="button"
-                onClick={() => setMode(value)}
+                onClick={() => switchMode(value)}
                 className={`rounded-btn px-3 py-1.5 transition-colors ${
                   mode === value ? "bg-teal-500 text-fixed-white font-semibold" : "text-[var(--muted)] hover:text-white"
                 }`}
@@ -519,6 +545,22 @@ function RecurringPlanModal({
                 {label}
               </button>
             ))}
+          </div>
+        )}
+
+        {converting && mode === "income" && (
+          <div className="rounded-btn border border-amber-400/30 bg-amber-400/5 p-3 text-xs text-amber-200">
+            Den här planen skickar ingen faktura. Den lägger bara in en intäkt per period, som väntar tills någon
+            bekräftar den. Välj <strong>Fakturera automatiskt</strong> så blir varje period en riktig faktura med
+            OCR-nummer.
+          </div>
+        )}
+        {converting && mode === "invoice" && (
+          <div className="rounded-btn border border-teal-400/30 bg-teal-400/5 p-3 text-xs text-teal-200">
+            Faktureringen fortsätter från {initial?.next_due_date ? fmtDate(initial.next_due_date) : "nästa period"}, så
+            redan passerade perioder faktureras inte. Raden nedan är räknad så att kunden betalar samma belopp som
+            förut, inkl. moms — justera den om det behövs. Intäkter som planen redan har lagt in ligger kvar under
+            Intäkter, där du bekräftar eller tar bort dem.
           </div>
         )}
 
@@ -997,16 +1039,31 @@ export function RecurringIncomeTable({
   rows,
   customers,
   agreements = [],
+  invoices = [],
 }: {
   rows: RecurringPlan[];
   customers: Opt[];
   agreements?: AgreementRef[];
+  // Fakturor som planerna har skapat (invoices.recurring_income_id).
+  invoices?: PlanInvoiceRef[];
 }) {
-  const [edit, setEdit] = useState<RecurringPlan | null>(null);
+  // mode "invoice": öppna en intäktsplan direkt i faktureringsläget.
+  const [edit, setEdit] = useState<{ plan: RecurringPlan; mode?: "invoice" } | null>(null);
   const customerName = (id: string | null) => (id ? customers.find((c) => c.id === id)?.name ?? null : null);
+  const invoicesByPlan = useMemo(() => {
+    const byPlan = new Map<string, PlanInvoiceRef[]>();
+    for (const inv of invoices) {
+      if (!inv.recurring_income_id) continue;
+      byPlan.set(inv.recurring_income_id, [...(byPlan.get(inv.recurring_income_id) ?? []), inv]);
+    }
+    for (const list of byPlan.values()) {
+      list.sort((a, b) => String(b.period_start ?? "").localeCompare(String(a.period_start ?? "")));
+    }
+    return byPlan;
+  }, [invoices]);
   return (
     <>
-      <table className="w-full text-sm min-w-[720px]">
+      <table className="w-full text-sm min-w-[860px]">
         <thead className="bg-white/[0.03] text-left text-[var(--muted)] text-xs uppercase tracking-wider">
           <tr>
             <th className="p-3">Beskrivning</th>
@@ -1014,6 +1071,7 @@ export function RecurringIncomeTable({
             <th className="p-3">Frekvens</th>
             <th className="p-3">Nästa</th>
             <th className="p-3">Belopp</th>
+            <th className="p-3">Faktura</th>
             <th className="p-3">Status</th>
           </tr>
         </thead>
@@ -1021,8 +1079,14 @@ export function RecurringIncomeTable({
           {rows.map((r) => {
             const s = planSummary(r);
             const agreement = r.agreement_id ? agreements.find((a) => a.id === r.agreement_id) : null;
+            const planInvoices = invoicesByPlan.get(r.id) ?? [];
+            const latest = planInvoices[0] ?? null;
             return (
-              <tr key={r.id} onClick={() => setEdit(r)} className="hover:bg-white/[0.04] cursor-pointer transition-colors">
+              <tr
+                key={r.id}
+                onClick={() => setEdit({ plan: r })}
+                className="hover:bg-white/[0.04] cursor-pointer transition-colors"
+              >
                 <td className="p-3">
                   <div className="font-medium">{r.description}</div>
                   <div className="mt-0.5">
@@ -1032,7 +1096,7 @@ export function RecurringIncomeTable({
                         {r.auto_send && <Chip tone="blue">Mejlas</Chip>}
                       </span>
                     ) : (
-                      <span className="text-xs text-[var(--muted)]">{r.source || "Intäkt"}</span>
+                      <span className="text-xs text-[var(--muted)]">Endast intäkt{r.source ? ` · ${r.source}` : ""}</span>
                     )}
                   </div>
                 </td>
@@ -1068,6 +1132,41 @@ export function RecurringIncomeTable({
                   )}
                 </td>
                 <td className="p-3">
+                  {!s.invoiced ? (
+                    <div className="space-y-1">
+                      <div className="text-xs text-amber-300">Skapar ingen faktura</div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEdit({ plan: r, mode: "invoice" });
+                        }}
+                        className={BUTTON_CLS.small}
+                      >
+                        <Receipt size={12} /> Fakturera i stället
+                      </button>
+                    </div>
+                  ) : latest ? (
+                    <div className="space-y-1">
+                      <Link
+                        href={`/admin/invoices/${latest.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-mono text-xs font-semibold hover:text-teal-300"
+                      >
+                        {latest.number}
+                      </Link>
+                      <div className="flex items-center gap-1.5">
+                        <InvoiceStatusChip invoice={latest} />
+                        {planInvoices.length > 1 && (
+                          <span className="text-[11px] text-[var(--muted)]">{planInvoices.length} st</span>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-[var(--muted)]">Ingen än</span>
+                  )}
+                </td>
+                <td className="p-3">
                   <Chip tone={s.status.tone}>{s.status.label}</Chip>
                   {r.last_error && (
                     <div className="mt-1" title={r.last_error}>
@@ -1080,14 +1179,14 @@ export function RecurringIncomeTable({
           })}
           {!rows.length && (
             <tr>
-              <td colSpan={6} className="p-8 text-center text-sm text-[var(--muted)]">
-                Inga återkommande intäkter än. Lägg upp återkommande fakturering från ett avtal eller via knappen ovan.
+              <td colSpan={7} className="p-8 text-center text-sm text-[var(--muted)]">
+                Inga återkommande intäkter än. Lägg upp återkommande fakturering från ett avtal eller med Ny plan ovan.
               </td>
             </tr>
           )}
         </tbody>
       </table>
-      {edit && <RecurringPlanModal initial={edit} onClose={() => setEdit(null)} />}
+      {edit && <RecurringPlanModal initial={edit.plan} initialMode={edit.mode} onClose={() => setEdit(null)} />}
     </>
   );
 }

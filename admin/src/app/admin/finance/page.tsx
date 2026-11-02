@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/PageHeader";
-import { ChevronRight, FolderArchive, Landmark } from "lucide-react";
+import { ChevronRight, FolderArchive, Landmark, Repeat } from "lucide-react";
 import { fmtDate } from "@/lib/date";
-import { fmtAmount, isOutstanding } from "@/lib/invoice";
+import { fmtAmount, isOutstanding, todayISO } from "@/lib/invoice";
 import { NewPaymentButton, PaymentsTable } from "./PaymentsSection";
 import { NewRecurringButton, RecurringTable } from "./RecurringSection";
-import { NewRecurringIncomeButton, RecurringIncomeTable } from "./RecurringIncomeSection";
+import { NewRecurringIncomeButton, RecurringIncomeTable, type PlanInvoiceRef } from "./RecurringIncomeSection";
 import { materializeRecurring } from "@/lib/recurring-data";
 import { type RecurringPlan, toMonthly } from "@/lib/recurring";
 import { NewInvoiceButton } from "../invoices/NewInvoiceButton";
@@ -31,6 +31,9 @@ export const dynamic = "force-dynamic";
 
 const SEK = (n: number) =>
   new Intl.NumberFormat("sv-SE", { style: "currency", currency: "SEK", maximumFractionDigits: 0 }).format(n);
+
+const sumAmount = (rows: any[]) => rows.reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 export default async function FinancePage() {
   const supabase = await createClient();
@@ -116,15 +119,12 @@ export default async function FinancePage() {
   const suggestionCount = Object.values(txMatches).filter((m) => m.suggestions.length > 0).length;
   const paidViaBank = new Set(matchList.filter((m) => m.status === "applied").map((m) => m.invoice_id));
 
-  const totalExp = expensesData.reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
-  const totalInc = incomeData.reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
   const monthlyEquivalent = (rows: any[]) =>
     rows
       .filter((r: any) => r.active)
       .reduce((s: number, r: any) => s + toMonthly(r.amount_sek, r.frequency), 0);
   const totalRecurringMonthly = monthlyEquivalent(recurringData);
   const totalRecurringIncomeMonthly = monthlyEquivalent(recurringIncomeData);
-  const net = totalInc - totalExp;
 
   // Bank balances: starting balance + received income + reimbursed/paid expenses + paid payments
   const bankWithBalance: BankAccountWithBalance[] = bankList.map((b) => {
@@ -153,14 +153,44 @@ export default async function FinancePage() {
     };
   });
   // Kassa: bankens saldo för kopplade konton, annars portalens beräknade.
-  const totalCash = bankWithBalance
-    .filter((b) => !b.archived)
-    .reduce((s, b) => s + (b.bankBalance ?? b.currentBalance), 0);
+  const openAccounts = bankWithBalance.filter((b) => !b.archived);
+  const totalCash = openAccounts.reduce((s, b) => s + (b.bankBalance ?? b.currentBalance), 0);
+  const syncedAccounts = openAccounts.filter((b) => b.bankBalance != null).length;
+  const cashHint = !openAccounts.length
+    ? "Inga bankkonton än"
+    : syncedAccounts === openAccounts.length
+      ? "Saldo enligt banken"
+      : syncedAccounts > 0
+        ? "Bankens saldo + portalens beräkning"
+        : "Beräknat i portalen";
 
-  // Outstanding receivables: sent, unpaid invoices (drafts and credit notes excluded)
-  const outstanding = invoicesData
-    .filter((r: any) => isOutstanding(r))
-    .reduce((s: number, r: any) => s + Number(r.amount_sek || 0), 0);
+  // Intäkter. Bekräftade = mottagna i år; betalda fakturor bokförs som
+  // mottagna intäkter (0036) och räknas därför med här. Ej bekräftade = allt
+  // som väntar på betalning: intäkter som ingen har markerat som mottagna och
+  // skickade fakturor som inte är betalda (de får en intäktsrad först när de betalas).
+  const today = todayISO();
+  const confirmedIncome = sumAmount(
+    incomeData.filter((r: any) => r.status === "received" && String(r.date ?? "").startsWith(today.slice(0, 4))),
+  );
+  const unconfirmedRows = incomeData.filter((r: any) => r.status !== "received");
+  const outstandingInvoices = invoicesData.filter((r: any) => isOutstanding(r));
+  const unconfirmedIncome = sumAmount(unconfirmedRows) + sumAmount(outstandingInvoices);
+  const overdueInvoices = sumAmount(
+    outstandingInvoices.filter((r: any) => r.status === "overdue" || (r.due_date && r.due_date < today)),
+  );
+  const unconfirmedHint =
+    [
+      unconfirmedRows.length ? plural(unconfirmedRows.length, "intäkt att bekräfta", "intäkter att bekräfta") : null,
+      outstandingInvoices.length ? plural(outstandingInvoices.length, "obetald faktura", "obetalda fakturor") : null,
+    ]
+      .filter(Boolean)
+      .join(" · ") || "Inget väntar på betalning";
+
+  const activePlans = recurringIncomeData.filter((r) => r.active);
+  const plansWithoutInvoice = activePlans.filter((r) => !r.create_invoices).length;
+  const planInvoices = invoicesData.filter((r: any) => r.recurring_income_id) as PlanInvoiceRef[];
+
+  const unreimbursed = sumAmount(expensesData.filter((r: any) => r.status !== "reimbursed"));
 
   // Cashflow chart: use received income vs reimbursed/paid expenses for actual movement
   const realizedIncome = incomeData.filter((r: any) => r.status === "received");
@@ -177,7 +207,7 @@ export default async function FinancePage() {
     <>
       <PageHeader
         title="Ekonomi"
-        subtitle="Cashflow, kassa, fakturor, intäkter och utlägg."
+        subtitle="Kassa, pengar in och pengar ut."
         right={
           <div className="flex flex-wrap items-center gap-2">
             <Link
@@ -187,47 +217,42 @@ export default async function FinancePage() {
               <FolderArchive size={16} />
               Månadsarkiv
             </Link>
-            <NewBankAccountButton />
-            <NewPaymentButton
-              profiles={profileList}
-              projects={projectList}
-              bankAccounts={bankList}
-            />
-            <NewRecurringButton
-              profiles={profileList}
-              projects={projectList}
-              bankAccounts={bankList}
-            />
-            <NewRecurringIncomeButton />
-            <NewInvoiceButton customers={customerList} variant="secondary" />
-            <NewIncomeButton
-              customers={customerList}
-              projects={projectList}
-              bankAccounts={bankList}
-            />
-            <NewExpenseButton projects={projectList} bankAccounts={bankList} />
+            <NewInvoiceButton customers={customerList} />
           </div>
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6 mb-8">
-        <FinanceStat label="Kassa" value={SEK(Math.round(totalCash))} color="teal" />
-        <FinanceStat label="Intäkter" value={SEK(totalInc)} color="green" />
-        <FinanceStat label="Utlägg" value={SEK(totalExp)} color="red" />
-        <FinanceStat label="Netto" value={SEK(net)} color={net >= 0 ? "teal" : "red"} />
-        <FinanceStat label="Utestående fakturor" value={SEK(outstanding)} color="blue" />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 mb-8">
+        <FinanceStat label="Kassa" value={SEK(Math.round(totalCash))} color="teal" hint={cashHint} />
+        <FinanceStat label="Bekräftade intäkter" value={SEK(confirmedIncome)} color="green" hint="Mottaget i år" />
         <FinanceStat
-          label="Återkommande / mån"
+          label="Ej bekräftade intäkter"
+          value={SEK(unconfirmedIncome)}
+          color="amber"
+          hint={unconfirmedHint}
+          note={overdueInvoices > 0 ? { text: `${SEK(overdueInvoices)} har förfallit`, tone: "red" } : undefined}
+        />
+        <FinanceStat
+          label="Återkommande intäkter / mån"
           value={SEK(Math.round(totalRecurringIncomeMonthly))}
-          color="green"
+          color="blue"
+          hint={activePlans.length ? plural(activePlans.length, "aktiv plan", "aktiva planer") : "Inga aktiva planer"}
+          note={
+            plansWithoutInvoice > 0
+              ? { text: `${plansWithoutInvoice} skapar ingen faktura`, tone: "amber" }
+              : undefined
+          }
         />
       </div>
 
-      <Section title="Cashflow">
+      <Section
+        title="Cashflow"
+        hint="Bara pengar som faktiskt har rört sig: mottagna intäkter (även betalda fakturor), återbetalda utlägg och betalda betalningar."
+      >
         <CashflowChart income={realizedIncome} expenses={realizedExpenses} months={12} />
       </Section>
 
-      <Section title="Bankkonton & kassa">
+      <Section title="Bankkonton & kassa" right={<NewBankAccountButton variant="small" />}>
         {bankSyncEnabled && <BankConnectionBar connection={connection} bankName={BANK_NAME} />}
         <BankAccountsGrid accounts={bankWithBalance} canConnect={bankSyncEnabled} />
       </Section>
@@ -253,38 +278,7 @@ export default async function FinancePage() {
         </Section>
       )}
 
-      <div className="text-xs text-[var(--muted)] mb-4 -mt-2">
-        Återkommande kostnader / mån:{" "}
-        <span className="font-mono">{SEK(Math.round(totalRecurringMonthly))}</span>
-        {" · "}Netto återkommande / mån:{" "}
-        <span
-          className={`font-mono ${totalRecurringIncomeMonthly - totalRecurringMonthly >= 0 ? "text-emerald-300" : "text-rose-300"}`}
-        >
-          {SEK(Math.round(totalRecurringIncomeMonthly - totalRecurringMonthly))}
-        </span>
-      </div>
-
-      <Section title="Betalningar">
-        <PaymentsTable
-          rows={paymentsData as any}
-          profiles={profileList}
-          projects={projectList}
-          bankAccounts={bankList}
-        />
-      </Section>
-
-      <Section title="Återkommande betalningar">
-        <RecurringTable
-          rows={recurringData as any}
-          profiles={profileList}
-          projects={projectList}
-          bankAccounts={bankList}
-        />
-      </Section>
-
-      <Section title="Återkommande intäkter & fakturering">
-        <RecurringIncomeTable rows={recurringIncomeData} customers={customerList} agreements={agreementList} />
-      </Section>
+      <GroupHeading>Pengar in</GroupHeading>
 
       <Section
         title="Fakturor"
@@ -309,9 +303,16 @@ export default async function FinancePage() {
             {invoicesData.slice(0, 10).map((r: any) => (
               <tr key={r.id} className="hover:bg-white/[0.04] transition-colors">
                 <td className="p-3 font-mono">
-                  <Link href={`/admin/invoices/${r.id}`} className="hover:text-teal-300">
-                    {r.number}
-                  </Link>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Link href={`/admin/invoices/${r.id}`} className="hover:text-teal-300">
+                      {r.number}
+                    </Link>
+                    {r.recurring_income_id && (
+                      <span title="Skapad av återkommande fakturering" className="text-[var(--muted)]">
+                        <Repeat size={12} />
+                      </span>
+                    )}
+                  </span>
                 </td>
                 <td className="p-3 text-[var(--muted)]">
                   {r.customer_name ?? customerList.find((c) => c.id === r.customer_id)?.name ?? "—"}
@@ -344,7 +345,33 @@ export default async function FinancePage() {
         </table>
       </Section>
 
-      <Section title="Intäkter">
+      <Section
+        title="Återkommande intäkter & fakturering"
+        hint="Prenumerationer och avtal. Med Fakturera automatiskt blir varje period en riktig faktura med OCR-nummer."
+        right={
+          <>
+            <span className="text-xs text-[var(--muted)] font-mono">
+              {SEK(Math.round(totalRecurringIncomeMonthly))}/mån
+            </span>
+            <NewRecurringIncomeButton label="Ny plan" variant="small" />
+          </>
+        }
+      >
+        <RecurringIncomeTable
+          rows={recurringIncomeData}
+          customers={customerList}
+          agreements={agreementList}
+          invoices={planInvoices}
+        />
+      </Section>
+
+      <Section
+        title="Intäkter"
+        hint="Bekräfta en intäkt när pengarna har kommit in. Betalda fakturor hamnar här automatiskt."
+        right={
+          <NewIncomeButton customers={customerList} projects={projectList} bankAccounts={bankList} variant="small" />
+        }
+      >
         <IncomeTable
           rows={incomeData as any}
           customers={customerList}
@@ -354,7 +381,61 @@ export default async function FinancePage() {
         />
       </Section>
 
-      <Section title="Utlägg">
+      <GroupHeading>Pengar ut</GroupHeading>
+
+      <Section
+        title="Betalningar"
+        hint="Räkningar och fakturor som företaget ska betala."
+        right={
+          <NewPaymentButton profiles={profileList} projects={projectList} bankAccounts={bankList} variant="small" />
+        }
+      >
+        <PaymentsTable
+          rows={paymentsData as any}
+          profiles={profileList}
+          projects={projectList}
+          bankAccounts={bankList}
+        />
+      </Section>
+
+      <Section
+        title="Återkommande betalningar"
+        hint="Prenumerationer och andra fasta kostnader."
+        right={
+          <>
+            <span className="text-xs text-[var(--muted)] font-mono">{SEK(Math.round(totalRecurringMonthly))}/mån</span>
+            <NewRecurringButton
+              profiles={profileList}
+              projects={projectList}
+              bankAccounts={bankList}
+              label="Ny återkommande"
+              variant="small"
+            />
+          </>
+        }
+      >
+        <RecurringTable
+          rows={recurringData as any}
+          profiles={profileList}
+          projects={projectList}
+          bankAccounts={bankList}
+        />
+      </Section>
+
+      <Section
+        title="Utlägg"
+        hint="Köp som någon i teamet har betalat själv och ska få tillbaka."
+        right={
+          <>
+            {unreimbursed > 0 && (
+              <span className="text-xs text-[var(--muted)]">
+                Ej återbetalt <span className="font-mono text-rose-300">{SEK(unreimbursed)}</span>
+              </span>
+            )}
+            <NewExpenseButton projects={projectList} bankAccounts={bankList} variant="small" />
+          </>
+        }
+      >
         <ExpensesTable
           rows={expensesData as any}
           projects={projectList}
@@ -370,16 +451,23 @@ const financeColorMap = {
   red: { accentBar: "bg-rose-400", numColor: "text-rose-300" },
   teal: { accentBar: "bg-teal-400", numColor: "text-teal-300" },
   blue: { accentBar: "bg-sky-400", numColor: "text-sky-300" },
+  amber: { accentBar: "bg-amber-400", numColor: "text-amber-300" },
 };
 
 function FinanceStat({
   label,
   value,
   color,
+  hint,
+  note,
 }: {
   label: string;
   value: string;
   color: keyof typeof financeColorMap;
+  // Vad siffran räknar, på en rad under beloppet.
+  hint?: string;
+  // Något som behöver göras (förfallna fakturor, planer utan faktura).
+  note?: { text: string; tone: "red" | "amber" };
 }) {
   const c = financeColorMap[color];
   return (
@@ -388,25 +476,44 @@ function FinanceStat({
       <div className="pl-2">
         <div className="text-xs uppercase tracking-wider text-[var(--muted)]">{label}</div>
         <div className={`font-heading text-xl sm:text-2xl font-bold mt-2 ${c.numColor}`}>{value}</div>
+        {hint && <div className="text-xs text-[var(--muted)] mt-1">{hint}</div>}
+        {note && (
+          <div className={`text-xs mt-0.5 ${note.tone === "red" ? "text-rose-300" : "text-amber-300"}`}>
+            {note.text}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
+function GroupHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="font-heading text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mt-10 mb-3">
+      {children}
+    </h2>
+  );
+}
+
 function Section({
   title,
+  hint,
   right,
   children,
 }: {
   title: string;
+  hint?: string;
   right?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <section className="glass rounded-xl border border-white/10 overflow-hidden mb-6">
-      <header className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
-        <h2 className="font-heading font-semibold">{title}</h2>
-        {right}
+      <header className="px-5 py-3 border-b border-white/5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="min-w-0">
+          <h2 className="font-heading font-semibold">{title}</h2>
+          {hint && <p className="text-xs text-[var(--muted)] mt-0.5">{hint}</p>}
+        </div>
+        {right && <div className="flex flex-wrap items-center gap-2">{right}</div>}
       </header>
       <div className="overflow-x-auto scroll-x-hint">{children}</div>
     </section>
