@@ -192,7 +192,7 @@ export function InvoiceSettingsForm({
           <button
             onClick={save}
             disabled={saving}
-            className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors flex items-center gap-2"
+            className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors flex items-center gap-2"
           >
             {saved ? <Check size={14} /> : <Save size={14} />}
             {saving ? "Sparar…" : saved ? "Sparat" : "Spara"}

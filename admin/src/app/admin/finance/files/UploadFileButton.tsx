@@ -99,7 +99,7 @@ export function UploadFileButton({
         className={
           compact
             ? "w-full rounded-btn border border-dashed border-white/15 hover:border-teal-400/40 hover:bg-white/5 px-3 py-2 text-xs font-medium text-[var(--muted)] hover:text-white flex items-center justify-center gap-2"
-            : "rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-3 py-2 text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm shadow-teal-500/20"
+            : "rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-3 py-2 text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm shadow-teal-500/20"
         }
       >
         <Upload size={compact ? 14 : 16} />
@@ -182,7 +182,7 @@ export function UploadFileButton({
               <button
                 type="submit"
                 disabled={saving || !files || files.length === 0}
-                className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors"
+                className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors"
               >
                 {saving ? "Laddar upp…" : "Ladda upp"}
               </button>

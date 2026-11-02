@@ -53,7 +53,7 @@ export function NewDocButton({
         onClick={() => setOpen(true)}
         className={
           variant === "primary"
-            ? "rounded-btn bg-[var(--triad-teal)] text-black px-4 py-2 text-sm font-medium hover:brightness-110"
+            ? "rounded-btn bg-[var(--triad-teal)] text-fixed-black px-4 py-2 text-sm font-medium hover:brightness-110"
             : "rounded-btn border border-white/10 hover:bg-white/5 text-white px-3 py-1.5 text-xs flex items-center gap-1.5"
         }
       >
@@ -109,7 +109,7 @@ export function NewDocButton({
             <button
               type="submit"
               disabled={saving}
-              className="rounded-btn bg-[var(--triad-teal)] text-black px-4 py-2 text-sm font-semibold disabled:opacity-50"
+              className="rounded-btn bg-[var(--triad-teal)] text-fixed-black px-4 py-2 text-sm font-semibold disabled:opacity-50"
             >
               {saving ? "Skapar…" : "Skapa"}
             </button>

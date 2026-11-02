@@ -513,7 +513,7 @@ function RecurringPlanModal({
                 type="button"
                 onClick={() => setMode(value)}
                 className={`rounded-btn px-3 py-1.5 transition-colors ${
-                  mode === value ? "bg-teal-500 text-white font-semibold" : "text-[var(--muted)] hover:text-white"
+                  mode === value ? "bg-teal-500 text-fixed-white font-semibold" : "text-[var(--muted)] hover:text-white"
                 }`}
               >
                 {label}
@@ -931,7 +931,7 @@ function RecurringPlanModal({
             <button
               type="submit"
               disabled={!!saving}
-              className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors"
+              className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors"
             >
               {saving === "save" ? "Sparar…" : "Spara"}
             </button>

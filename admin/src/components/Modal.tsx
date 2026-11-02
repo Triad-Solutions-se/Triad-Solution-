@@ -37,7 +37,7 @@ export function Modal({
 
   return createPortal(
     <div
-      className={`fixed inset-0 bg-black/60 grid z-50 ${
+      className={`fixed inset-0 bg-[var(--scrim)] grid z-50 ${
         sheet ? "items-end justify-items-center sm:place-items-center sm:p-4" : "place-items-center p-4"
       }`}
       onClick={onClose}

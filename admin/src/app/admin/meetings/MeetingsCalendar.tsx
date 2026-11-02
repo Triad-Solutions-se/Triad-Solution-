@@ -73,7 +73,7 @@ export function MeetingsCalendar({ meetings }: { meetings: Meeting[] }) {
                 } ${today ? "ring-1 sm:ring-2 ring-teal-400 ring-offset-1 ring-offset-[var(--surface)]" : ""}`}
               >
                 <div className={`font-semibold w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center rounded-full text-[9px] sm:text-[11px] ${
-                  today ? "bg-teal-400 text-black" : "text-[var(--muted)]"
+                  today ? "bg-teal-400 text-fixed-black" : "text-[var(--muted)]"
                 }`}>
                   {d.getDate()}
                 </div>

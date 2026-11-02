@@ -122,7 +122,7 @@ export function NewAgreementButton({
         className={
           variant === "small"
             ? "rounded-btn border border-white/10 hover:bg-white/10 px-2.5 py-1.5 text-xs flex items-center gap-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            : "rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm shadow-teal-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+            : "rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm shadow-teal-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
         }
       >
         {variant === "small" ? <FileSignature size={12} /> : <Plus size={16} />}
@@ -131,7 +131,7 @@ export function NewAgreementButton({
 
       {open && (
         <div
-          className="fixed inset-0 bg-black/60 grid place-items-center z-50 p-4"
+          className="fixed inset-0 bg-[var(--scrim)] grid place-items-center z-50 p-4"
           onClick={() => setOpen(false)}
         >
           <form
@@ -240,7 +240,7 @@ export function NewAgreementButton({
               <button
                 type="submit"
                 disabled={saving || customerMissing}
-                className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors"
+                className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors"
               >
                 {saving ? "Skapar…" : "Skapa avtal"}
               </button>

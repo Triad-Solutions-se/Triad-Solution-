@@ -147,7 +147,7 @@ export function DateInput({
           <div
             ref={popRef}
             style={{ top: pos.top, left: pos.left, width: POPOVER_W }}
-            className="fixed z-[60] glass rounded-xl border border-white/10 p-3 shadow-xl shadow-black/40"
+            className="fixed z-[60] glass rounded-xl border border-white/10 p-3 shadow-xl shadow-fixed-black/40"
           >
             <div className="flex items-center justify-between mb-2">
               <button
@@ -198,7 +198,7 @@ export function DateInput({
                     onClick={() => pick(d)}
                     className={`h-8 rounded-md text-xs transition-colors ${
                       isSelected
-                        ? "bg-teal-400 text-black font-semibold"
+                        ? "bg-teal-400 text-fixed-black font-semibold"
                         : isToday
                         ? "ring-1 ring-teal-400 text-white hover:bg-white/10"
                         : inMonth

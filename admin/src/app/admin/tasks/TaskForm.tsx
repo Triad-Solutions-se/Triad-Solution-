@@ -265,7 +265,7 @@ export function TaskFormModal({
             <button
               type="submit"
               disabled={saving || deleting}
-              className="rounded-btn bg-[var(--triad-teal)] text-black px-4 py-2 text-sm font-medium disabled:opacity-50"
+              className="rounded-btn bg-[var(--triad-teal)] text-fixed-black px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
               {saving ? "Sparar…" : "Spara"}
             </button>

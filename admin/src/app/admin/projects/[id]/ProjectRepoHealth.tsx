@@ -76,7 +76,7 @@ export async function ProjectRepoHealth({
           href={h.htmlUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-[var(--triad-teal)] hover:underline min-w-0"
+          className="inline-flex items-center gap-1.5 text-[var(--accent-text)] hover:underline min-w-0"
         >
           <Github size={14} className="shrink-0" />
           <span className="truncate">
@@ -184,7 +184,7 @@ function RepoLink({ repoRef }: { repoRef: RepoRef }) {
       href={repoHtmlUrl(repoRef)}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 text-[var(--triad-teal)] hover:underline"
+      className="inline-flex items-center gap-1.5 text-[var(--accent-text)] hover:underline"
     >
       <Github size={14} />
       {repoRef.owner}/{repoRef.repo}

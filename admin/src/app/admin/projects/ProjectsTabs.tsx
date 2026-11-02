@@ -26,7 +26,7 @@ export function ProjectsTabs({ active, counts }: { active: ProjectsTab; counts: 
               {t.label}
               <span
                 className={`rounded-full px-1.5 py-0.5 text-[10px] font-mono ${
-                  isActive ? "bg-[var(--triad-teal)]/20 text-[var(--triad-teal)]" : "bg-white/5 text-[var(--muted)]"
+                  isActive ? "bg-[var(--triad-teal)]/20 text-[var(--accent-text)]" : "bg-white/5 text-[var(--muted)]"
                 }`}
               >
                 {t.count}

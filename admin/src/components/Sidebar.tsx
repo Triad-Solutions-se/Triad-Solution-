@@ -6,6 +6,7 @@ import {
   Wallet, Palette, BookTemplate, BarChart3, Bug, LogOut, X,
   PanelLeftClose, PanelLeftOpen, Settings, Sparkles, Receipt,
 } from "lucide-react";
+import { ThemeToggle } from "./ThemeToggle";
 
 const nav = [
   { href: "/admin", label: "Översikt", icon: LayoutDashboard, exact: true },
@@ -119,6 +120,8 @@ export function Sidebar({
           );
         })}
       </nav>
+
+      <ThemeToggle collapsed={collapsed} />
 
       {/* Collapse toggle — desktop only */}
       {onToggleCollapse && (

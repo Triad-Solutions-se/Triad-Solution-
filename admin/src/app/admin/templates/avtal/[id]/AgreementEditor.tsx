@@ -198,7 +198,7 @@ export function AgreementEditor({
           <button
             onClick={save}
             disabled={saving}
-            className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-3 py-2 text-sm font-medium flex items-center gap-2 disabled:opacity-50 transition-colors"
+            className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-3 py-2 text-sm font-medium flex items-center gap-2 disabled:opacity-50 transition-colors"
           >
             <Save size={14} />
             {saving ? "Sparar…" : "Spara"}
@@ -475,7 +475,7 @@ export function AgreementEditor({
           <button
             onClick={() => download("contract")}
             disabled={downloading !== null || !f.offer_id || missing.contract.length > 0}
-            className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold flex items-center gap-2 disabled:opacity-50 transition-colors"
+            className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold flex items-center gap-2 disabled:opacity-50 transition-colors"
           >
             <Download size={14} />
             {downloading === "contract"
@@ -524,7 +524,7 @@ export function AgreementEditor({
             <div className="flex items-center gap-2">
               <button
                 onClick={del}
-                className="rounded-btn bg-rose-500 hover:bg-rose-400 text-white px-3 py-2 text-sm font-medium flex items-center gap-2"
+                className="rounded-btn bg-rose-500 hover:bg-rose-400 text-fixed-white px-3 py-2 text-sm font-medium flex items-center gap-2"
               >
                 <Trash2 size={14} />
                 Bekräfta

@@ -261,7 +261,7 @@ function IncomeFormModal({
             <button
               type="submit"
               disabled={saving}
-              className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors"
+              className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors"
             >
               {saving ? "Sparar…" : "Spara"}
             </button>

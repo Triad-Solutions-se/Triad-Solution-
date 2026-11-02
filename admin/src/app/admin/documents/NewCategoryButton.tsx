@@ -112,7 +112,7 @@ export function NewCategoryButton({
             <button
               type="submit"
               disabled={saving || !title.trim()}
-              className="rounded-btn bg-[var(--triad-teal)] text-black px-4 py-2 text-sm font-semibold disabled:opacity-50"
+              className="rounded-btn bg-[var(--triad-teal)] text-fixed-black px-4 py-2 text-sm font-semibold disabled:opacity-50"
             >
               {saving ? "Skapar…" : "Skapa"}
             </button>

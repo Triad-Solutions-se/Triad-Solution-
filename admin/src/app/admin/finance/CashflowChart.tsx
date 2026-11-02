@@ -124,7 +124,7 @@ export function CashflowChart({
           className="w-full h-[220px] min-w-[640px]"
         >
           {/* zero line */}
-          <line x1={padL} x2={W - padR} y1={yZero} y2={yZero} stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
+          <line x1={padL} x2={W - padR} y1={yZero} y2={yZero} className="stroke-white/[0.12]" strokeWidth="1" />
           {/* bars */}
           {buckets.map((b, i) => {
             const cx = padL + slot * (i + 0.5);
@@ -155,7 +155,7 @@ export function CashflowChart({
                   y={H - padB + 16}
                   fontSize="10"
                   textAnchor="middle"
-                  fill="rgba(255,255,255,0.55)"
+                  className="fill-white/55"
                 >
                   {b.label}
                 </text>
