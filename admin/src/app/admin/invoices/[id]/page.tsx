@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ChevronLeft } from "lucide-react";
 import type { InvoiceRecord } from "@/lib/invoice";
 import { fetchInvoiceSettings } from "@/lib/invoice-data";
+import { emailConfig } from "@/lib/invoice-email";
 import { fetchCompanyInfo } from "../../api/offers/[id]/contract-data";
 import { InvoiceEditor } from "./InvoiceEditor";
 
@@ -29,6 +30,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     banksRes,
     planRes,
     incomeRes,
+    emailLogRes,
   ] = await Promise.all([
       supabase.from("customers").select("id,name,org_number,address,contact_person,email").order("name"),
       supabase
@@ -54,6 +56,13 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         : Promise.resolve({ data: null }),
       // Fel (migration 0036 ej körd) → ingen "Bokförd"-länk.
       supabase.from("income").select("id").eq("invoice_id", id).maybeSingle(),
+      // Fel (migration 0038 ej körd) → ingen utskickslogg.
+      supabase
+        .from("invoice_email_log")
+        .select("id,to_email,status,error,automatic,created_at")
+        .eq("invoice_id", id)
+        .order("created_at", { ascending: false })
+        .limit(10),
     ]);
 
   return (
@@ -82,6 +91,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         bankAccounts={(banksRes.data ?? []) as any[]}
         plan={(planRes.data ?? null) as any}
         incomeBooked={!!incomeRes.data}
+        emailReady={emailConfig().ready}
+        emailLog={(emailLogRes.data ?? []) as any[]}
       />
     </>
   );

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/PageHeader";
 import { fetchInvoiceSettings } from "@/lib/invoice-data";
+import { emailConfig } from "@/lib/invoice-email";
 import { CompanySettingsForm } from "./CompanySettingsForm";
 import { InvoiceSettingsForm } from "./InvoiceSettingsForm";
 import { CapacitySettings } from "./CapacitySettings";
@@ -55,7 +56,11 @@ export default async function SettingsPage() {
             <code className="font-mono">supabase/migrations/0034_invoice_system.sql</code>.
           </div>
         ) : (
-          <InvoiceSettingsForm settings={invoiceSettings.settings} orgNumber={settings.org_number} />
+          <InvoiceSettingsForm
+            settings={invoiceSettings.settings}
+            orgNumber={settings.org_number}
+            emailMissing={emailConfig().missing}
+          />
         )}
         <AiSettings aiEnabled={data?.ai_enabled === true} />
         <CapacitySettings members={members} />

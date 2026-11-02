@@ -2,7 +2,7 @@
 // mappar en fakturarad till det format PDF-generatorn förväntar sig. Delas av
 // PDF-routen och fakturasidorna så att urval och mappning hålls i synk.
 
-import type { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   type InvoiceSettings,
   normalizeLines,
@@ -10,13 +10,11 @@ import {
 } from "./invoice";
 import type { InvoicePdfData } from "./invoice-pdf";
 
-type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
-
 // Egen fråga (inte i fetchCompanyInfo) så att offert- och avtalsflödet fortsätter
 // fungera även om migration 0034 inte körts. `error` sätts då och sidorna kan
 // visa en hint om migrationen.
 export async function fetchInvoiceSettings(
-  supabase: SupabaseServerClient,
+  supabase: SupabaseClient,
 ): Promise<{ settings: InvoiceSettings; error: string | null }> {
   const { data, error } = await supabase
     .from("company_settings")
@@ -31,7 +29,7 @@ function one<T>(v: T | T[] | null | undefined): T | null {
 }
 
 export async function fetchInvoiceForPdf(
-  supabase: SupabaseServerClient,
+  supabase: SupabaseClient,
   id: string,
 ): Promise<{ invoice: InvoicePdfData | null; customerName: string; error: string | null; status: number }> {
   const { data: row, error } = await supabase

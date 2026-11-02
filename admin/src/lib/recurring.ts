@@ -130,6 +130,10 @@ export type RecurringPlan = {
   lead_days?: number | null;
   invoice_message?: string | null;
   our_reference?: string | null;
+  // Migration 0038 — fakturamejl.
+  auto_send?: boolean | null;
+  email_to?: string | null;
+  last_error?: string | null;
 };
 
 export type NextInvoice = { index: number; period: Period; invoiceDate: string };

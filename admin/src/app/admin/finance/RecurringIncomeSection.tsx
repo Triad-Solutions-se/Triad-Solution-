@@ -20,6 +20,7 @@ import {
   computeInvoiceTotals,
   firstOfNextMonthISO,
   fmtAmount,
+  isValidEmail,
   lineAmount,
   newEmptyLine,
   normalizeLines,
@@ -156,10 +157,12 @@ function RecurringPlanModal({
     lead_days: String(initial?.lead_days ?? 14),
     invoice_message: initial?.invoice_message ?? "",
     our_reference: initial?.our_reference ?? "",
+    auto_send: initial ? initial.auto_send === true : true,
+    email_to: initial?.email_to ?? "",
   }));
   const [lines, setLines] = useState<InvoiceLine[]>(() => normalizeLines(initial?.items));
 
-  const [customers, setCustomers] = useState<Opt[]>([]);
+  const [customers, setCustomers] = useState<(Opt & { email?: string | null })[]>([]);
   const [projects, setProjects] = useState<Opt[]>([]);
   const [banks, setBanks] = useState<Opt[]>([]);
   const [defaultTerms, setDefaultTerms] = useState(30);
@@ -176,14 +179,21 @@ function RecurringPlanModal({
     let cancelled = false;
     (async () => {
       const [c, p, b, s, auth] = await Promise.all([
-        supabase.from("customers").select("id,name").order("name"),
+        supabase.from("customers").select("id,name,email").order("name"),
         supabase.from("projects").select("id,name").order("name"),
         supabase.from("bank_accounts").select("id,name").eq("archived", false).order("name"),
         supabase.from("company_settings").select("payment_terms_days").eq("id", 1).maybeSingle(),
         isEdit ? Promise.resolve(null) : supabase.auth.getUser(),
       ]);
       if (cancelled) return;
-      setCustomers((c.data ?? []) as Opt[]);
+      const customerList = (c.data ?? []) as (Opt & { email?: string | null })[];
+      setCustomers(customerList);
+      // Förvald kund → fakturamejlet går till kundens e-post tills något annat anges.
+      setF((prev) =>
+        prev.email_to || !prev.customer_id
+          ? prev
+          : { ...prev, email_to: customerList.find((x) => x.id === prev.customer_id)?.email ?? "" },
+      );
       setProjects((p.data ?? []) as Opt[]);
       setBanks((b.data ?? []) as Opt[]);
       if (s.data?.payment_terms_days != null) setDefaultTerms(Number(s.data.payment_terms_days));
@@ -352,6 +362,8 @@ function RecurringPlanModal({
       invoice_message: f.invoice_message.trim() || null,
       our_reference: f.our_reference.trim() || null,
       amount_sek: totals.toPay,
+      auto_send: f.auto_send,
+      email_to: f.email_to.trim() || null,
     };
   }
 
@@ -363,11 +375,17 @@ function RecurringPlanModal({
       if (lines.length === 0) return "Lägg till minst en fakturarad.";
       if (lines.some((l) => !l.description.trim())) return "Varje fakturarad behöver en beskrivning.";
       if (f.end_date && f.end_date < f.start_date) return "Slutdatum ligger före startdatum.";
+      if (f.auto_send && !isValidEmail(f.email_to)) {
+        return "Ange vart fakturorna ska mejlas, eller stäng av automatiskt utskick.";
+      }
     }
     return null;
   }
 
   function explain(message: string): string {
+    if (/auto_send|email_to/i.test(message)) {
+      return `${message} — automatiska fakturamejl kräver databasmigration 0038_recurring_invoice_email.`;
+    }
     if (/create_invoices|billing_timing|lead_days|column .* does not exist|schema cache/i.test(message)) {
       return `${message} — återkommande fakturering kräver databasmigration 0036_economy_links_recurring_billing.`;
     }
@@ -411,12 +429,21 @@ function RecurringPlanModal({
       return;
     }
     const { invoiceId, error: invErr } = await invoiceNextPeriodNow(supabase, saved);
-    setSaving(null);
     if (invErr || !invoiceId) {
+      setSaving(null);
       setError(invErr ?? "Kunde inte skapa fakturan.");
       router.refresh();
       return;
     }
+    // Ett misslyckat utskick syns i fakturans utskickslogg, dit vi går ändå.
+    if (saved.auto_send) {
+      await fetch(`/admin/api/invoices/${invoiceId}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: saved.email_to ?? undefined }),
+      }).catch(() => null);
+    }
+    setSaving(null);
     router.push(`/admin/invoices/${invoiceId}`);
     router.refresh();
   }
@@ -509,7 +536,8 @@ function RecurringPlanModal({
               value={f.customer_id}
               onChange={(e) => {
                 autofill.current = !isEdit;
-                setF((p) => ({ ...p, customer_id: e.target.value, source_ref: "" }));
+                const email = customers.find((c) => c.id === e.target.value)?.email;
+                setF((p) => ({ ...p, customer_id: e.target.value, source_ref: "", email_to: email || p.email_to }));
               }}
               className={`mt-1 ${input}`}
             >
@@ -755,6 +783,31 @@ function RecurringPlanModal({
               />
             </label>
 
+            <div className="rounded-btn border border-white/10 bg-black/20 p-3 space-y-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={f.auto_send}
+                  onChange={(e) => setF((p) => ({ ...p, auto_send: e.target.checked }))}
+                  className="accent-teal-500"
+                />
+                Mejla fakturorna automatiskt
+                <span className="text-xs text-[var(--muted)]">(PDF:en bifogas)</span>
+              </label>
+              {f.auto_send && (
+                <label className="block">
+                  <span className="text-xs text-[var(--muted)]">Fakturamejl till</span>
+                  <input {...bind("email_to")} type="email" placeholder="ekonomi@kund.se" className={`mt-1 ${input}`} />
+                </label>
+              )}
+              <p className="text-[11px] text-[var(--muted)]">
+                {f.auto_send
+                  ? "Varje utkast mejlas vid nästa dagliga körning (ca kl. 07–08) och markeras som skickat."
+                  : "Utkasten skapas för granskning — skicka dem från fakturan."}
+              </p>
+              {initial?.last_error && <p className="text-[11px] text-rose-300">Senaste utskick: {initial.last_error}</p>}
+            </div>
+
             <div className="rounded-btn border border-teal-400/20 bg-teal-400/5 p-3 text-xs space-y-1">
               <div className="flex flex-wrap justify-between gap-2">
                 <span className="text-[var(--muted)]">Per faktura</span>
@@ -863,10 +916,11 @@ function RecurringPlanModal({
                 type="button"
                 onClick={invoiceNow}
                 disabled={!!saving}
-                title={`Skapar utkastet för perioden ${periodLabel(next.period.start, next.period.end)} direkt`}
+                title={`${f.auto_send ? "Skapar och mejlar fakturan" : "Skapar utkastet"} för perioden ${periodLabel(next.period.start, next.period.end)} direkt`}
                 className="rounded-btn border border-white/10 hover:bg-white/5 px-3 py-2 text-sm flex items-center gap-2 disabled:opacity-50"
               >
-                <Receipt size={14} /> {saving === "invoice" ? "Skapar…" : "Fakturera nästa period nu"}
+                <Receipt size={14} />{" "}
+                {saving === "invoice" ? "Skapar…" : f.auto_send ? "Fakturera och mejla nästa period nu" : "Fakturera nästa period nu"}
               </button>
             )}
           </div>
@@ -973,7 +1027,10 @@ export function RecurringIncomeTable({
                   <div className="font-medium">{r.description}</div>
                   <div className="mt-0.5">
                     {s.invoiced ? (
-                      <Chip tone="teal">Faktureras</Chip>
+                      <span className="inline-flex flex-wrap gap-1">
+                        <Chip tone="teal">Faktureras</Chip>
+                        {r.auto_send && <Chip tone="blue">Mejlas</Chip>}
+                      </span>
                     ) : (
                       <span className="text-xs text-[var(--muted)]">{r.source || "Intäkt"}</span>
                     )}
@@ -1012,6 +1069,11 @@ export function RecurringIncomeTable({
                 </td>
                 <td className="p-3">
                   <Chip tone={s.status.tone}>{s.status.label}</Chip>
+                  {r.last_error && (
+                    <div className="mt-1" title={r.last_error}>
+                      <Chip tone="red">Utskick misslyckades</Chip>
+                    </div>
+                  )}
                 </td>
               </tr>
             );

@@ -19,6 +19,16 @@ Offert → avtal → fakturor → intäkter, med länkar åt båda håll (offert
 - **Offertens faktureringsintervall** ("Underhållet faktureras") står i offert-PDF/Excel och avtalet och blir förval för avtalets återkommande fakturering.
 - Ekonomi visar "Återkommande / mån" (alla aktiva planer omräknade per månad), och kundlistan visar återkommande intäkt per kund.
 
+### Fakturamejl
+Fakturor mejlas med PDF:en bifogad via [Resend](https://resend.com): "Slutför och skicka med e-post" på ett utkast, "Skicka med e-post" på en skickad faktura, och automatiskt för återkommande fakturering med "Mejla fakturorna automatiskt" påslaget. Varje morgon (06:00 UTC) anropar Vercel Cron `/api/cron/invoices`, som skapar periodernas utkast och mejlar dem för planer med automatiskt utskick (och markerar dem som skickade). Ett misslyckat utskick görs inte om automatiskt — felet syns på planen och i fakturans utskickslogg, och fakturan skickas för hand när det är åtgärdat. Schema i `supabase/migrations/0038_recurring_invoice_email.sql`.
+
+Miljövariabler i Vercel (triad-admin):
+- `RESEND_API_KEY` — från Resend, med domänen mcasolutions.se verifierad (DNS-poster för SPF/DKIM).
+- `INVOICE_EMAIL_FROM` — t.ex. `MCA Solutions <faktura@mcasolutions.se>`. Svar går till företagets e-post under Inställningar.
+- `INVOICE_EMAIL_BCC` (valfri) — kopia av varje fakturamejl.
+- `CRON_SECRET` — valfri lång slumpsträng; Vercel skickar den till cron-routen.
+- `SUPABASE_SERVICE_ROLE_KEY` — finns redan (används av analytics).
+
 ## Local setup
 ```bash
 cd admin

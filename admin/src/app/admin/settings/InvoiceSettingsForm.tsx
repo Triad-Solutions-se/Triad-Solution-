@@ -17,9 +17,12 @@ import {
 export function InvoiceSettingsForm({
   settings,
   orgNumber,
+  emailMissing,
 }: {
   settings: InvoiceSettings;
   orgNumber: string;
+  // Miljövariabler för fakturamejl som saknas i Vercel (tom = konfigurerat).
+  emailMissing: string[];
 }) {
   const supabase = createClient();
   const router = useRouter();
@@ -173,6 +176,17 @@ export function InvoiceSettingsForm({
             className="mt-1 w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm resize-y"
           />
         </label>
+
+        <div className="rounded-btn border border-white/10 bg-black/20 p-3 text-xs">
+          {emailMissing.length === 0 ? (
+            <span className="text-teal-200">Fakturamejl är konfigurerade — återkommande fakturering och &quot;Skicka med e-post&quot; mejlar PDF:en.</span>
+          ) : (
+            <span className="text-amber-200">
+              Fakturamejl är inte konfigurerade: lägg till {emailMissing.join(" och ")} i Vercel (triad-admin → Settings →
+              Environment Variables). Se README under Fakturamejl.
+            </span>
+          )}
+        </div>
 
         <div className="flex justify-end pt-1">
           <button
