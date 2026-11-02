@@ -47,12 +47,12 @@ export function NewMeetingButton() {
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm shadow-teal-500/20">
+      <button onClick={() => setOpen(true)} className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm shadow-teal-500/20">
         <Plus size={16} />
         Nytt möte
       </button>
       {open && (
-        <div className="fixed inset-0 bg-black/60 grid place-items-center z-50 p-4" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 bg-[var(--scrim)] grid place-items-center z-50 p-4" onClick={() => setOpen(false)}>
           <form onClick={(e) => e.stopPropagation()} onSubmit={submit} className="w-full max-w-lg glass rounded-modal p-6 space-y-4 max-h-[90vh] overflow-auto">
             <h3 className="font-heading text-lg font-semibold">Nytt möte</h3>
             <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Mötesnamn" className="w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2" />
@@ -68,7 +68,7 @@ export function NewMeetingButton() {
               <div className="text-xs uppercase tracking-wider text-[var(--muted)] mb-2">Deltagare</div>
               <div className="flex gap-2">
                 {PARTICIPANTS.map((p) => (
-                  <button type="button" key={p} onClick={() => toggle(p)} className={`rounded-full border px-3 py-1 text-xs ${parts.includes(p) ? "bg-[var(--triad-teal)]/20 border-[var(--triad-teal)] text-[var(--triad-teal)]" : "border-white/10 text-[var(--muted)]"}`}>
+                  <button type="button" key={p} onClick={() => toggle(p)} className={`rounded-full border px-3 py-1 text-xs ${parts.includes(p) ? "bg-[var(--triad-teal)]/20 border-[var(--triad-teal)] text-[var(--accent-text)]" : "border-white/10 text-[var(--muted)]"}`}>
                     {p}
                   </button>
                 ))}
@@ -76,7 +76,7 @@ export function NewMeetingButton() {
             </div>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setOpen(false)} className="rounded-btn px-3 py-2 text-sm text-[var(--muted)]">Avbryt</button>
-              <button type="submit" disabled={saving} className="rounded-btn bg-[var(--triad-teal)] text-black px-4 py-2 text-sm font-medium disabled:opacity-50">
+              <button type="submit" disabled={saving} className="rounded-btn bg-[var(--triad-teal)] text-fixed-black px-4 py-2 text-sm font-medium disabled:opacity-50">
                 {saving ? "Sparar…" : "Spara"}
               </button>
             </div>

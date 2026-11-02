@@ -35,12 +35,12 @@ export function NewCustomerButton() {
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm shadow-teal-500/20">
+      <button onClick={() => setOpen(true)} className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm shadow-teal-500/20">
         <Plus size={16} />
         Ny kund
       </button>
       {open && (
-        <div className="fixed inset-0 bg-black/60 grid place-items-center z-50 p-4" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 bg-[var(--scrim)] grid place-items-center z-50 p-4" onClick={() => setOpen(false)}>
           <form onClick={(e) => e.stopPropagation()} onSubmit={submit} className="w-full max-w-lg glass rounded-modal p-6 space-y-3 max-h-[90vh] overflow-auto">
             <h3 className="font-heading text-lg font-semibold">Ny kund</h3>
             <input autoFocus {...bind("name")} placeholder="Kundnamn (juridiskt företagsnamn)" className="w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2" />
@@ -67,7 +67,7 @@ export function NewCustomerButton() {
             <textarea {...bind("notes")} rows={3} placeholder="Anteckningar" className="w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm" />
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setOpen(false)} className="rounded-btn px-3 py-2 text-sm text-[var(--muted)]">Avbryt</button>
-              <button type="submit" disabled={saving} className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors">
+              <button type="submit" disabled={saving} className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors">
                 {saving ? "Sparar…" : "Spara"}
               </button>
             </div>

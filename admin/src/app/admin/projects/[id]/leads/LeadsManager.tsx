@@ -272,7 +272,7 @@ export function LeadsManager({
           </div>
           <button
             onClick={() => setUploadOpen(true)}
-            className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-3 py-1.5 text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm shadow-teal-500/20"
+            className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-3 py-1.5 text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm shadow-teal-500/20"
           >
             <Upload size={14} />
             Ladda upp
@@ -374,7 +374,7 @@ export function LeadsManager({
               type="button"
               onClick={importParsed}
               disabled={importing || parsed.length === 0}
-              className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors"
+              className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors"
             >
               {importing ? "Importerar…" : `Importera ${parsed.length} leads`}
             </button>

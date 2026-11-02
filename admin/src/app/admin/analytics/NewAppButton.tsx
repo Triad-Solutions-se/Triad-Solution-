@@ -42,14 +42,14 @@ export function NewAppButton() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm shadow-teal-500/20"
+        className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm shadow-teal-500/20"
       >
         <Plus size={16} />
         Ny app
       </button>
       {open && (
         <div
-          className="fixed inset-0 bg-black/60 grid place-items-center z-50 p-4"
+          className="fixed inset-0 bg-[var(--scrim)] grid place-items-center z-50 p-4"
           onClick={() => setOpen(false)}
         >
           <form
@@ -88,7 +88,7 @@ export function NewAppButton() {
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors"
+                className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors"
               >
                 {saving ? "Sparar…" : "Spara"}
               </button>

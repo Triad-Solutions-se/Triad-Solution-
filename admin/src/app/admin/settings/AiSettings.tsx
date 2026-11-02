@@ -57,7 +57,7 @@ export function AiSettings({ aiEnabled }: { aiEnabled: boolean }) {
             }`}
           >
             <span
-              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-fixed-white transition-transform ${
                 enabled ? "translate-x-[22px]" : "translate-x-0.5"
               }`}
             />

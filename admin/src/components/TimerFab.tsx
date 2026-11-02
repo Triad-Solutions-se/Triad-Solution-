@@ -32,17 +32,17 @@ export function TimerFab() {
         onClick={() => setOpen(true)}
         aria-label={running ? `Timer går: ${running.project_name}` : "Starta timer"}
         style={{ bottom: "calc(1rem + env(safe-area-inset-bottom))" }}
-        className={`fixed right-4 z-40 flex items-center rounded-full shadow-lg shadow-black/40 transition-colors ${
+        className={`fixed right-4 z-40 flex items-center rounded-full shadow-lg shadow-fixed-black/40 transition-colors ${
           running
-            ? "gap-2 bg-rose-500 hover:bg-rose-400 text-white pl-3.5 pr-4 h-12 max-w-[calc(100vw-2rem)]"
-            : "lg:hidden justify-center h-14 w-14 bg-teal-500 hover:bg-teal-400 text-white"
+            ? "gap-2 bg-rose-500 hover:bg-rose-400 text-fixed-white pl-3.5 pr-4 h-12 max-w-[calc(100vw-2rem)]"
+            : "lg:hidden justify-center h-14 w-14 bg-teal-500 hover:bg-teal-400 text-fixed-white"
         }`}
       >
         {running ? (
           <>
             <span className="relative flex h-2.5 w-2.5 shrink-0">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-white opacity-75 animate-ping" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-white" />
+              <span className="absolute inline-flex h-full w-full rounded-full bg-fixed-white opacity-75 animate-ping" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-fixed-white" />
             </span>
             <span className="font-mono text-sm tabular-nums">{fmtClock(elapsed)}</span>
             <span className="text-sm font-medium truncate max-w-[9rem]">{running.project_name}</span>
@@ -77,7 +77,7 @@ export function TimerFab() {
                   setOpen(false);
                 }}
                 disabled={busy}
-                className="mt-4 w-full rounded-btn bg-rose-500 hover:bg-rose-400 text-white py-3 text-base font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-60"
+                className="mt-4 w-full rounded-btn bg-rose-500 hover:bg-rose-400 text-fixed-white py-3 text-base font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-60"
               >
                 {busy ? <Loader2 size={18} className="animate-spin" /> : <Square size={16} fill="currentColor" />}
                 Stoppa timer

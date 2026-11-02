@@ -149,7 +149,7 @@ export default async function ProjectDashboardPage({
           <ProjectTimerButton project={{ id: project.id, name: project.name }} />
           <Link
             href={`/admin/projects/${project.id}/leads`}
-            className="inline-flex items-center gap-2 rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold transition-colors shadow-sm shadow-teal-500/20"
+            className="inline-flex items-center gap-2 rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold transition-colors shadow-sm shadow-teal-500/20"
           >
             <PhoneCall size={14} />
             Leads

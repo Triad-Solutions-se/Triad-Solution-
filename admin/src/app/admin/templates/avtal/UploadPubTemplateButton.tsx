@@ -70,7 +70,7 @@ export function UploadPubTemplateButton() {
 
       {open && (
         <div
-          className="fixed inset-0 bg-black/60 grid place-items-center z-50 p-4"
+          className="fixed inset-0 bg-[var(--scrim)] grid place-items-center z-50 p-4"
           onClick={() => !saving && setOpen(false)}
         >
           <form
@@ -139,7 +139,7 @@ export function UploadPubTemplateButton() {
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold flex items-center gap-2 disabled:opacity-50 transition-colors"
+                className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold flex items-center gap-2 disabled:opacity-50 transition-colors"
               >
                 {saving ? (
                   <>

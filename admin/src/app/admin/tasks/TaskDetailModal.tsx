@@ -156,7 +156,7 @@ export function TaskDetailModal({
             <Link
               href={`/admin/projects/${task.project.id}#task-${task.id}`}
               onClick={onClose}
-              className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-3 py-2 text-sm font-semibold inline-flex items-center gap-2 transition-colors shadow-sm shadow-teal-500/20"
+              className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-3 py-2 text-sm font-semibold inline-flex items-center gap-2 transition-colors shadow-sm shadow-teal-500/20"
             >
               <ExternalLink size={14} />
               Gå till projektet

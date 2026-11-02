@@ -199,7 +199,7 @@ export function PitchView({
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold transition-colors inline-flex items-center gap-2"
+              className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold transition-colors inline-flex items-center gap-2"
             >
               <Pencil size={14} />
               Redigera
@@ -259,7 +259,7 @@ export function PitchView({
               type="button"
               onClick={save}
               disabled={saving}
-              className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors inline-flex items-center gap-2"
+              className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors inline-flex items-center gap-2"
             >
               <Save size={14} />
               {saving ? "Sparar…" : "Spara"}
@@ -277,7 +277,7 @@ export function PitchView({
           </p>
           <button
             onClick={() => setEditing(true)}
-            className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold"
+            className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold"
           >
             Kom igång
           </button>

@@ -43,7 +43,7 @@ export function WorkloadDonut({ segments }: { segments: WorkloadSegment[] }) {
             cy={size / 2}
             r={r}
             fill="none"
-            stroke="rgba(255,255,255,0.05)"
+            className="stroke-white/5"
             strokeWidth={stroke}
           />
           {data.map((s, i) => {

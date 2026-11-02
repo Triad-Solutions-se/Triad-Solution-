@@ -176,7 +176,7 @@ export function BankConnectionBar({
             <button
               onClick={connect}
               disabled={!!busy}
-              className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50 transition-colors"
+              className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50 transition-colors"
             >
               <Link2 size={13} />
               {busy === "connect"

@@ -301,7 +301,7 @@ export function OfferEditor({
             <button
               onClick={save}
               disabled={saving}
-              className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors flex items-center gap-2"
+              className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors flex items-center gap-2"
             >
               <Save size={14} /> {saving ? "Sparar…" : "Spara"}
             </button>
@@ -594,7 +594,7 @@ export function OfferEditor({
                   </button>
                   <button
                     onClick={remove}
-                    className="rounded-btn bg-rose-500 hover:bg-rose-400 text-white px-3 py-2 text-xs font-semibold"
+                    className="rounded-btn bg-rose-500 hover:bg-rose-400 text-fixed-white px-3 py-2 text-xs font-semibold"
                   >
                     Bekräfta radering
                   </button>

@@ -646,7 +646,7 @@ export function InvoiceEditor({
               <button
                 onClick={() => run("save", () => save())}
                 disabled={!!busy}
-                className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors flex items-center gap-2"
+                className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors flex items-center gap-2"
               >
                 <Save size={14} /> {busy === "save" ? "Sparar…" : locked ? "Spara anteckningar" : "Spara"}
               </button>
@@ -662,7 +662,7 @@ export function InvoiceEditor({
                 onClick={sendEmail}
                 disabled={!!busy || missing.length > 0 || !emailReady}
                 title={emailReady ? undefined : "E-postutskick är inte konfigurerade i Vercel än"}
-                className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors flex items-center gap-2"
+                className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors flex items-center gap-2"
               >
                 <Mail size={14} /> {busy === "email" ? "Skickar…" : "Slutför och skicka med e-post"}
               </button>
@@ -703,7 +703,7 @@ export function InvoiceEditor({
                   <button
                     onClick={registerPayment}
                     disabled={!!busy || !payDate}
-                    className="rounded-btn bg-emerald-500 hover:bg-emerald-400 text-white px-3 py-2 text-sm font-semibold disabled:opacity-50"
+                    className="rounded-btn bg-emerald-500 hover:bg-emerald-400 text-fixed-white px-3 py-2 text-sm font-semibold disabled:opacity-50"
                   >
                     {busy === "pay" ? "Sparar…" : "Spara betalning"}
                   </button>
@@ -715,7 +715,7 @@ export function InvoiceEditor({
                 <button
                   onClick={() => setPayOpen(true)}
                   disabled={!!busy}
-                  className="rounded-btn bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50 flex items-center gap-2"
+                  className="rounded-btn bg-emerald-500 hover:bg-emerald-400 text-fixed-white px-4 py-2 text-sm font-semibold disabled:opacity-50 flex items-center gap-2"
                 >
                   <CheckCircle2 size={14} /> Registrera betalning
                 </button>
@@ -1097,7 +1097,7 @@ export function InvoiceEditor({
                     <button
                       onClick={remove}
                       disabled={!!busy}
-                      className="rounded-btn bg-rose-500 hover:bg-rose-400 text-white px-3 py-2 text-xs font-semibold disabled:opacity-50"
+                      className="rounded-btn bg-rose-500 hover:bg-rose-400 text-fixed-white px-3 py-2 text-xs font-semibold disabled:opacity-50"
                     >
                       Bekräfta radering
                     </button>
