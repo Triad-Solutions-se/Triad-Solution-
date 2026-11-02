@@ -139,6 +139,9 @@ function invoiceRow(
     project_id: plan.project_id,
     bank_account_id: plan.bank_account_id,
     recurring_income_id: plan.id,
+    // Mottagaren för fakturamejlet (0038) — bara när planen har en, så att
+    // genereringen fungerar även innan migrationen körts.
+    ...(plan.email_to ? { email_to: plan.email_to } : {}),
   };
 }
 

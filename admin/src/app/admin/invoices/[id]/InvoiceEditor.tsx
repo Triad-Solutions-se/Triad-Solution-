@@ -40,6 +40,7 @@ import {
   fmtAmount,
   formatBankgiro,
   isInvoiceStatus,
+  isValidEmail,
   isValidBankgiro,
   lineAmount,
   linesFromOfferItems,
@@ -67,6 +68,14 @@ type AgreementOpt = { id: string; agreement_number: string | null; customer_id: 
 type ProjectOpt = { id: string; name: string; customer_id: string | null };
 type InvoiceRef = { id: string; number: string; status: string; paid_at?: string | null };
 type PlanRef = { id: string; description: string; frequency: string };
+type EmailLogEntry = {
+  id: string;
+  to_email: string;
+  status: string;
+  error: string | null;
+  automatic: boolean;
+  created_at: string;
+};
 
 const input =
   "w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed";
@@ -90,6 +99,8 @@ export function InvoiceEditor({
   bankAccounts,
   plan,
   incomeBooked,
+  emailReady,
+  emailLog,
 }: {
   invoice: InvoiceRecord;
   customers: CustomerOpt[];
@@ -105,6 +116,10 @@ export function InvoiceEditor({
   plan: PlanRef | null;
   // Om betalningen finns som intäkt i Ekonomi (trigger i migration 0036).
   incomeBooked: boolean;
+  // E-posttjänsten är konfigurerad (RESEND_API_KEY + INVOICE_EMAIL_FROM).
+  emailReady: boolean;
+  // Utskick av fakturan, senaste först (migration 0038).
+  emailLog: EmailLogEntry[];
 }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -132,6 +147,7 @@ export function InvoiceEditor({
     offer_id: invoice.offer_id ?? "",
     agreement_id: invoice.agreement_id ?? "",
     project_id: invoice.project_id ?? "",
+    email_to: invoice.email_to ?? customers.find((c) => c.id === invoice.customer_id)?.email ?? "",
   });
   const [lines, setLines] = useState<InvoiceLine[]>(() => normalizeLines(invoice.items));
   const [dirty, setDirty] = useState(false);
@@ -145,6 +161,7 @@ export function InvoiceEditor({
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const terms = clampInt(f.payment_terms_days, 0, 365, settings.paymentTermsDays);
   const vatRate = f.vat_rate.trim() === "" ? 25 : Math.max(0, Math.min(100, Number(f.vat_rate) || 0));
@@ -209,6 +226,7 @@ export function InvoiceEditor({
       customer_org_number: c ? c.org_number ?? "" : p.customer_org_number,
       customer_address: c ? c.address ?? "" : p.customer_address,
       reference: p.reference || c?.contact_person || "",
+      email_to: c?.email ?? p.email_to,
       offer_id: offers.find((o) => o.id === p.offer_id)?.customer_id === id ? p.offer_id : "",
       agreement_id: agreements.find((a) => a.id === p.agreement_id)?.customer_id === id ? p.agreement_id : "",
       project_id: projects.find((x) => x.id === p.project_id)?.customer_id === id ? p.project_id : "",
@@ -263,13 +281,16 @@ export function InvoiceEditor({
       offer_id: f.offer_id || null,
       agreement_id: f.agreement_id || null,
       project_id: f.project_id || null,
+      email_to: f.email_to.trim() || null,
     };
   }
 
   // Sparar utkastet (allt) eller — när fakturan är låst — bara anteckningarna.
   async function save(extra: Record<string, unknown> = {}): Promise<boolean> {
     setError(null);
-    const body = locked ? { notes: f.notes.trim() || null, ...extra } : { ...payload(), ...extra };
+    const body = locked
+      ? { notes: f.notes.trim() || null, email_to: f.email_to.trim() || null, ...extra }
+      : { ...payload(), ...extra };
     const { error } = await supabase.from("invoices").update(body).eq("id", invoice.id);
     if (error) {
       setError(error.message);
@@ -293,6 +314,7 @@ export function InvoiceEditor({
 
   async function run(name: string, fn: () => Promise<unknown>) {
     setBusy(name);
+    setNotice(null);
     try {
       await fn();
     } catch (e: any) {
@@ -362,6 +384,37 @@ export function InvoiceEditor({
         const { error } = await supabase.from("invoices").update({ status: "credited" }).eq("id", original.id);
         if (error) setError(`Kreditfakturan skickades men originalet kunde inte markeras: ${error.message}`);
       }
+    });
+  }
+
+  // Mejlar fakturan med PDF:en. Ett utkast markeras som skickat (och låses)
+  // först när mejlet har gått iväg.
+  function sendEmail() {
+    const to = f.email_to.trim();
+    if (!isValidEmail(to)) {
+      setError("Ange en giltig e-postadress under Fakturamottagare.");
+      return;
+    }
+    if (status === "draft" && missing.length > 0) {
+      setError(`Komplettera innan fakturan skickas: ${missing.join(", ")}.`);
+      return;
+    }
+    const question =
+      status === "draft"
+        ? `Slutför ${kind.toLowerCase()} ${invoice.number} och mejla den till ${to}? Den låses för redigering.`
+        : `Mejla ${kind.toLowerCase()} ${invoice.number} till ${to}?`;
+    if (!confirm(question)) return;
+    run("email", async () => {
+      if (dirty && !(await save())) return;
+      const res = await fetch(`/admin/api/invoices/${invoice.id}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to }),
+      });
+      const body = await res.json().catch(() => ({}));
+      router.refresh();
+      if (!res.ok) throw new Error(body?.error ?? `Kunde inte skicka (${res.status}).`);
+      setNotice(`${kind} ${invoice.number} mejlades till ${body.to}.`);
     });
   }
 
@@ -593,7 +646,7 @@ export function InvoiceEditor({
               <button
                 onClick={() => run("save", () => save())}
                 disabled={!!busy}
-                className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors flex items-center gap-2"
+                className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors flex items-center gap-2"
               >
                 <Save size={14} /> {busy === "save" ? "Sparar…" : locked ? "Spara anteckningar" : "Spara"}
               </button>
@@ -606,14 +659,20 @@ export function InvoiceEditor({
           {status === "draft" && (
             <>
               <button
-                onClick={finalize}
-                disabled={!!busy || missing.length > 0}
-                className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors flex items-center gap-2"
+                onClick={sendEmail}
+                disabled={!!busy || missing.length > 0 || !emailReady}
+                title={emailReady ? undefined : "E-postutskick är inte konfigurerade i Vercel än"}
+                className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors flex items-center gap-2"
               >
-                <Send size={14} /> {busy === "finalize" ? "Slutför…" : "Slutför och markera som skickad"}
+                <Mail size={14} /> {busy === "email" ? "Skickar…" : "Slutför och skicka med e-post"}
+              </button>
+              <button onClick={finalize} disabled={!!busy || missing.length > 0} className={btn}>
+                <Send size={14} /> {busy === "finalize" ? "Slutför…" : "Slutför utan e-post"}
               </button>
               <span className="text-xs text-[var(--muted)]">
-                Låser {kind.toLowerCase()}n. Ladda sedan ner PDF:en och skicka den till kunden.
+                {emailReady
+                  ? `Mejlas till ${f.email_to || "—"} med PDF:en bifogad och låses.`
+                  : `Låser ${kind.toLowerCase()}n. Ladda sedan ner PDF:en och skicka den till kunden.`}
               </span>
             </>
           )}
@@ -644,7 +703,7 @@ export function InvoiceEditor({
                   <button
                     onClick={registerPayment}
                     disabled={!!busy || !payDate}
-                    className="rounded-btn bg-emerald-500 hover:bg-emerald-400 text-white px-3 py-2 text-sm font-semibold disabled:opacity-50"
+                    className="rounded-btn bg-emerald-500 hover:bg-emerald-400 text-fixed-white px-3 py-2 text-sm font-semibold disabled:opacity-50"
                   >
                     {busy === "pay" ? "Sparar…" : "Spara betalning"}
                   </button>
@@ -656,21 +715,32 @@ export function InvoiceEditor({
                 <button
                   onClick={() => setPayOpen(true)}
                   disabled={!!busy}
-                  className="rounded-btn bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50 flex items-center gap-2"
+                  className="rounded-btn bg-emerald-500 hover:bg-emerald-400 text-fixed-white px-4 py-2 text-sm font-semibold disabled:opacity-50 flex items-center gap-2"
                 >
                   <CheckCircle2 size={14} /> Registrera betalning
                 </button>
               )}
-              <a href={mailtoHref()} className={btn} title="Öppnar ditt e-postprogram — bifoga PDF:en">
-                <Mail size={14} /> E-posta kunden
-              </a>
             </>
           )}
 
-          {isCredit && status === "sent" && (
-            <a href={mailtoHref()} className={btn} title="Öppnar ditt e-postprogram — bifoga PDF:en">
-              <Mail size={14} /> E-posta kunden
-            </a>
+          {status !== "draft" && (
+            <>
+              <button
+                onClick={sendEmail}
+                disabled={!!busy || !emailReady}
+                title={emailReady ? `Mejla PDF:en till ${f.email_to || "—"}` : "E-postutskick är inte konfigurerade i Vercel än"}
+                className={btn}
+              >
+                <Mail size={14} /> {busy === "email" ? "Skickar…" : "Skicka med e-post"}
+              </button>
+              <a
+                href={mailtoHref()}
+                className={`${btn} text-[var(--muted)]`}
+                title="Öppnar ditt e-postprogram — bifoga PDF:en själv"
+              >
+                E-postprogram
+              </a>
+            </>
           )}
 
           {status === "paid" && (
@@ -710,6 +780,12 @@ export function InvoiceEditor({
       {error && (
         <div className="rounded-xl border border-rose-400/30 bg-rose-400/5 p-3 text-sm text-rose-300">{error}</div>
       )}
+      {notice && (
+        <div className="rounded-xl border border-emerald-400/30 bg-emerald-400/5 p-3 text-sm text-emerald-200 flex items-start gap-2">
+          <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
+          <span>{notice}</span>
+        </div>
+      )}
 
       {locked && (
         <div className="glass rounded-xl border border-white/10 p-4 text-sm text-[var(--muted)] flex items-start gap-2">
@@ -718,7 +794,7 @@ export function InvoiceEditor({
             {isCredit
               ? "Kreditfakturan är skickad och låst."
               : "Fakturan är skickad och låst. Korrigera genom att kreditera den och skapa en ny."}{" "}
-            Interna anteckningar kan fortfarande ändras.
+            Interna anteckningar och mottagaren för fakturamejlet kan fortfarande ändras.
           </span>
         </div>
       )}
@@ -806,6 +882,15 @@ export function InvoiceEditor({
               <label className="block">
                 <span className="text-xs text-[var(--muted)]">Vår referens</span>
                 <input {...bind("our_reference")} disabled={locked} className={`mt-1 ${input}`} />
+              </label>
+              <label className="block sm:col-span-2">
+                <span className="text-xs text-[var(--muted)]">Fakturamejl till</span>
+                <input
+                  type="email"
+                  {...bind("email_to")}
+                  placeholder={customer?.email ?? "ekonomi@kund.se"}
+                  className={`mt-1 ${input}`}
+                />
               </label>
             </div>
           </Card>
@@ -1012,7 +1097,7 @@ export function InvoiceEditor({
                     <button
                       onClick={remove}
                       disabled={!!busy}
-                      className="rounded-btn bg-rose-500 hover:bg-rose-400 text-white px-3 py-2 text-xs font-semibold disabled:opacity-50"
+                      className="rounded-btn bg-rose-500 hover:bg-rose-400 text-fixed-white px-3 py-2 text-xs font-semibold disabled:opacity-50"
                     >
                       Bekräfta radering
                     </button>
@@ -1074,6 +1159,28 @@ export function InvoiceEditor({
               <p className="text-[11px] text-[var(--muted)] mt-3">
                 OCR-numret byggs av fakturanumret plus längd- och kontrollsiffra och är unikt per faktura.
               </p>
+            </div>
+          )}
+
+          {emailLog.length > 0 && (
+            <div className="glass rounded-card p-5">
+              <h2 className="font-heading text-sm font-semibold uppercase tracking-wider text-[var(--muted)] mb-3">
+                Utskick
+              </h2>
+              <ul className="space-y-2 text-xs">
+                {emailLog.map((e) => (
+                  <li key={e.id}>
+                    <div className={e.status === "sent" ? "text-teal-200" : "text-rose-300"}>
+                      {e.status === "sent" ? "Mejlad" : "Misslyckades"} · {e.to_email}
+                    </div>
+                    <div className="text-[var(--muted)]">
+                      {new Date(e.created_at).toLocaleString("sv-SE")}
+                      {e.automatic ? " · automatiskt" : ""}
+                    </div>
+                    {e.error && <div className="text-rose-300/80">{e.error}</div>}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 

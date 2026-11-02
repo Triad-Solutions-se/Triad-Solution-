@@ -217,7 +217,7 @@ export function ProjectTaskList({
             <button
               type="submit"
               disabled={saving}
-              className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+              className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
             >
               {saving ? "Sparar…" : "Lägg till"}
             </button>

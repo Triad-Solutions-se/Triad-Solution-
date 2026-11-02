@@ -83,7 +83,7 @@ export function TaskCard({ task }: { task: Task }) {
             aria-label={done ? "Markera som ej klar" : "Markera som klar"}
             className={`mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[5px] border transition-all touch-manipulation ${
               done
-                ? "border-teal-400 bg-teal-400 text-black"
+                ? "border-teal-400 bg-teal-400 text-fixed-black"
                 : "border-white/25 bg-transparent hover:border-teal-400/60"
             }`}
           >

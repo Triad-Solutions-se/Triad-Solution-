@@ -108,7 +108,7 @@ export function ProjectInfoEditor({
               href={project.external_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[var(--triad-teal)] hover:underline max-w-full"
+              className="inline-flex items-center gap-1 text-[var(--accent-text)] hover:underline max-w-full"
             >
               <span className="truncate">{prettyUrl(project.external_url)}</span>
               <ExternalLink size={11} className="opacity-70 shrink-0" />
@@ -123,7 +123,7 @@ export function ProjectInfoEditor({
               href={`https://github.com/${project.github_owner}/${project.github_repo}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[var(--triad-teal)] hover:underline max-w-full"
+              className="inline-flex items-center gap-1 text-[var(--accent-text)] hover:underline max-w-full"
             >
               <Github size={11} className="shrink-0 opacity-70" />
               <span className="truncate">
@@ -254,7 +254,7 @@ export function ProjectInfoEditor({
         <button
           onClick={save}
           disabled={saving}
-          className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-3 py-1.5 text-xs font-semibold inline-flex items-center gap-1 disabled:opacity-50"
+          className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-3 py-1.5 text-xs font-semibold inline-flex items-center gap-1 disabled:opacity-50"
         >
           <Check size={12} /> {saving ? "Sparar…" : "Spara"}
         </button>

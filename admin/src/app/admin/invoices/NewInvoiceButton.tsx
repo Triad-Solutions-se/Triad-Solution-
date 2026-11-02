@@ -44,7 +44,7 @@ export type InvoicePreset = { customerId?: string; offerId?: string; agreementId
 
 const BUTTON_CLS = {
   primary:
-    "rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm shadow-teal-500/20",
+    "rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm shadow-teal-500/20",
   secondary:
     "rounded-btn border border-white/10 hover:bg-white/5 px-3 py-2 text-sm font-medium flex items-center gap-2",
   small:
@@ -189,7 +189,7 @@ function NewInvoiceDialog({
   // för avtal (eller om offerten bara har månadsavgift), perioden från avtalsstart.
   useEffect(() => {
     if (!offer) return;
-    const hasOneTime = offerOneTimeItems(offer).length > 0;
+    const hasOneTime = computeSectionTotals(offerOneTimeItems(offer), 0).afterDiscount > 0;
     const hasMonthly = offerMonthlyItems(offer).length > 0;
     setIncludeOneTime(hasOneTime);
     setIncludeMonthly(hasMonthly && (!hasOneTime || !!agreement));
@@ -441,7 +441,7 @@ function NewInvoiceDialog({
             type="button"
             onClick={create}
             disabled={saving || !customerId}
-            className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors"
+            className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors"
           >
             {saving ? "Skapar…" : "Skapa faktura"}
           </button>

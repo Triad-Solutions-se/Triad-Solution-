@@ -109,7 +109,7 @@ export function SupermindChat({ initialThreads }: { initialThreads: ThreadSummar
       <aside className="glass rounded-card p-3 flex flex-col min-h-0">
         <button
           onClick={newChat}
-          className="mb-3 w-full rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-3 py-2 text-sm font-semibold inline-flex items-center justify-center gap-2"
+          className="mb-3 w-full rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-3 py-2 text-sm font-semibold inline-flex items-center justify-center gap-2"
         >
           <Plus size={14} /> Ny chatt
         </button>
@@ -198,7 +198,7 @@ export function SupermindChat({ initialThreads }: { initialThreads: ThreadSummar
           <button
             type="submit"
             disabled={loading || !input.trim()}
-            className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white p-2.5 disabled:opacity-50 shrink-0"
+            className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white p-2.5 disabled:opacity-50 shrink-0"
             aria-label="Skicka"
           >
             <Send size={16} />

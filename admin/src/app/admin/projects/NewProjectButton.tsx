@@ -37,11 +37,11 @@ export function NewProjectButton({ mode = "project" }: { mode?: "project" | "ide
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="rounded-btn bg-[var(--triad-teal)] text-black px-4 py-2 text-sm font-medium hover:brightness-110">
+      <button onClick={() => setOpen(true)} className="rounded-btn bg-[var(--triad-teal)] text-fixed-black px-4 py-2 text-sm font-medium hover:brightness-110">
         {triggerLabel}
       </button>
       {open && (
-        <div className="fixed inset-0 bg-black/60 grid place-items-center z-50 p-4" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 bg-[var(--scrim)] grid place-items-center z-50 p-4" onClick={() => setOpen(false)}>
           <form onClick={(e) => e.stopPropagation()} onSubmit={submit} className="w-full max-w-md glass rounded-modal p-6 space-y-4">
             <h3 className="font-heading text-lg font-semibold">{heading}</h3>
             <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={namePlaceholder} className="w-full rounded-btn bg-black/30 border border-white/10 px-3 py-2" />
@@ -53,7 +53,7 @@ export function NewProjectButton({ mode = "project" }: { mode?: "project" | "ide
             </select>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setOpen(false)} className="rounded-btn px-3 py-2 text-sm text-[var(--muted)]">Avbryt</button>
-              <button type="submit" disabled={saving} className="rounded-btn bg-[var(--triad-teal)] text-black px-4 py-2 text-sm font-medium disabled:opacity-50">
+              <button type="submit" disabled={saving} className="rounded-btn bg-[var(--triad-teal)] text-fixed-black px-4 py-2 text-sm font-medium disabled:opacity-50">
                 {saving ? "Sparar…" : "Spara"}
               </button>
             </div>

@@ -6,12 +6,45 @@
   --triad-teal: #00b4a8;
   --triad-navy: #0a2540;
   --triad-antracit: #2b2d2f;
+}
+
+/* Theme tokens. Dark is the default; the root layout sets data-theme="light"
+   on <html> from localStorage before first paint. A nested data-theme pins a
+   subtree to one theme (the login screen stays dark). */
+:root,
+[data-theme="dark"] {
   --bg: #0a1020;
   --surface: #0f1b35;
   --surface-hi: #13254a;
   --border: rgba(255, 255, 255, 0.08);
   --muted: #8494b0;
   --text: #e7ecf3;
+  --accent-text: #00b4a8;
+  --chip-teal: #6ae5dd;
+  --scrim: rgba(0, 0, 0, 0.6);
+  --scrollbar: rgba(255, 255, 255, 0.08);
+  --scrollbar-hover: rgba(255, 255, 255, 0.16);
+  --scroll-hint: var(--bg);
+  /* RGB channels behind Tailwind's `white` and `black` (see tailwind.config.ts). */
+  --fg-rgb: 255 255 255;
+  --recess-rgb: 0 0 0;
+}
+
+[data-theme="light"] {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --surface-hi: #e9eef5;
+  --border: rgba(10, 37, 64, 0.1);
+  --muted: #596780;
+  --text: #0a2540;
+  --accent-text: #0f766e;
+  --chip-teal: #0f766e;
+  --scrim: rgba(10, 37, 64, 0.4);
+  --scrollbar: rgba(10, 37, 64, 0.16);
+  --scrollbar-hover: rgba(10, 37, 64, 0.28);
+  --scroll-hint: var(--surface);
+  --fg-rgb: 10 37 64;
+  --recess-rgb: 255 255 255;
 }
 
 html, body {
@@ -20,12 +53,19 @@ html, body {
   font-family: "Roboto", system-ui, sans-serif;
 }
 
+[data-theme] { color: var(--text); }
+
 h1, h2, h3, h4, h5 { font-family: "Montserrat", system-ui, sans-serif; }
 
 .glass {
   background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
   border: 1px solid var(--border);
   backdrop-filter: blur(10px);
+}
+
+/* Light cards are solid surfaces on the grey page instead of translucent panes. */
+[data-theme="light"] .glass {
+  background: var(--surface);
 }
 
 .brand-gradient {
@@ -39,8 +79,8 @@ h1, h2, h3, h4, h5 { font-family: "Montserrat", system-ui, sans-serif; }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
 
 /* Scroll-hint: fades right edge on horizontally scrollable containers */
 .scroll-x-hint {
@@ -53,7 +93,7 @@ h1, h2, h3, h4, h5 { font-family: "Montserrat", system-ui, sans-serif; }
   right: 0;
   bottom: 0;
   width: 40px;
-  background: linear-gradient(to right, transparent, var(--bg));
+  background: linear-gradient(to right, transparent, var(--scroll-hint));
   pointer-events: none;
   border-radius: inherit;
 }

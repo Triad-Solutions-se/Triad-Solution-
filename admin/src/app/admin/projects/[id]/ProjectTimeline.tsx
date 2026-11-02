@@ -150,10 +150,10 @@ export function ProjectTimeline({
                     >
                       {showInsideLabels && (
                         <>
-                          <span className="text-[10px] font-medium text-black/80 whitespace-nowrap">
+                          <span className="text-[10px] font-medium text-fixed-black/80 whitespace-nowrap">
                             {fmtMonthDay(startTs)}
                           </span>
-                          <span className="text-[10px] font-medium text-black/80 whitespace-nowrap">
+                          <span className="text-[10px] font-medium text-fixed-black/80 whitespace-nowrap">
                             {fmtMonthDay(endTs!)}
                           </span>
                         </>

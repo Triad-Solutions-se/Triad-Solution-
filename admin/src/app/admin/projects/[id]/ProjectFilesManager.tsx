@@ -100,7 +100,7 @@ export function ProjectFilesManager({
     <div className="space-y-4">
       <button
         onClick={() => setOpen(true)}
-        className="w-full rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-3 py-2 text-sm font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm shadow-teal-500/20"
+        className="w-full rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-3 py-2 text-sm font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm shadow-teal-500/20"
       >
         <Upload size={16} />
         Ladda upp filer
@@ -178,7 +178,7 @@ export function ProjectFilesManager({
               <button
                 type="submit"
                 disabled={saving || !files || files.length === 0}
-                className="rounded-btn bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors"
+                className="rounded-btn bg-teal-500 hover:bg-teal-400 text-fixed-white px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors"
               >
                 {saving ? "Laddar upp…" : "Ladda upp"}
               </button>
