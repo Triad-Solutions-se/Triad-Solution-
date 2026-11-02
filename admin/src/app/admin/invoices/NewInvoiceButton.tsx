@@ -189,7 +189,7 @@ function NewInvoiceDialog({
   // för avtal (eller om offerten bara har månadsavgift), perioden från avtalsstart.
   useEffect(() => {
     if (!offer) return;
-    const hasOneTime = offerOneTimeItems(offer).length > 0;
+    const hasOneTime = computeSectionTotals(offerOneTimeItems(offer), 0).afterDiscount > 0;
     const hasMonthly = offerMonthlyItems(offer).length > 0;
     setIncludeOneTime(hasOneTime);
     setIncludeMonthly(hasMonthly && (!hasOneTime || !!agreement));

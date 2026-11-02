@@ -62,6 +62,8 @@ export type InvoiceRecord = {
   bank_account_id?: string | null;
   recurring_income_id?: string | null; // migration 0036
   credited_invoice_id: string | null;
+  email_to?: string | null; // migration 0038
+  emailed_at?: string | null; // migration 0038
   sent_at: string | null;
   paid_at: string | null;
   created_at: string;
@@ -279,6 +281,12 @@ export function firstOfNextMonthISO(from: string = todayISO()): string {
 export function periodLabel(start: string | null, end: string | null): string {
   if (start && end && start !== end) return `${start} – ${end}`;
   return start || end || "";
+}
+
+// ---------- E-post ----------
+
+export function isValidEmail(s: string | null | undefined): boolean {
+  return /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test((s ?? "").trim());
 }
 
 // ---------- Belopp ----------
