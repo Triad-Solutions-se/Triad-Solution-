@@ -30,14 +30,20 @@ import {
   todayISO,
 } from "@/lib/invoice";
 import {
+  type NextInvoice,
+  type Period,
   type RecurringPlan,
   BILLING_TIMINGS,
   FREQUENCIES,
   frequencyInfo,
   isFrequency,
   linesForPeriod,
+  monthList,
+  monthsPer,
   nextInvoicePeriod,
   periodAt,
+  periodIndexFrom,
+  periodName,
   planLines,
   rescaleLines,
   toMonthly,
@@ -74,6 +80,8 @@ type PlanInvoice = {
 };
 // Faktura som en plan har skapat, som Ekonomi-sidan skickar till planlistan.
 export type PlanInvoiceRef = PlanInvoice & { recurring_income_id: string | null };
+// Intäktsrad som planen lade in medan den var en ren intäktsplan.
+type PlanIncome = { id: string; date: string | null; status: string | null };
 
 export type RecurringPreset = { customerId?: string; agreementId?: string; offerId?: string };
 export type AgreementRef = { id: string; agreement_number: string | null };
@@ -98,20 +106,50 @@ function clampInt(raw: string, min: number, max: number, fallback: number): numb
   return Math.max(min, Math.min(max, n));
 }
 
-// Utkast som skapas direkt när planen sparas (perioder vars fakturadatum
-// redan passerat), max 24 som i genereringen.
-function dueNowCount(plan: RecurringPlan, today: string): number {
+// Perioder vars utkast skapas direkt när planen sparas (fakturadatumet har
+// redan passerat), max 24 som i genereringen. Perioder som redan har en
+// faktura hoppas över av det unika indexet och räknas inte.
+function duePeriods(plan: RecurringPlan, today: string, invoiced: Map<string, string>): Period[] {
   const anchor = plan.start_date ?? plan.next_due_date;
-  if (!anchor) return 0;
+  if (!anchor) return [];
   let cursor = plan.next_due_date;
-  let n = 0;
-  while (n < 24) {
+  const due: Period[] = [];
+  for (let n = 0; n < 24; n++) {
     const next = nextInvoicePeriod({ ...plan, next_due_date: cursor });
     if (!next || next.invoiceDate > today) break;
-    n++;
+    if (!invoiced.has(next.period.start)) due.push(next.period);
     cursor = periodAt(anchor, plan.frequency, next.index + 1).start;
   }
-  return n;
+  return due;
+}
+
+// Första perioden från `next` som planen inte redan har fakturerat.
+function firstUninvoiced(
+  plan: RecurringPlan,
+  next: NextInvoice | null,
+  invoiced: Map<string, string>,
+): NextInvoice | null {
+  const anchor = plan.start_date ?? plan.next_due_date;
+  let cur = next;
+  for (let n = 0; cur && anchor && invoiced.has(cur.period.start) && n < 240; n++) {
+    cur = nextInvoicePeriod({ ...plan, next_due_date: periodAt(anchor, plan.frequency, cur.index + 1).start });
+  }
+  return cur;
+}
+
+// Perioderna att välja som nästa faktura: från planens start till ett år
+// efter idag (eller efter vald period, om den ligger senare).
+function periodChoices(anchor: string, freq: string, endDate: string | null, selected: string, today: string): Period[] {
+  const last =
+    Math.max(periodIndexFrom(anchor, freq, today), periodIndexFrom(anchor, freq, selected)) +
+    Math.ceil(12 / monthsPer(freq));
+  const choices: Period[] = [];
+  for (let k = Math.max(0, last - 120); k <= last; k++) {
+    const p = periodAt(anchor, freq, k);
+    if (endDate && p.start > endDate) break;
+    choices.push(p);
+  }
+  return choices;
 }
 
 // Raden en intäktsplan får när den byter till fakturering: à-priset exkl.
@@ -190,6 +228,10 @@ function RecurringPlanModal({
   const [offers, setOffers] = useState<OfferRow[]>([]);
   const [agreements, setAgreements] = useState<AgreementRow[]>([]);
   const [planInvoices, setPlanInvoices] = useState<PlanInvoice[]>([]);
+  const [planIncome, setPlanIncome] = useState<PlanIncome[]>([]);
+  // Väntande intäkter för perioder som nu faktureras tas bort, så att samma
+  // månad inte räknas två gånger.
+  const [replaceIncome, setReplaceIncome] = useState(true);
   const [saving, setSaving] = useState<null | "save" | "invoice" | "delete">(null);
   const [error, setError] = useState<string | null>(null);
   // Nya planer fylls i från avtalet/offerten när underlaget väljs (och när
@@ -257,7 +299,8 @@ function RecurringPlanModal({
     };
   }, [supabase, f.customer_id]);
 
-  // Fakturor som planen redan skapat.
+  // Fakturor som planen redan skapat (alla, så att periodväljaren kan visa
+  // vilka perioder som redan är fakturerade).
   useEffect(() => {
     if (!initial?.create_invoices) return;
     let cancelled = false;
@@ -266,7 +309,6 @@ function RecurringPlanModal({
       .select("id,number,status,due_date,period_start,period_end,amount_sek,currency,credited_invoice_id")
       .eq("recurring_income_id", initial.id)
       .order("period_start", { ascending: false })
-      .limit(6)
       .then(({ data }) => {
         if (!cancelled) setPlanInvoices((data ?? []) as PlanInvoice[]);
       });
@@ -274,6 +316,30 @@ function RecurringPlanModal({
       cancelled = true;
     };
   }, [supabase, initial?.id, initial?.create_invoices]);
+
+  // Intäkter som planen lade in som ren intäktsplan.
+  useEffect(() => {
+    if (!initial) return;
+    let cancelled = false;
+    supabase
+      .from("income")
+      .select("id,date,status")
+      .eq("recurring_income_id", initial.id)
+      .order("date")
+      .then(({ data }) => {
+        if (!cancelled) setPlanIncome((data ?? []) as PlanIncome[]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, initial?.id]);
+
+  // Periodstart → fakturanummer för perioder som planen redan fakturerat.
+  const invoicedStarts = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const inv of planInvoices) if (inv.period_start) m.set(inv.period_start, inv.number);
+    return m;
+  }, [planInvoices]);
 
   const agreement = f.source_ref.startsWith("agreement:")
     ? agreements.find((a) => a.id === f.source_ref.slice("agreement:".length)) ?? null
@@ -335,9 +401,10 @@ function RecurringPlanModal({
     project_id: f.project_id || null,
     bank_account_id: f.bank_account_id || null,
     frequency: f.frequency,
-    // Byter en befintlig intäktsplan till fakturering fortsätter den från
-    // nästa förfallodatum, så redan passerade perioder faktureras inte.
-    next_due_date: initial?.next_due_date ?? null,
+    // Markören: starten på perioden som faktureras härnäst. En intäktsplan
+    // som byter till fakturering fortsätter från nästa förfallodatum, om man
+    // inte väljer en tidigare period för att fakturera i efterhand.
+    next_due_date: f.next_due_date || null,
     start_date: f.start_date || null,
     end_date: f.end_date || null,
     active: f.active,
@@ -350,8 +417,44 @@ function RecurringPlanModal({
     billing_timing: f.billing_timing,
     lead_days: leadDays,
   };
+  // Vald period (markören) och första perioden från den som inte redan har en
+  // faktura — dit hoppar genereringen, eftersom det unika indexet stoppar dubbletter.
   const next = mode === "invoice" ? nextInvoicePeriod(draftPlan) : null;
-  const dueNow = mode === "invoice" && f.active ? dueNowCount(draftPlan, today) : 0;
+  const upcoming = firstUninvoiced(draftPlan, next, invoicedStarts);
+  const due = mode === "invoice" && f.active ? duePeriods(draftPlan, today, invoicedStarts) : [];
+  const choices =
+    mode === "invoice" && f.start_date
+      ? periodChoices(f.start_date, f.frequency, f.end_date || null, f.next_due_date || f.start_date, today)
+      : [];
+  // Intäkter i perioder som nu ska faktureras, när en intäktsplan byter till
+  // fakturering eller markören flyttas bakåt: de väntande ersätts av
+  // fakturorna, de bekräftade får en faktura till.
+  const overlapFrom =
+    next && f.active && (!initial?.create_invoices || !initial.next_due_date || next.period.start < initial.next_due_date)
+      ? next.period.start
+      : null;
+  const overlap = overlapFrom
+    ? planIncome.filter((r) => r.date && r.date >= overlapFrom && (!f.end_date || r.date <= f.end_date))
+    : [];
+  const pendingOverlap = overlap.filter((r) => r.status !== "received");
+  const receivedOverlap = overlap.filter(
+    (r) =>
+      r.status === "received" &&
+      !planInvoices.some((i) => i.period_start && i.period_start <= r.date! && r.date! <= (i.period_end ?? i.period_start)),
+  );
+
+  function choiceLabel(p: Period): string {
+    const invoiceNumber = invoicedStarts.get(p.start);
+    const income = planIncome.filter((r) => r.date && r.date >= p.start && r.date <= p.end);
+    return [
+      periodName(p),
+      invoiceNumber ? `fakturerad ${invoiceNumber}` : null,
+      income.length ? (income.some((r) => r.status === "received") ? "intäkt bekräftad" : "intäkt väntar") : null,
+      p.start <= today && today <= p.end ? "pågår" : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
 
   function payload() {
     const common = {
@@ -387,6 +490,7 @@ function RecurringPlanModal({
       lead_days: leadDays,
       invoice_message: f.invoice_message.trim() || null,
       our_reference: f.our_reference.trim() || null,
+      next_due_date: (upcoming ?? next)?.period.start ?? (f.next_due_date || null),
       amount_sek: totals.toPay,
       auto_send: f.auto_send,
       email_to: f.email_to.trim() || null,
@@ -433,6 +537,15 @@ function RecurringPlanModal({
     if (res.error || !res.data) {
       setError(explain(res.error?.message ?? "Kunde inte spara."));
       return null;
+    }
+    if (mode === "invoice" && replaceIncome && pendingOverlap.length) {
+      const ids = pendingOverlap.map((r) => r.id);
+      const { error: delErr } = await supabase.from("income").delete().in("id", ids);
+      if (delErr) {
+        setError(`Planen sparades, men de väntande intäkterna kunde inte tas bort: ${delErr.message}`);
+        return null;
+      }
+      setPlanIncome((rows) => rows.filter((r) => !ids.includes(r.id)));
     }
     return res.data as RecurringPlan;
   }
@@ -557,10 +670,11 @@ function RecurringPlanModal({
         )}
         {converting && mode === "invoice" && (
           <div className="rounded-btn border border-teal-400/30 bg-teal-400/5 p-3 text-xs text-teal-200">
-            Faktureringen fortsätter från {initial?.next_due_date ? fmtDate(initial.next_due_date) : "nästa period"}, så
-            redan passerade perioder faktureras inte. Raden nedan är räknad så att kunden betalar samma belopp som
-            förut, inkl. moms — justera den om det behövs. Intäkter som planen redan har lagt in ligger kvar under
-            Intäkter, där du bekräftar eller tar bort dem.
+            Faktureringen fortsätter från {initial?.next_due_date ? fmtDate(initial.next_due_date) : "nästa period"} —
+            vill du fakturera passerade perioder i efterhand, välj en tidigare period under{" "}
+            <strong>Nästa faktura avser</strong>. Raden nedan är räknad så att kunden betalar samma belopp som förut,
+            inkl. moms — justera den om det behövs. Intäkter som planen redan har lagt in ligger kvar under Intäkter,
+            om de inte ersätts av fakturorna.
           </div>
         )}
 
@@ -713,6 +827,51 @@ function RecurringPlanModal({
               )}
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+              <label className="block">
+                <span className="text-xs text-[var(--muted)]">{isEdit ? "Nästa faktura avser" : "Första fakturan avser"}</span>
+                <select
+                  value={next?.period.start ?? ""}
+                  onChange={(e) => setF((p) => ({ ...p, next_due_date: e.target.value }))}
+                  disabled={choices.length === 0}
+                  className={`mt-1 ${input} disabled:opacity-50`}
+                >
+                  {!next && <option value="">{f.start_date ? "Inga fler perioder" : "Ange när första perioden börjar"}</option>}
+                  {choices.map((p) => (
+                    <option key={p.start} value={p.start}>
+                      {choiceLabel(p)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="text-[11px] text-[var(--muted)] sm:pb-2">
+                Välj en tidigare period för att fakturera i efterhand, eller en senare för att hoppa över perioder.
+              </p>
+            </div>
+
+            {pendingOverlap.length > 0 && (
+              <label className="flex items-start gap-2 rounded-btn border border-white/10 bg-black/20 p-3 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={replaceIncome}
+                  onChange={(e) => setReplaceIncome(e.target.checked)}
+                  className="accent-teal-500 mt-0.5"
+                />
+                <span>
+                  {pendingOverlap.length === 1
+                    ? `Ta bort den väntande intäkten för ${monthList(pendingOverlap.map((r) => r.date!))} — fakturan ersätter den, så att perioden inte räknas två gånger.`
+                    : `Ta bort de ${pendingOverlap.length} väntande intäkterna för ${monthList(pendingOverlap.map((r) => r.date!))} — fakturorna ersätter dem, så att perioderna inte räknas två gånger.`}
+                </span>
+              </label>
+            )}
+            {receivedOverlap.length > 0 && (
+              <div className="rounded-btn border border-amber-400/30 bg-amber-400/5 p-3 text-xs text-amber-200">
+                {receivedOverlap.length === 1
+                  ? `${monthList(receivedOverlap.map((r) => r.date!))} har redan en bekräftad intäkt men får ändå en faktura med det här valet. Har kunden redan betalat, ta bort det utkastet under Fakturor efteråt.`
+                  : `${monthList(receivedOverlap.map((r) => r.date!))} har redan bekräftade intäkter men får ändå fakturor med det här valet. Har kunden redan betalat, ta bort de utkasten under Fakturor efteråt.`}
+              </div>
+            )}
+
             <div className="rounded-btn border border-white/10 bg-black/20 p-3 space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[10px] uppercase tracking-wider text-[var(--muted)]">
@@ -772,7 +931,14 @@ function RecurringPlanModal({
                     className={`col-span-4 sm:col-span-2 ${cell} font-mono`}
                   />
                   <div className="col-span-2 sm:col-span-2 flex items-center justify-end gap-1">
-                    <span className="font-mono text-xs text-[var(--muted)] truncate">{fmtAmount(lineAmount(l))}</span>
+                    <div className="min-w-0 text-right font-mono text-xs text-[var(--muted)]">
+                      <div className="truncate">{fmtAmount(lineAmount(l))}</div>
+                      {l.discount_pct > 0 && (
+                        <div className="text-[10px] text-amber-300" title="Rabatt från offerten — beloppet är efter rabatt">
+                          −{l.discount_pct} %
+                        </div>
+                      )}
+                    </div>
                     <button
                       type="button"
                       onClick={() => setLines((ls) => ls.filter((x) => x.id !== l.id))}
@@ -866,11 +1032,13 @@ function RecurringPlanModal({
               <div className="flex flex-wrap justify-between gap-2">
                 <span className="text-[var(--muted)]">{isEdit ? "Nästa faktura" : "Första fakturan"}</span>
                 <span className="text-right">
-                  {next ? (
+                  {upcoming ? (
                     <>
-                      period {periodLabel(next.period.start, next.period.end)} ·{" "}
-                      {next.invoiceDate <= today ? "skapas när du sparar" : `utkast ${fmtDate(next.invoiceDate)}`}
+                      {periodName(upcoming.period)} ·{" "}
+                      {upcoming.invoiceDate <= today ? "skapas när du sparar" : `utkast ${fmtDate(upcoming.invoiceDate)}`}
                     </>
+                  ) : next ? (
+                    "Alla perioder är redan fakturerade"
                   ) : f.start_date ? (
                     "Inga fler perioder (slutdatum passerat)"
                   ) : (
@@ -878,10 +1046,17 @@ function RecurringPlanModal({
                   )}
                 </span>
               </div>
-              {dueNow > 1 && (
+              {next && upcoming?.period.start !== next.period.start && (
+                <div className="text-[var(--muted)]">
+                  Perioder från {periodName(next.period)} som redan är fakturerade hoppas över.
+                </div>
+              )}
+              {due.length > 1 && (
                 <div className="text-amber-300">
-                  {dueNow} perioder har redan passerat och skapas som utkast direkt. Börjar fakturaperioderna
-                  senare, ändra &quot;Första period börjar&quot;.
+                  {due.length} fakturautkast skapas direkt när du sparar (
+                  {periodName({ start: due[0].start, end: due[due.length - 1].end })})
+                  {f.auto_send ? " och mejlas till kunden vid nästa dagliga körning" : ""}. Ska inte alla faktureras,
+                  välj en senare period ovan.
                 </div>
               )}
             </div>
@@ -923,7 +1098,7 @@ function RecurringPlanModal({
           <div className="space-y-1">
             <div className="text-[10px] uppercase tracking-wider text-[var(--muted)]">Senaste fakturor</div>
             <ul className="divide-y divide-white/5 rounded-btn border border-white/10">
-              {planInvoices.map((inv) => (
+              {planInvoices.slice(0, 6).map((inv) => (
                 <li key={inv.id} className="px-3 py-2 flex items-center justify-between gap-3 text-xs">
                   <Link href={`/admin/invoices/${inv.id}`} className="font-mono font-semibold hover:text-teal-300">
                     {inv.number}
@@ -953,12 +1128,12 @@ function RecurringPlanModal({
                 {saving === "delete" ? "Tar bort…" : "Ta bort"}
               </button>
             )}
-            {mode === "invoice" && isEdit && next && (
+            {mode === "invoice" && isEdit && upcoming && (
               <button
                 type="button"
                 onClick={invoiceNow}
                 disabled={!!saving}
-                title={`${f.auto_send ? "Skapar och mejlar fakturan" : "Skapar utkastet"} för perioden ${periodLabel(next.period.start, next.period.end)} direkt`}
+                title={`${f.auto_send ? "Skapar och mejlar fakturan" : "Skapar utkastet"} för perioden ${periodLabel(upcoming.period.start, upcoming.period.end)} direkt`}
                 className="rounded-btn border border-white/10 hover:bg-white/5 px-3 py-2 text-sm flex items-center gap-2 disabled:opacity-50"
               >
                 <Receipt size={14} />{" "}
