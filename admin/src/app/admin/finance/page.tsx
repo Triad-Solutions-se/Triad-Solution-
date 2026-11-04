@@ -12,7 +12,10 @@ import { type RecurringPlan, toMonthly } from "@/lib/recurring";
 import { NewInvoiceButton } from "../invoices/NewInvoiceButton";
 import { InvoiceStatusChip } from "../invoices/InvoiceStatusChip";
 import { NewExpenseButton, ExpensesTable } from "./ExpensesSection";
-import { NewIncomeButton, IncomeTable } from "./IncomeSection";
+import { NewIncomeButton, type Income } from "./IncomeSection";
+import { CustomerIncomeTable, type CustomerIncomeRow } from "./CustomerIncomeSection";
+import { FinanceStat, GroupHeading, Section } from "./FinanceBlocks";
+import { customerEconomyHref, economyByCustomer } from "@/lib/customer";
 import {
   BankAccountsGrid,
   NewBankAccountButton,
@@ -216,6 +219,17 @@ export default async function FinancePage() {
 
   const unreimbursed = sumAmount(expensesData.filter((r: any) => r.status !== "reimbursed"));
 
+  // Intäkter per kund: alla kunder med intäkter, fakturor eller återkommande planer.
+  const economy = economyByCustomer(
+    { income: incomeData, invoices: invoicesData, plans: recurringIncomeData },
+    today,
+  );
+  const customerIncomeRows: CustomerIncomeRow[] = customerList
+    .filter((c) => economy.has(c.id))
+    .map((c) => ({ ...economy.get(c.id)!, id: c.id, name: c.name }))
+    .sort((a, b) => a.name.localeCompare(b.name, "sv"));
+  const unassignedIncome = incomeData.filter((r: any) => !r.customer_id) as Income[];
+
   // Cashflow: bankens bokförda transaktioner för kopplade konton, portalens
   // poster (mottagna intäkter, återbetalda utlägg, betalda betalningar) för
   // resten. Bankhistoriken börjar vid kontots första bokförda transaktion.
@@ -371,7 +385,13 @@ export default async function FinancePage() {
                   </span>
                 </td>
                 <td className="p-3 text-[var(--muted)]">
-                  {r.customer_name ?? customerList.find((c) => c.id === r.customer_id)?.name ?? "—"}
+                  {r.customer_id ? (
+                    <Link href={customerEconomyHref(r.customer_id)} className="hover:text-teal-300">
+                      {r.customer_name ?? customerList.find((c) => c.id === r.customer_id)?.name ?? "Kund"}
+                    </Link>
+                  ) : (
+                    r.customer_name ?? "—"
+                  )}
                 </td>
                 <td className="p-3 text-[var(--muted)]">{fmtDate(r.issued_at)}</td>
                 <td className="p-3 text-[var(--muted)]">{r.credited_invoice_id ? "—" : fmtDate(r.due_date)}</td>
@@ -422,14 +442,16 @@ export default async function FinancePage() {
       </Section>
 
       <Section
-        title="Intäkter"
-        hint="Bekräfta en intäkt när pengarna har kommit in. Betalda fakturor hamnar här automatiskt."
+        title="Intäkter per kund"
+        hint="Öppna en kund för fakturor, betalt och obetalt, planer och intäkter. Betalda fakturor bokförs som intäkter automatiskt."
         right={
           <NewIncomeButton customers={customerList} projects={projectList} bankAccounts={bankList} variant="small" />
         }
       >
-        <IncomeTable
-          rows={incomeData as any}
+        <CustomerIncomeTable
+          rows={customerIncomeRows}
+          unassigned={unassignedIncome}
+          unassignedEconomy={economy.get(null) ?? null}
           customers={customerList}
           projects={projectList}
           bankAccounts={bankList}
@@ -499,79 +521,5 @@ export default async function FinancePage() {
         />
       </Section>
     </>
-  );
-}
-
-const financeColorMap = {
-  green: { accentBar: "bg-emerald-400", numColor: "text-emerald-300" },
-  red: { accentBar: "bg-rose-400", numColor: "text-rose-300" },
-  teal: { accentBar: "bg-teal-400", numColor: "text-teal-300" },
-  blue: { accentBar: "bg-sky-400", numColor: "text-sky-300" },
-  amber: { accentBar: "bg-amber-400", numColor: "text-amber-300" },
-};
-
-function FinanceStat({
-  label,
-  value,
-  color,
-  hint,
-  note,
-}: {
-  label: string;
-  value: string;
-  color: keyof typeof financeColorMap;
-  // Vad siffran räknar, på en rad under beloppet.
-  hint?: string;
-  // Något som behöver göras (förfallna fakturor, planer utan faktura).
-  note?: { text: string; tone: "red" | "amber" };
-}) {
-  const c = financeColorMap[color];
-  return (
-    <div className="glass rounded-xl border border-white/10 p-5 relative overflow-hidden">
-      <div className={`absolute left-0 top-0 bottom-0 w-1 ${c.accentBar}`} />
-      <div className="pl-2">
-        <div className="text-xs uppercase tracking-wider text-[var(--muted)]">{label}</div>
-        <div className={`font-heading text-xl sm:text-2xl font-bold mt-2 ${c.numColor}`}>{value}</div>
-        {hint && <div className="text-xs text-[var(--muted)] mt-1">{hint}</div>}
-        {note && (
-          <div className={`text-xs mt-0.5 ${note.tone === "red" ? "text-rose-300" : "text-amber-300"}`}>
-            {note.text}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function GroupHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="font-heading text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mt-10 mb-3">
-      {children}
-    </h2>
-  );
-}
-
-function Section({
-  title,
-  hint,
-  right,
-  children,
-}: {
-  title: string;
-  hint?: string;
-  right?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="glass rounded-xl border border-white/10 overflow-hidden mb-6">
-      <header className="px-5 py-3 border-b border-white/5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="min-w-0">
-          <h2 className="font-heading font-semibold">{title}</h2>
-          {hint && <p className="text-xs text-[var(--muted)] mt-0.5">{hint}</p>}
-        </div>
-        {right && <div className="flex flex-wrap items-center gap-2">{right}</div>}
-      </header>
-      <div className="overflow-x-auto scroll-x-hint">{children}</div>
-    </section>
   );
 }

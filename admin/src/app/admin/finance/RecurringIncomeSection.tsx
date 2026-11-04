@@ -49,6 +49,7 @@ import {
   toMonthly,
 } from "@/lib/recurring";
 import { invoiceNextPeriodNow } from "@/lib/recurring-data";
+import { customerEconomyHref } from "@/lib/customer";
 import { InvoiceStatusChip } from "../invoices/InvoiceStatusChip";
 
 type Opt = { id: string; name: string };
@@ -1215,12 +1216,17 @@ export function RecurringIncomeTable({
   customers,
   agreements = [],
   invoices = [],
+  linkCustomers = true,
+  emptyText = "Inga återkommande intäkter än. Lägg upp återkommande fakturering från ett avtal eller med Ny plan ovan.",
 }: {
   rows: RecurringPlan[];
   customers: Opt[];
   agreements?: AgreementRef[];
   // Fakturor som planerna har skapat (invoices.recurring_income_id).
   invoices?: PlanInvoiceRef[];
+  // Kundnamnet länkar till kundsidan — av på kundsidan själv.
+  linkCustomers?: boolean;
+  emptyText?: string;
 }) {
   // mode "invoice": öppna en intäktsplan direkt i faktureringsläget.
   const [edit, setEdit] = useState<{ plan: RecurringPlan; mode?: "invoice" } | null>(null);
@@ -1276,7 +1282,19 @@ export function RecurringIncomeTable({
                   </div>
                 </td>
                 <td className="p-3 text-[var(--muted)]">
-                  <div>{customerName(r.customer_id) ?? "—"}</div>
+                  <div>
+                    {linkCustomers && r.customer_id && customerName(r.customer_id) ? (
+                      <Link
+                        href={customerEconomyHref(r.customer_id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="hover:text-teal-300"
+                      >
+                        {customerName(r.customer_id)}
+                      </Link>
+                    ) : (
+                      customerName(r.customer_id) ?? "—"
+                    )}
+                  </div>
                   {agreement && (
                     <Link
                       href={`/admin/templates/avtal/${agreement.id}`}
@@ -1355,7 +1373,7 @@ export function RecurringIncomeTable({
           {!rows.length && (
             <tr>
               <td colSpan={7} className="p-8 text-center text-sm text-[var(--muted)]">
-                Inga återkommande intäkter än. Lägg upp återkommande fakturering från ett avtal eller med Ny plan ovan.
+                {emptyText}
               </td>
             </tr>
           )}

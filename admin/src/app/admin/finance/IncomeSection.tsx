@@ -13,7 +13,7 @@ import { NEW_BUTTON_CLS, type NewButtonVariant } from "./button-styles";
 type ProjectOpt = { id: string; name: string };
 type CustomerOpt = { id: string; name: string };
 type BankOpt = { id: string; name: string };
-type Income = {
+export type Income = {
   id: string;
   description: string;
   amount_sek: number | string;
@@ -56,6 +56,7 @@ function IncomeFormModal({
   bankAccounts,
   initial,
   invoiceNumber,
+  defaultCustomerId,
 }: {
   open: boolean;
   onClose: () => void;
@@ -64,6 +65,8 @@ function IncomeFormModal({
   bankAccounts: BankOpt[];
   initial?: Income | null;
   invoiceNumber?: string | null;
+  // Förvald kund för en ny intäkt (kundsidan under Ekonomi).
+  defaultCustomerId?: string;
 }) {
   const supabase = createClient();
   const router = useRouter();
@@ -85,7 +88,7 @@ function IncomeFormModal({
           project_id: initial.project_id ?? "",
           bank_account_id: initial.bank_account_id ?? "",
         }
-      : emptyForm,
+      : { ...emptyForm, customer_id: defaultCustomerId ?? "" },
   );
 
   async function submit(e: React.FormEvent) {
@@ -277,12 +280,14 @@ export function NewIncomeButton({
   customers,
   projects,
   bankAccounts,
+  customerId,
   label = "Ny intäkt",
   variant = "secondary",
 }: {
   customers: CustomerOpt[];
   projects: ProjectOpt[];
   bankAccounts: BankOpt[];
+  customerId?: string;
   label?: string;
   variant?: NewButtonVariant;
 }) {
@@ -300,6 +305,7 @@ export function NewIncomeButton({
           customers={customers}
           projects={projects}
           bankAccounts={bankAccounts}
+          defaultCustomerId={customerId}
         />
       )}
     </>
@@ -312,12 +318,17 @@ export function IncomeTable({
   projects,
   bankAccounts,
   invoiceNumbers = {},
+  showCustomer = true,
+  emptyText = "Inga intäkter än.",
 }: {
   rows: Income[];
   customers: CustomerOpt[];
   projects: ProjectOpt[];
   bankAccounts: BankOpt[];
   invoiceNumbers?: Record<string, string>;
+  // Kundkolumnen döljs på kundsidan, där alla rader har samma kund.
+  showCustomer?: boolean;
+  emptyText?: string;
 }) {
   const router = useRouter();
   const [edit, setEdit] = useState<Income | null>(null);
@@ -344,7 +355,7 @@ export function IncomeTable({
         <thead className="bg-white/[0.03] text-left text-[var(--muted)] text-xs uppercase tracking-wider">
           <tr>
             <th className="p-3">Beskrivning</th>
-            <th className="p-3">Kund</th>
+            {showCustomer && <th className="p-3">Kund</th>}
             <th className="p-3">Projekt</th>
             <th className="p-3">Konto</th>
             <th className="p-3">Datum</th>
@@ -373,7 +384,7 @@ export function IncomeTable({
                   r.source && <div className="text-xs text-[var(--muted)]">{r.source}</div>
                 )}
               </td>
-              <td className="p-3 text-[var(--muted)]">{customerName(r.customer_id) ?? "—"}</td>
+              {showCustomer && <td className="p-3 text-[var(--muted)]">{customerName(r.customer_id) ?? "—"}</td>}
               <td className="p-3 text-[var(--muted)]">{projectName(r.project_id) ?? "—"}</td>
               <td className="p-3 text-[var(--muted)]">{bankName(r.bank_account_id) ?? "—"}</td>
               <td className="p-3 text-[var(--muted)]">{fmtDate(r.date)}</td>
@@ -403,8 +414,8 @@ export function IncomeTable({
           ))}
           {!rows.length && (
             <tr>
-              <td colSpan={7} className="p-8 text-center text-sm text-[var(--muted)]">
-                Inga intäkter än.
+              <td colSpan={showCustomer ? 7 : 6} className="p-8 text-center text-sm text-[var(--muted)]">
+                {emptyText}
               </td>
             </tr>
           )}
