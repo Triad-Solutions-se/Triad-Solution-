@@ -8,6 +8,7 @@ import { EditCustomerButton } from "./EditCustomerButton";
 import { NewInvoiceButton } from "../invoices/NewInvoiceButton";
 import { effectiveStatus, fmtAmount, isOutstanding } from "@/lib/invoice";
 import { toMonthly } from "@/lib/recurring";
+import { customerEconomyHref, customerStatus } from "@/lib/customer";
 import { AlertTriangle, Search } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -107,10 +108,12 @@ export default async function CustomersPage({
               {c.name?.slice(0, 2).toUpperCase() ?? "?"}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="font-semibold text-sm truncate">{c.name}</div>
+              <Link href={customerEconomyHref(c.id)} className="block font-semibold text-sm truncate hover:text-teal-300">
+                {c.name}
+              </Link>
               <div className="text-xs text-[var(--muted)] truncate">{c.contact_person ?? c.email ?? c.industry ?? "—"}</div>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                <Chip tone={statusTone(c.status)}>{statusLabel(c.status)}</Chip>
+                <Chip tone={customerStatus(c.status).tone}>{customerStatus(c.status).label}</Chip>
                 {(!c.org_number || !c.address) && (
                   <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-400/10 text-amber-200 px-2 py-0.5 text-[10px]">
                     <AlertTriangle size={10} /> Saknar avtalsuppgifter
@@ -148,7 +151,9 @@ export default async function CustomersPage({
               {customers.map((c: any) => (
                 <tr key={c.id} className="hover:bg-white/[0.02]">
                   <td className="p-3">
-                    <div className="font-medium">{c.name}</div>
+                    <Link href={customerEconomyHref(c.id)} className="font-medium hover:text-teal-300">
+                      {c.name}
+                    </Link>
                     {c.website && (
                       <a href={c.website.startsWith("http") ? c.website : `https://${c.website}`} target="_blank" rel="noreferrer" className="text-xs text-teal-400 hover:underline">
                         {c.website}
@@ -173,7 +178,7 @@ export default async function CustomersPage({
                     )}
                   </td>
                   <td className="p-3 text-[var(--muted)]">{c.contact_person ?? "—"}</td>
-                  <td className="p-3"><Chip tone={statusTone(c.status)}>{statusLabel(c.status)}</Chip></td>
+                  <td className="p-3"><Chip tone={customerStatus(c.status).tone}>{customerStatus(c.status).label}</Chip></td>
                   <td className="p-3 text-[var(--muted)]">
                     <div className="flex flex-col gap-0.5">
                       {c.email && <a href={`mailto:${c.email}`} className="text-xs hover:text-white">{c.email}</a>}
@@ -226,7 +231,7 @@ function InvoiceSummary({
   ) : null;
   if (!stats) return recurring ? <span className="text-xs flex flex-col">{recurring}</span> : <span className="text-xs text-[var(--muted)]">—</span>;
   return (
-    <Link href={`/admin/invoices?customer=${customerId}`} className="text-xs hover:text-white flex flex-col gap-0.5">
+    <Link href={customerEconomyHref(customerId)} className="text-xs hover:text-white flex flex-col gap-0.5">
       <span className="text-[var(--muted)]">{stats.count} st</span>
       {stats.outstanding !== 0 ? (
         <span className={`font-mono ${stats.overdue ? "text-rose-300" : "text-sky-300"}`}>
@@ -238,19 +243,4 @@ function InvoiceSummary({
       {recurring}
     </Link>
   );
-}
-
-function statusTone(s: string | null): any {
-  if (s === "active") return "green";
-  if (s === "prospect") return "blue";
-  if (s === "inactive") return "gray";
-  if (s === "closed") return "red";
-  return "gray";
-}
-function statusLabel(s: string | null) {
-  if (s === "active") return "Aktiv";
-  if (s === "prospect") return "Prospekt";
-  if (s === "inactive") return "Inaktiv";
-  if (s === "closed") return "Avslutad";
-  return s ?? "—";
 }
