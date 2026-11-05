@@ -6,8 +6,10 @@ import {
   resolveWeek,
   stockholmNow,
   type Member,
+  type MemberTimeSummary,
   type WorkBlock,
 } from "@/lib/work-plan";
+import { TimeSummary } from "./TimeSummary";
 import { WeekPlanner } from "./WeekPlanner";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +30,7 @@ export default async function CalendarPage({
     },
     blocks,
     profiles,
+    summary,
   ] = await Promise.all([
     supabase.auth.getUser(),
     supabase
@@ -36,7 +39,9 @@ export default async function CalendarPage({
       .gte("work_date", monday)
       .lte("work_date", addDays(monday, 6)),
     supabase.from("profiles").select("id,display_name").order("created_at"),
+    supabase.rpc("member_time_summary", { p_week_start: monday }),
   ]);
+  const members = (profiles.data ?? []) as Member[];
 
   return (
     <>
@@ -48,9 +53,17 @@ export default async function CalendarPage({
         monday={monday}
         today={today}
         userId={user?.id ?? ""}
-        members={(profiles.data ?? []) as Member[]}
+        members={members}
         initialBlocks={(blocks.data ?? []) as WorkBlock[]}
       />
+      {summary.data && (
+        <TimeSummary
+          className="mt-6"
+          members={members}
+          summary={summary.data as MemberTimeSummary[]}
+          monday={monday}
+        />
+      )}
     </>
   );
 }
