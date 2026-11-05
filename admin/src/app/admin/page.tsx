@@ -1,7 +1,14 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { fmtDate, fmtDateTime } from "@/lib/date";
-import { WORK_BLOCK_FIELDS, addDays, mondayOf, stockholmNow, type WorkBlock } from "@/lib/work-plan";
+import {
+  WORK_BLOCK_FIELDS,
+  addDays,
+  mondayOf,
+  stockholmNow,
+  type MemberTimeSummary,
+  type WorkBlock,
+} from "@/lib/work-plan";
 import { PageHeader } from "@/components/PageHeader";
 import { Chip } from "@/components/Chip";
 import { CheckCircle2, CheckSquare, FolderKanban, Calendar, Users } from "lucide-react";
@@ -9,6 +16,7 @@ import { DashboardTaskRow } from "./DashboardTaskRow";
 import type { Task as TaskCardTask } from "./tasks/TaskCard";
 import { WorkloadDonut } from "@/components/WorkloadDonut";
 import { ProjectTimeline, type TimelineTask } from "./projects/[id]/ProjectTimeline";
+import { TimeSummary } from "./calendar/TimeSummary";
 import { WeekPlanOverview } from "./calendar/WeekPlanOverview";
 
 export const dynamic = "force-dynamic";
@@ -53,7 +61,7 @@ export default async function OverviewPage() {
 
   const taskFields =
     "id,title,description,status,priority,start_at,due_at,assignee_ids,project:projects(id,name)";
-  const [openTasksData, tasksMine, projects, meetings, customers, profilesData, workBlocks] = await Promise.all([
+  const [openTasksData, tasksMine, projects, meetings, customers, profilesData, workBlocks, timeSummary] = await Promise.all([
     supabase
       .from("tasks")
       .select("assignee_ids", { count: "exact" })
@@ -81,6 +89,7 @@ export default async function OverviewPage() {
       .select(WORK_BLOCK_FIELDS)
       .gte("work_date", monday)
       .lte("work_date", addDays(monday, 6)),
+    supabase.rpc("member_time_summary", { p_week_start: monday }),
   ]);
 
   const profileById = new Map<string, { id: string; display_name: string | null }>(
@@ -143,6 +152,15 @@ export default async function OverviewPage() {
           monday={monday}
           today={today}
         />
+
+        {timeSummary.data && (
+          <TimeSummary
+            className="lg:col-span-3"
+            members={[...profileById.values()]}
+            summary={timeSummary.data as MemberTimeSummary[]}
+            monday={monday}
+          />
+        )}
 
         <section className="glass rounded-xl border border-white/10 p-5">
           <div className="flex items-center justify-between mb-4">

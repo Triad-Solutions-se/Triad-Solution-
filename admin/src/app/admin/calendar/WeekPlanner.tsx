@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/Modal";
-import { fmtDuration } from "@/lib/date";
 import {
   DAY_MINUTES,
   SLOT_MINUTES,
@@ -14,6 +13,7 @@ import {
   blockRange,
   fmtDay,
   fmtMinute,
+  fmtMinutes,
   fmtRange,
   fmtWeekSpan,
   isoWeek,
@@ -55,7 +55,6 @@ const GRID_LINES = {
 };
 
 const toPx = (minutes: number) => (minutes / SLOT_MINUTES) * SLOT_HEIGHT;
-const fmtMinutes = (minutes: number) => fmtDuration(minutes * 60_000);
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
 type DragKind = "create" | "move" | "resize-start" | "resize-end";

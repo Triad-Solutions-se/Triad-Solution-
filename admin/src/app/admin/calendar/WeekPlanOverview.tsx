@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { fmtDuration } from "@/lib/date";
 import {
   WEEKDAYS,
   blockRange,
+  fmtMinutes,
   fmtRange,
   isoWeek,
   memberColor,
@@ -12,8 +12,6 @@ import {
   type Member,
   type WorkBlock,
 } from "@/lib/work-plan";
-
-const fmtMinutes = (minutes: number) => fmtDuration(minutes * 60_000);
 
 // Dashboardens överblick: vem jobbar när den här veckan.
 export function WeekPlanOverview({

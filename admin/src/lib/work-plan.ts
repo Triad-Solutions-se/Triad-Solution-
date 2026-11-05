@@ -2,6 +2,8 @@
 // tid: datum som "YYYY-MM-DD" och tider som minut på dygnet. Datumräkningen går
 // via UTC så att den ger samma svar på servern (UTC) och i webbläsaren.
 
+import { fmtDuration } from "./date";
+
 export const SLOT_MINUTES = 15;
 export const DAY_MINUTES = 1440;
 export const WEEKDAYS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
@@ -20,6 +22,14 @@ export type WorkBlock = {
 export type Member = { id: string; display_name: string | null };
 export type MinuteRange = { start: number; end: number };
 export type PlacedRange = MinuteRange & { date: string };
+
+// En rad från member_time_summary (migration 0043).
+export type MemberTimeSummary = {
+  profile_id: string;
+  planned_week_minutes: number;
+  logged_week_minutes: number;
+  logged_total_minutes: number;
+};
 
 export const WORK_BLOCK_FIELDS = "profile_id,work_date,start_minute,end_minute";
 
@@ -77,6 +87,9 @@ export function stockholmNow(at: Date = new Date()): { date: string; minute: num
 }
 
 // ---- Format ---------------------------------------------------------------
+
+// "3 h 15 min"
+export const fmtMinutes = (minutes: number) => fmtDuration(minutes * 60_000);
 
 export function fmtMinute(minute: number): string {
   const h = String(Math.floor(minute / 60)).padStart(2, "0");
