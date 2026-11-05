@@ -3,7 +3,10 @@
 Invite-only admin at `portal.mcasolutions.se/admin` (also reachable as `www.mcasolutions.se/admin`). Next.js 15 App Router + Supabase SSR + TipTap.
 
 ## Modules
-Översikt · Uppgifter (kanban) · Projekt · Möten (kalender + lista) · Kunder · Dokument (TipTap) · Ekonomi · Grafisk Profil · Mallar (Dokumentmallar + Offerter).
+Översikt · Uppgifter (kanban) · Projekt · Möten (kalender + lista) · Kalender (planerad arbetstid) · Kunder · Dokument (TipTap) · Ekonomi · Grafisk Profil · Mallar (Dokumentmallar + Offerter).
+
+### Kalender
+Varje medlem planerar sin arbetstid vecka för vecka under `/admin/calendar`, i kvartsintervall. Dra i kalendern för att skapa en tid, dra i en tid för att flytta den och i dess kanter för att ändra längden; klicka på en tid för att ändra den exakt eller ta bort den (på telefon: tryck). Tider som överlappar eller möts slås ihop. Alla ser allas plan men ändrar bara sin egen, och Översikt visar veckans tider per medlem. Tiderna är väggklocka i svensk tid. Schema i `supabase/migrations/0042_work_blocks.sql`.
 
 ### Offerter (under Mallar)
 Skapa kundoffert med två fasta priskolumner — `project_price` (engångsavgift) och `monthly_price` (underhåll/månad). Live-uträkning av delsumma, moms och totaler i admin-UI:t. Export till Excel via `/admin/api/offers/[id]/export` — branded layout, live SUM-formler i kalkylbladet, A4 utskriftsklar. Statusflöde: utkast → skickad → accepterad/avslagen/utgången. Schema i `supabase/migrations/0015_offers.sql`; kör den migrationen i Supabase SQL-editorn för att aktivera modulen. Offertnummer auto-genereras per kalenderår (`YYYY-NNN`).

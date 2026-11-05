@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, CheckSquare, FolderKanban, Calendar, Users, FileText,
+  LayoutDashboard, CheckSquare, FolderKanban, Calendar, CalendarClock, Users, FileText,
   Wallet, Palette, BookTemplate, BarChart3, Bug, LogOut, X,
   PanelLeftClose, PanelLeftOpen, Settings, Sparkles, Receipt,
 } from "lucide-react";
@@ -14,6 +14,7 @@ const nav = [
   { href: "/admin/tasks", label: "Uppgifter", icon: CheckSquare },
   { href: "/admin/projects", label: "Projekt", icon: FolderKanban },
   { href: "/admin/meetings", label: "Möten", icon: Calendar },
+  { href: "/admin/calendar", label: "Kalender", icon: CalendarClock },
   { href: "/admin/customers", label: "Kunder", icon: Users },
   { href: "/admin/documents", label: "Dokument", icon: FileText },
   { href: "/admin/finance", label: "Ekonomi", icon: Wallet },
@@ -88,7 +89,7 @@ export function Sidebar({
           const Icon = item.icon;
           const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
 
-          const dividerAfter = idx === 0 || idx === 4;
+          const dividerAfter = idx === 0 || idx === 5;
 
           return (
             <div key={item.href}>
