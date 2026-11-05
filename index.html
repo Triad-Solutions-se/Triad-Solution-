@@ -771,6 +771,8 @@
       display: inline-block;
       overflow: hidden;
       vertical-align: bottom;
+      padding-bottom: .14em;   /* keep descenders (g, y, j) inside the clip */
+      margin-bottom: -.14em;
     }
     .word-reveal span {
       display: inline-block;
@@ -4088,13 +4090,15 @@
     const el = document.getElementById('about-headline');
     if (!el) return;
     el.innerHTML = '';
-    el.style.cssText = 'background:linear-gradient(175deg,#fff 30%,#666 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
     t('headline').split(' ').forEach((w, i) => {
       if (i > 0) el.appendChild(document.createTextNode(' '));
       const wrap  = document.createElement('span');
       wrap.className = 'word-reveal';
       wrap.style.transitionDelay = (0.07 * i) + 's';
       const inner = document.createElement('span');
+      // Gradient sits on each word: a text-clipped gradient on the h2 itself
+      // doesn't paint through the transformed word spans (headline was invisible).
+      inner.style.cssText = 'background:linear-gradient(175deg,#fff 30%,#666 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;';
       inner.textContent = w;
       wrap.appendChild(inner);
       el.appendChild(wrap);
