@@ -98,6 +98,11 @@ h1, h2, h3, h4, h5 { font-family: "Montserrat", system-ui, sans-serif; }
   border-radius: inherit;
 }
 
+/* Bokföringen: toningen får inte täcka siffror i beloppskolumnen längst till höger. */
+.no-scroll-fade .scroll-x-hint::after {
+  display: none;
+}
+
 /* Highlight a task card when navigated to via #task-<id> anchor.
    Used by the "Gå till projektet" button on the task detail modal. */
 @keyframes task-flash {

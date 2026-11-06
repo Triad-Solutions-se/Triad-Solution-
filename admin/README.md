@@ -3,7 +3,7 @@
 Invite-only admin at `portal.mcasolutions.se/admin` (also reachable as `www.mcasolutions.se/admin`). Next.js 15 App Router + Supabase SSR + TipTap.
 
 ## Modules
-Översikt · Uppgifter (kanban) · Projekt · Möten (kalender + lista) · Kalender (planerad arbetstid) · Kunder · Dokument (TipTap) · Ekonomi · Grafisk Profil · Mallar (Dokumentmallar + Offerter).
+Översikt · Uppgifter (kanban) · Projekt · Möten (kalender + lista) · Kalender (planerad arbetstid) · Kunder · Dokument (TipTap) · Ekonomi · Bokföring · Grafisk Profil · Mallar (Dokumentmallar + Offerter).
 
 ### Kalender
 Varje medlem planerar sin arbetstid vecka för vecka under `/admin/calendar`, i kvartsintervall. Dra i kalendern för att skapa en tid, dra i en tid för att flytta den och i dess kanter för att ändra längden; klicka på en tid för att ändra den exakt eller ta bort den (på telefon: tryck). Tider som överlappar eller möts slås ihop. Alla ser allas plan men ändrar bara sin egen, och Översikt visar veckans tider per medlem. "Tid per person" på Översikt och under kalendern jämför planerad tid med tid loggad i projekttimern, för veckan och totalt. Tiderna är väggklocka i svensk tid. Schema i `supabase/migrations/0042_work_blocks.sql` och `0043_member_time_summary.sql`.
@@ -22,6 +22,20 @@ Offert → avtal → fakturor → intäkter, med länkar åt båda håll (offert
 - **Återkommande fakturering.** Under Ekonomi → Återkommande intäkt, eller "Lägg upp" på avtals-/offertsidan: kund, avtal/offert, frekvens (månadsvis, kvartalsvis, halvårsvis, årsvis), fakturarader per period (hämtas från offertens återkommande kostnad × periodens månader), moms, betalningsvillkor och förskott (utkast X dagar före perioden) eller efterskott (dagen efter). Ett fakturautkast per period skapas automatiskt när Ekonomi, Fakturor, en offert eller ett avtal öppnas, och dyker upp under Fakturor för granskning. "Fakturera nästa period nu" skapar nästa utkast direkt. Raderade utkast skapas inte igen. När ett avtal sätts till Avslutad pausas dess återkommande fakturering. Läget "Endast intäkt" fungerar som tidigare (intäktsrader utan faktura).
 - **Offertens faktureringsintervall** ("Underhållet faktureras") står i offert-PDF/Excel och avtalet och blir förval för avtalets återkommande fakturering.
 - Ekonomi visar "Återkommande / mån" (alla aktiva planer omräknade per månad), och kundlistan visar återkommande intäkt per kund.
+
+### Bokföring
+Dubbel bokföring enligt BAS 2026 under `/admin/bookkeeping`, med fakturametoden och K2 som tänkt regelverk (kontoplanen saknar konton som inte får användas i K2). Schema i `supabase/migrations/0044_bookkeeping.sql`, logik i `src/lib/accounting/`.
+
+- **Att godkänna.** Fakturor, banktransaktioner, leverantörsfakturor (Betalningar) och utlägg blir förslag med förifyllda konton, moms och datum. Kontona har en lista som går att ändra, och "Ändra rader" öppnar belopp, text och fler rader. Godkänn bokför posten som en verifikation. Förslagen räknas fram vid varje sidladdning och sparas inte (`proposals.ts`), bara besluten.
+- **Regler.** Motpart → konto + moms (`accounting_rules`). Väljer någon ett annat konto eller annan moms i kön sparas valet och gäller nästa gång. Okända motparter hamnar på 2999 OBS-konto och märks "Kontrollera".
+- **Banken är sanningen för pengarna.** Samma avgränsning som cashflow: på kopplade konton bokförs 1930 bara från banktransaktioner, så att inget räknas två gånger. Godkänd inbetalning kopplas till fakturan, godkänd utbetalning markerar leverantörsfakturan eller utlägget som betalt.
+- **Omvänd moms.** BAS 2026 saknar motkonto till 4531/4535, så utländska tjänster bokförs på kostnadskontot (t.ex. 6540) med ruta 21 eller 22 på raden (`journal_lines.vat_box`), plus 2645/2614. Rutan följer med som radtext i SIE-filen.
+- **Verifikationer.** Löpande nummer per räkenskapsår utan luckor, sätts vid bokföring. Kan inte ändras eller raderas (triggers): fel rättas med "Gör rättelse", som lägger tillbaka underlaget i kön. Debet = kredit kontrolleras i databasen. Manuella verifikationer för ingående balans, lön, periodiseringar och bokslut.
+- **Moms.** Momsdeklarationens rutor per period i hela kronor (ören faller bort), sista dag och momsavslut. Avslutet nollar momskontona mot 2650, bokför ören på 3740 och låser perioden. Sedan kommer "Moms till skattekontot" i kön. Inget skickas till Skatteverket.
+- **Kundfordringar.** Åldersanalys av obetalda fakturor, leverantörsskulder och skuld till ägare, avstämda mot bokföringen.
+- **Rapporter.** Resultat- och balansräkning, varning när eget kapital är under halva aktiekapitalet, och SIE 4-export (`/admin/api/accounting/sie`, codepage 437) till konsult eller bokslutsprogram. Årsbokslut, lön och avskrivningar görs som manuella verifikationer eller av konsulten.
+
+Allt skrivs av servern (service role) via `/admin/api/accounting/*`. Medlemmar läser.
 
 ### Fakturamejl
 Fakturor mejlas med PDF:en bifogad via [Resend](https://resend.com): "Slutför och skicka med e-post" på ett utkast, "Skicka med e-post" på en skickad faktura, och automatiskt för återkommande fakturering med "Mejla fakturorna automatiskt" påslaget. Varje morgon (06:00 UTC) anropar Vercel Cron `/api/cron/invoices`, som skapar periodernas utkast och mejlar dem för planer med automatiskt utskick (och markerar dem som skickade). Ett misslyckat utskick görs inte om automatiskt — felet syns på planen och i fakturans utskickslogg, och fakturan skickas för hand när det är åtgärdat. Schema i `supabase/migrations/0038_recurring_invoice_email.sql`.

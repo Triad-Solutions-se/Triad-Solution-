@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, CheckSquare, FolderKanban, Calendar, CalendarClock, Users, FileText,
   Wallet, Palette, BookTemplate, BarChart3, Bug, LogOut, X,
-  PanelLeftClose, PanelLeftOpen, Settings, Sparkles, Receipt,
+  PanelLeftClose, PanelLeftOpen, Settings, Sparkles, Receipt, BookOpenCheck,
 } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -19,6 +19,7 @@ const nav = [
   { href: "/admin/documents", label: "Dokument", icon: FileText },
   { href: "/admin/finance", label: "Ekonomi", icon: Wallet },
   { href: "/admin/invoices", label: "Fakturor", icon: Receipt },
+  { href: "/admin/bookkeeping", label: "Bokföring", icon: BookOpenCheck },
   { href: "/admin/analytics", label: "Analys", icon: BarChart3 },
   { href: "/admin/crashes", label: "Krascher", icon: Bug },
   { href: "/admin/brand", label: "Grafisk Profil", icon: Palette },
