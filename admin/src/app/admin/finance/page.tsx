@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/PageHeader";
-import { ChevronRight, FolderArchive, Landmark, Repeat } from "lucide-react";
+import { BookOpenCheck, ChevronRight, FolderArchive, Landmark, Repeat } from "lucide-react";
 import { fmtDate } from "@/lib/date";
 import { fmtAmount, isOutstanding, todayISO } from "@/lib/invoice";
 import { NewPaymentButton, PaymentsTable } from "./PaymentsSection";
@@ -282,6 +282,13 @@ export default async function FinancePage() {
         subtitle="Kassa, pengar in och pengar ut."
         right={
           <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/admin/bookkeeping"
+              className="rounded-btn border border-white/10 hover:bg-white/5 px-3 py-2 text-sm font-medium flex items-center gap-2"
+            >
+              <BookOpenCheck size={16} />
+              Bokföring
+            </Link>
             <Link
               href="/admin/finance/files"
               className="rounded-btn border border-white/10 hover:bg-white/5 px-3 py-2 text-sm font-medium flex items-center gap-2"
