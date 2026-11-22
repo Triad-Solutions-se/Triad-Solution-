@@ -4,6 +4,26 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0a2540" />
+  <!-- Google tag (gtag.js). Consent Mode v2: everything starts denied, so no
+       cookies are set until the visitor accepts the cookie banner. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-BX8H63VYKV"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('consent', 'default', {
+      analytics_storage: 'denied',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied'
+    });
+    try {
+      if (localStorage.getItem('cookie_consent') === 'accepted') {
+        gtag('consent', 'update', { analytics_storage: 'granted' });
+      }
+    } catch (e) {}
+    gtag('js', new Date());
+    gtag('config', 'G-BX8H63VYKV');
+  </script>
   <title>Integritetspolicy — MCA Solutions</title>
   <meta name="description" content="Så samlar MCA Solutions AB in, använder och skyddar personuppgifter som delas via vår hemsida, och vilka rättigheter du har." />
   <link rel="canonical" href="https://www.mcasolutions.se/integritetspolicy" />

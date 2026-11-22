@@ -4,6 +4,26 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#00b4a8" id="meta-theme">
+  <!-- Google tag (gtag.js). Consent Mode v2: everything starts denied, so no
+       cookies are set until the visitor accepts the cookie banner. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-BX8H63VYKV"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('consent', 'default', {
+      analytics_storage: 'denied',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied'
+    });
+    try {
+      if (localStorage.getItem('cookie_consent') === 'accepted') {
+        gtag('consent', 'update', { analytics_storage: 'granted' });
+      }
+    } catch (e) {}
+    gtag('js', new Date());
+    gtag('config', 'G-BX8H63VYKV');
+  </script>
   <title>MCA Solutions — Skräddarsydd mjukvara för SMB</title>
   <meta name="description" content="MCA Solutions bygger skräddarsydd mjukvara för små och medelstora företag — webbappar, e-handel, SaaS och appar." />
   <link rel="canonical" href="https://www.mcasolutions.se/" />
@@ -4136,6 +4156,8 @@
 
     function dismiss(choice) {
       localStorage.setItem('cookie_consent', choice);
+      // Matches the consent check in the <head> Google tag snippet.
+      if (choice === 'accepted') gtag('consent', 'update', { analytics_storage: 'granted' });
       banner.classList.add('hiding');
       setTimeout(() => banner.remove(), 400);
     }

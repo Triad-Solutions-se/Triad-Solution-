@@ -5,6 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#061a2e" />
   <meta name="description" content="StackHive — a cozy hexagon puzzle game for iPhone by MCA Solutions. Daily challenges, endless mode, Game Center leaderboards." />
+  <!-- Google tag (gtag.js). Consent Mode v2: everything starts denied, so no
+       cookies are set until the visitor accepts the cookie banner. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-BX8H63VYKV"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('consent', 'default', {
+      analytics_storage: 'denied',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied'
+    });
+    try {
+      if (localStorage.getItem('cookie_consent') === 'accepted') {
+        gtag('consent', 'update', { analytics_storage: 'granted' });
+      }
+    } catch (e) {}
+    gtag('js', new Date());
+    gtag('config', 'G-BX8H63VYKV');
+  </script>
   <title>StackHive — Hexagon puzzle game by MCA Solutions</title>
   <link rel="canonical" href="https://www.mcasolutions.se/stackhive" />
   <meta property="og:type" content="website" />
