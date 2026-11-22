@@ -4,6 +4,26 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0a2540" />
+  <!-- Google tag (gtag.js). Consent Mode v2: everything starts denied, so no
+       cookies are set until the visitor accepts the cookie banner. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-BX8H63VYKV"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('consent', 'default', {
+      analytics_storage: 'denied',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied'
+    });
+    try {
+      if (localStorage.getItem('cookie_consent') === 'accepted') {
+        gtag('consent', 'update', { analytics_storage: 'granted' });
+      }
+    } catch (e) {}
+    gtag('js', new Date());
+    gtag('config', 'G-BX8H63VYKV');
+  </script>
   <title>Kontakt — begär offert | MCA Solutions</title>
   <meta name="description" content="Kontakta MCA Solutions för ett kostnadsfritt inledande möte om skräddarsydd mjukvara — webbappar, e-handel, SaaS och appar." />
   <link rel="canonical" href="https://www.mcasolutions.se/kontakt" />
@@ -235,6 +255,8 @@
         if (res.ok) {
           btn.textContent = MSG.sent;
           this.reset();
+          // Lead conversion for Google Analytics / Google Ads.
+          gtag('event', 'generate_lead', { form_id: 'contactForm' });
         } else {
           btn.textContent = MSG.error;
           btn.disabled = false;
@@ -255,6 +277,7 @@
 
       function dismiss(choice) {
         try { localStorage.setItem('cookie_consent', choice); } catch (e) {}
+        if (choice === 'accepted') gtag('consent', 'update', { analytics_storage: 'granted' });
         banner.classList.add('hiding');
         setTimeout(() => banner.remove(), 400);
       }
