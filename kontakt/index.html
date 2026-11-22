@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a2540" />
+  <title>Kontakt — begär offert | MCA Solutions</title>
+  <meta name="description" content="Kontakta MCA Solutions för ett kostnadsfritt inledande möte om skräddarsydd mjukvara — webbappar, e-handel, SaaS och appar." />
+  <link rel="canonical" href="https://www.mcasolutions.se/kontakt" />
+  <link rel="icon" href="/brand/mca-icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/brand/mca-icon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="MCA Solutions" />
+  <meta property="og:locale" content="sv_SE" />
+  <meta property="og:title" content="Kontakt — begär offert | MCA Solutions" />
+  <meta property="og:description" content="Kontakta MCA Solutions för ett kostnadsfritt inledande möte om skräddarsydd mjukvara." />
+  <meta property="og:url" content="https://www.mcasolutions.se/kontakt" />
+  <meta property="og:image" content="https://www.mcasolutions.se/brand/og-image.png" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { background: #0a2540; }
+    body {
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+    }
+    header {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 28px 24px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header img { height: 24px; width: auto; display: block; }
+    header a.back { color: #a1a1a6; font-size: 14px; text-decoration: none; }
+    header a.back:hover { color: #fff; }
+    main { max-width: 780px; margin: 0 auto; padding: 72px 24px 96px; }
+    .head { text-align: center; margin-bottom: 56px; }
+    h1 { font-size: clamp(32px, 6vw, 52px); font-weight: 300; letter-spacing: -.02em; line-height: 1.12; margin-bottom: 18px; }
+    .lead { color: #c7c7cc; font-size: 17px; font-weight: 300; line-height: 1.7; max-width: 540px; margin: 0 auto; }
+    a { color: #fff; }
+
+    /* Contact form (moved here from the start page) */
+    .form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .fg { display: flex; flex-direction: column; gap: 7px; }
+    .fg.full { grid-column: 1 / -1; }
+    .fg label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: #a1a1a6;
+    }
+    .fg input, .fg textarea {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+      padding: 13px 16px;
+      font-size: 16px;
+      font-weight: 300;
+      color: #fff;
+      font-family: inherit;
+      outline: none;
+      transition: border-color .2s, background .2s;
+      -webkit-appearance: none;
+    }
+    .fg input::placeholder, .fg textarea::placeholder { color: #636366; }
+    .fg input:focus, .fg textarea:focus {
+      border-color: rgba(255,255,255,.28);
+      background: rgba(255,255,255,.065);
+    }
+    .fg textarea { min-height: 140px; resize: vertical; }
+    .submit-btn {
+      grid-column: 1 / -1;
+      width: 100%;
+      margin-top: 6px;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 500;
+      letter-spacing: .02em;
+      border-radius: 100px;
+      background: #fff;
+      color: #000;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background .2s, transform .15s;
+    }
+    .submit-btn:hover { background: #e8e8ed; transform: scale(1.01); }
+    .submit-btn:disabled { background: rgba(255,255,255,.15); color: #fff; transform: none; cursor: default; }
+    .direct { margin-top: 40px; text-align: center; color: #a1a1a6; font-size: 15px; font-weight: 300; }
+    .direct a { text-decoration: underline; text-underline-offset: 3px; }
+    @media (max-width: 640px) {
+      main { padding-top: 48px; }
+      .head { margin-bottom: 40px; }
+      .form { grid-template-columns: 1fr; }
+      .fg.full, .submit-btn { grid-column: 1; }
+    }
+
+    footer { max-width: 780px; margin: 0 auto; padding: 0 24px 48px; color: #636366; font-size: 13px; text-align: center; }
+    footer a { color: #a1a1a6; }
+
+    /* Cookie banner — same behaviour and storage key as the start page */
+    #cookie-banner {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1100;
+      background: #111;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 16px;
+      padding: 24px 28px;
+      max-width: 560px;
+      width: calc(100% - 48px);
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.6);
+      opacity: 0;
+      transition: opacity .4s ease, transform .4s ease;
+      pointer-events: none;
+    }
+    #cookie-banner.visible { opacity: 1; pointer-events: auto; }
+    #cookie-banner.hiding { opacity: 0; transform: translateX(-50%) translateY(16px); }
+    .cookie-text { flex: 1; font-size: 13px; color: #a1a1a6; font-weight: 300; line-height: 1.6; }
+    .cookie-text a { color: #a1a1a6; text-decoration: underline; text-underline-offset: 3px; }
+    .cookie-text a:hover { color: #fff; }
+    .cookie-btns { display: flex; gap: 10px; flex-shrink: 0; }
+    .cookie-btns button {
+      padding: 8px 20px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      border-radius: 100px;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    #cookie-decline { background: rgba(255,255,255,.07); color: #a1a1a6; border: 1px solid rgba(255,255,255,.1); }
+    #cookie-accept { background: #fff; color: #000; border: 1px solid #fff; }
+    #cookie-accept:hover { background: #e8e8ed; }
+    @media (max-width: 560px) {
+      #cookie-banner { flex-direction: column; align-items: stretch; }
+      .cookie-btns { justify-content: flex-end; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/" aria-label="MCA Solutions — till startsidan" data-en-label="MCA Solutions — back to home"><img src="/brand/mca-logo-long-white.svg" alt="MCA Solutions" /></a>
+    <a class="back" href="/" data-en="← Back to home">← Till startsidan</a>
+  </header>
+
+  <main>
+    <div class="head">
+      <h1 data-en="Ready to take the next step?">Redo att ta nästa steg?</h1>
+      <p class="lead" data-en="Fill in the form for a free initial meeting.">Fyll i formuläret för ett kostnadsfritt inledande möte.</p>
+    </div>
+
+    <form id="contactForm" novalidate>
+      <div class="form">
+        <div class="fg">
+          <label for="fname" data-en="First name">Förnamn</label>
+          <input type="text" id="fname" name="fname" placeholder="Erik" data-en-ph="John" autocomplete="given-name" required />
+        </div>
+        <div class="fg">
+          <label for="lname" data-en="Last name">Efternamn</label>
+          <input type="text" id="lname" name="lname" placeholder="Svensson" data-en-ph="Smith" autocomplete="family-name" required />
+        </div>
+        <div class="fg">
+          <label for="email" data-en="Email">E-post</label>
+          <input type="email" id="email" name="email" placeholder="erik@foretaget.se" data-en-ph="john@company.com" autocomplete="email" required />
+        </div>
+        <div class="fg">
+          <label for="phone" data-en="Phone">Telefon</label>
+          <input type="tel" id="phone" name="phone" placeholder="+46 70 000 00 00" autocomplete="tel" />
+        </div>
+        <div class="fg full">
+          <label for="company" data-en="Company">Företag</label>
+          <input type="text" id="company" name="company" placeholder="Ert företagsnamn" data-en-ph="Your company name" autocomplete="organization" required />
+        </div>
+        <div class="fg full">
+          <label for="message" data-en="Message">Meddelande</label>
+          <textarea id="message" name="message" placeholder="Berätta kort om er utmaning eller idé..." data-en-ph="Tell us briefly about your challenge or idea..." required></textarea>
+        </div>
+        <button type="submit" class="submit-btn" data-en="Request a quote">Begär offert</button>
+      </div>
+    </form>
+
+    <p class="direct"><span data-en="Prefer email or phone?">Hellre mejl eller telefon?</span> <a href="mailto:kontakt@mcasolutions.se">kontakt@mcasolutions.se</a> · <a href="tel:+46720054845">072-00 548 45</a></p>
+  </main>
+
+  <footer>
+    © 2026 MCA Solutions AB · <a href="/integritetspolicy" data-en="Privacy policy">Integritetspolicy</a> · <a href="/villkor" data-en="Terms">Allmänna villkor</a> · <a href="/">mcasolutions.se</a>
+  </footer>
+
+  <div id="cookie-banner">
+    <p class="cookie-text"><span data-en="We use cookies to improve your experience. Read our">Vi använder cookies för att förbättra din upplevelse. Läs vår</span> <a href="/integritetspolicy" data-en="privacy policy">integritetspolicy</a>.</p>
+    <div class="cookie-btns">
+      <button type="button" id="cookie-decline" data-en="Decline">Neka</button>
+      <button type="button" id="cookie-accept" data-en="Accept">Acceptera</button>
+    </div>
+  </div>
+
+  <script>
+    // Language follows the choice made on the start page (stored as 'triad_lang').
+    let en = false;
+    try { en = localStorage.getItem('triad_lang') === 'en'; } catch (e) {}
+    if (en) {
+      document.documentElement.lang = 'en';
+      document.title = 'Contact — request a quote | MCA Solutions';
+      document.querySelectorAll('[data-en]').forEach(el => { el.textContent = el.dataset.en; });
+      document.querySelectorAll('[data-en-ph]').forEach(el => { el.placeholder = el.dataset.enPh; });
+      document.querySelectorAll('[data-en-label]').forEach(el => { el.setAttribute('aria-label', el.dataset.enLabel); });
+    }
+    const MSG = en
+      ? { sending: 'Sending...', sent: "Sent! We'll be in touch soon.", error: 'Something went wrong. Try again.' }
+      : { sending: 'Skickar...', sent: 'Skickat! Vi återkommer snart.', error: 'Något gick fel. Försök igen.' };
+
+    // Contact form — same Formspree endpoint and field names the start page used.
+    document.getElementById('contactForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const btn = this.querySelector('.submit-btn');
+      btn.textContent = MSG.sending;
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('https://formspree.io/f/xpqklqdp', {
+          method: 'POST',
+          body: new FormData(this),
+          headers: { 'Accept': 'application/json' }
+        });
+        if (res.ok) {
+          btn.textContent = MSG.sent;
+          this.reset();
+        } else {
+          btn.textContent = MSG.error;
+          btn.disabled = false;
+        }
+      } catch {
+        btn.textContent = MSG.error;
+        btn.disabled = false;
+      }
+    });
+
+    // Cookie consent — shares the 'cookie_consent' key with the start page.
+    (function () {
+      const banner = document.getElementById('cookie-banner');
+      let stored = null;
+      try { stored = localStorage.getItem('cookie_consent'); } catch (e) {}
+      if (stored) { banner.remove(); return; }
+      setTimeout(() => banner.classList.add('visible'), 600);
+
+      function dismiss(choice) {
+        try { localStorage.setItem('cookie_consent', choice); } catch (e) {}
+        banner.classList.add('hiding');
+        setTimeout(() => banner.remove(), 400);
+      }
+
+      document.getElementById('cookie-accept').addEventListener('click', () => dismiss('accepted'));
+      document.getElementById('cookie-decline').addEventListener('click', () => dismiss('declined'));
+    })();
+  </script>
+</body>
+</html>

@@ -612,71 +612,12 @@
 
     .contact-head {
       text-align: center;
-      margin-bottom: 72px;
+      margin-bottom: 40px;
     }
     .contact-head .section-title { margin-top: 12px; margin-bottom: 18px; }
     .contact-head .section-body  { max-width: 540px; margin: 0 auto; text-align: center; }
 
-    .form {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-
-    .fg { display: flex; flex-direction: column; gap: 7px; }
-    .fg.full { grid-column: 1 / -1; }
-
-    .fg label {
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      color: var(--g600);
-    }
-
-    .fg input, .fg textarea {
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 12px;
-      padding: 13px 16px;
-      font-size: 15px;
-      font-weight: 300;
-      color: var(--white);
-      font-family: inherit;
-      outline: none;
-      transition: border-color .2s, background .2s;
-      -webkit-appearance: none;
-    }
-    .fg input::placeholder, .fg textarea::placeholder { color: var(--g600); }
-    .fg input:focus, .fg textarea:focus {
-      border-color: rgba(255,255,255,.28);
-      background: rgba(255,255,255,.065);
-    }
-    .fg textarea { min-height: 120px; resize: vertical; }
-
-    .submit-btn {
-      grid-column: 1 / -1;
-      width: 100%;
-      padding: 16px;
-      font-size: 16px;
-      font-weight: 500;
-      letter-spacing: .02em;
-      border-radius: 100px;
-      background: var(--white);
-      color: var(--black);
-      border: none;
-      cursor: pointer;
-      font-family: inherit;
-      transition: background .2s, transform .15s;
-    }
-    .submit-btn:hover { background: var(--g200); transform: scale(1.01); }
-    .submit-btn:disabled { background: rgba(255,255,255,.15); color: var(--white); transform: none; cursor: default; }
-
-    @media (max-width: 640px) {
-      .form { grid-template-columns: 1fr; }
-      .fg.full { grid-column: 1; }
-      .submit-btn { grid-column: 1; }
-    }
+    .contact-cta { text-align: center; }
 
     /* ============================================
        FOOTER
@@ -1797,7 +1738,7 @@
 
     /* ── CONTACT ── */
     @media (max-width: 480px) {
-      .contact-head { margin-bottom: 48px; }
+      .contact-head { margin-bottom: 32px; }
       .contact-head .section-title { font-size: clamp(36px, 10vw, 64px); }
     }
 
@@ -1837,7 +1778,7 @@
   <ul class="nav-links" id="navLinks">
     <li><a href="#about">Om oss</a></li>
     <li><a href="#services-pin-container">Tjänster</a></li>
-    <li><a href="#contact">Kontakt</a></li>
+    <li><a href="/kontakt">Kontakt</a></li>
     <li class="nav-lang">
       <button id="lang-toggle" class="lang-toggle" type="button" aria-label="Byt språk / Switch language">
         <span data-lang-opt="sv">SV</span>
@@ -1845,7 +1786,7 @@
       </button>
     </li>
     <li>
-      <a href="#contact" class="btn btn-sm btn-white nav-cta">Begär offert</a>
+      <a href="/kontakt" class="btn btn-sm btn-white nav-cta">Begär offert</a>
     </li>
   </ul>
 
@@ -3373,35 +3314,10 @@
       <p class="section-body reveal d2">Fyll i formuläret för ett kostnadsfritt inledande möte.</p>
     </div>
 
-    <form id="contactForm" novalidate>
-      <div class="form">
-        <div class="fg reveal d1">
-          <label for="fname">Förnamn</label>
-          <input type="text" id="fname" name="fname" placeholder="Erik" required />
-        </div>
-        <div class="fg reveal d2">
-          <label for="lname">Efternamn</label>
-          <input type="text" id="lname" name="lname" placeholder="Svensson" required />
-        </div>
-        <div class="fg reveal d1">
-          <label for="email">E-post</label>
-          <input type="email" id="email" name="email" placeholder="erik@foretaget.se" required />
-        </div>
-        <div class="fg reveal d2">
-          <label for="phone">Telefon</label>
-          <input type="tel" id="phone" name="phone" placeholder="+46 70 000 00 00" />
-        </div>
-        <div class="fg full reveal d3">
-          <label for="company">Företag</label>
-          <input type="text" id="company" name="company" placeholder="Ert företagsnamn" required />
-        </div>
-        <div class="fg full reveal d4">
-          <label for="message">Meddelande</label>
-          <textarea id="message" name="message" placeholder="Berätta kort om er utmaning eller idé..." required></textarea>
-        </div>
-        <button type="submit" class="submit-btn reveal">Begär offert</button>
-      </div>
-    </form>
+    <!-- The form itself lives on /kontakt, the single page lead tracking is tied to. -->
+    <div class="contact-cta reveal d3">
+      <a href="/kontakt" class="btn btn-lg btn-white">Begär offert</a>
+    </div>
   </div>
 </section>
 
@@ -3418,7 +3334,7 @@
     <div class="foot-links">
       <a href="/integritetspolicy" id="link-privacy">Integritetspolicy</a>
       <a href="/villkor" id="link-terms">Villkor</a>
-      <a href="#contact">Kontakt</a>
+      <a href="/kontakt">Kontakt</a>
     </div>
   </div>
   <address class="foot-company" itemscope itemtype="https://schema.org/Organization">
@@ -3773,21 +3689,9 @@
   const RT = {
     title:       ['MCA Solutions — Skräddarsydd mjukvara för SMB', 'MCA Solutions — Tailored software for SMBs'],
     menu:        ['Öppna meny', 'Open menu'],
-    headline:    ['Vi bygger mjukvara som faktiskt gör skillnad.', 'We build software that actually makes a difference.'],
-    formSending: ['Skickar...', 'Sending...'],
-    formSent:    ['Skickat! Vi återkommer snart.', "Sent! We'll be in touch soon."],
-    formError:   ['Något gick fel. Försök igen.', 'Something went wrong. Try again.']
+    headline:    ['Vi bygger mjukvara som faktiskt gör skillnad.', 'We build software that actually makes a difference.']
   };
   const t = (k) => RT[k][currentLang === 'en' ? 1 : 0];
-
-  // Placeholders → [sv, en], keyed by input id.
-  const PH = {
-    fname:   ['Erik', 'John'],
-    lname:   ['Svensson', 'Smith'],
-    email:   ['erik@foretaget.se', 'john@company.com'],
-    company: ['Ert företagsnamn', 'Your company name'],
-    message: ['Berätta kort om er utmaning eller idé...', 'Tell us briefly about your challenge or idea...']
-  };
 
   // Built once from the (Swedish) DOM: snapshots each translatable text node.
   let i18nNodes = [];
@@ -3815,11 +3719,6 @@
     const en = currentLang === 'en';
 
     i18nNodes.forEach(o => { o.node.nodeValue = en ? o.en : o.sv; });
-
-    Object.keys(PH).forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.placeholder = PH[id][en ? 1 : 0];
-    });
 
     document.documentElement.lang = currentLang;
     document.title = t('title');
@@ -4200,35 +4099,6 @@
       e.preventDefault();
       window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - 58, behavior: 'smooth' });
     });
-  });
-
-  /* ═══════════════════════════════════════════════
-     CONTACT FORM
-  ═══════════════════════════════════════════════ */
-  document.getElementById('contactForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const btn = this.querySelector('.submit-btn');
-    btn.textContent = t('formSending');
-    btn.disabled = true;
-
-    const data = new FormData(this);
-    try {
-      const res = await fetch('https://formspree.io/f/xpqklqdp', {
-        method: 'POST',
-        body: data,
-        headers: { 'Accept': 'application/json' }
-      });
-      if (res.ok) {
-        btn.textContent = t('formSent');
-        this.reset();
-      } else {
-        btn.textContent = t('formError');
-        btn.disabled = false;
-      }
-    } catch {
-      btn.textContent = t('formError');
-      btn.disabled = false;
-    }
   });
 
   /* ═══════════════════════════════════════════════
