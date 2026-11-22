@@ -255,8 +255,13 @@
         if (res.ok) {
           btn.textContent = MSG.sent;
           this.reset();
-          // Lead conversion for Google Analytics / Google Ads.
-          gtag('event', 'generate_lead', { form_id: 'contactForm' });
+          // Google Ads counts a visit to /kontakt/tack as a lead, so only a sent
+          // form may lead there. Go once the lead event is out, or after 1 s if
+          // the Google tag is blocked and never calls back.
+          let left = false;
+          const toThanks = () => { if (!left) { left = true; location.assign('/kontakt/tack'); } };
+          gtag('event', 'generate_lead', { form_id: 'contactForm', event_callback: toThanks });
+          setTimeout(toThanks, 1000);
         } else {
           btn.textContent = MSG.error;
           btn.disabled = false;
