@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a2540" />
+  <!-- Google tag (gtag.js). Consent Mode v2: everything starts denied, so no
+       cookies are set until the visitor accepts the cookie banner. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-BX8H63VYKV"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('consent', 'default', {
+      analytics_storage: 'denied',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied'
+    });
+    try {
+      if (localStorage.getItem('cookie_consent') === 'accepted') {
+        gtag('consent', 'update', { analytics_storage: 'granted' });
+      }
+    } catch (e) {}
+    gtag('js', new Date());
+    gtag('config', 'G-BX8H63VYKV');
+  </script>
+  <title>Tack för ditt meddelande | MCA Solutions</title>
+  <!-- Only reached after a sent contact form: Google Ads counts a visit here as a
+       lead, so keep it out of search results and out of the sitemap. -->
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="/brand/mca-icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/brand/mca-icon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { background: #0a2540; }
+    body {
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      width: 100%;
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 28px 24px 0;
+    }
+    header img { height: 24px; width: auto; display: block; }
+    main {
+      flex: 1;
+      width: 100%;
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 72px 24px 96px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .check {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.28);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 32px;
+    }
+    h1 { font-size: clamp(32px, 6vw, 52px); font-weight: 300; letter-spacing: -.02em; line-height: 1.12; margin-bottom: 18px; }
+    .lead { color: #c7c7cc; font-size: 17px; font-weight: 300; line-height: 1.7; max-width: 480px; }
+    .home {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 40px;
+      padding: 13px 32px;
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: .015em;
+      border-radius: 100px;
+      background: #fff;
+      color: #000;
+      text-decoration: none;
+      transition: background .2s, transform .2s;
+    }
+    .home:hover { background: #e8e8ed; transform: scale(1.015); }
+    footer { width: 100%; max-width: 780px; margin: 0 auto; padding: 0 24px 48px; color: #636366; font-size: 13px; text-align: center; }
+    footer a { color: #a1a1a6; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/" aria-label="MCA Solutions — till startsidan" data-en-label="MCA Solutions — back to home"><img src="/brand/mca-logo-long-white.svg" alt="MCA Solutions" /></a>
+  </header>
+
+  <main>
+    <div class="check" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+    </div>
+    <h1 data-en="Thanks for your message!">Tack för ditt meddelande!</h1>
+    <p class="lead" data-en="We have received your request and will be in touch soon.">Vi har tagit emot din förfrågan och återkommer snart.</p>
+    <a class="home" href="/" data-en="Back to home">Till startsidan</a>
+  </main>
+
+  <footer>
+    © 2026 MCA Solutions AB · <a href="/integritetspolicy" data-en="Privacy policy">Integritetspolicy</a> · <a href="/villkor" data-en="Terms">Allmänna villkor</a>
+  </footer>
+
+  <script>
+    // Language follows the choice made on the start page (stored as 'triad_lang').
+    let en = false;
+    try { en = localStorage.getItem('triad_lang') === 'en'; } catch (e) {}
+    if (en) {
+      document.documentElement.lang = 'en';
+      document.title = 'Thanks for your message | MCA Solutions';
+      document.querySelectorAll('[data-en]').forEach(el => { el.textContent = el.dataset.en; });
+      document.querySelectorAll('[data-en-label]').forEach(el => { el.setAttribute('aria-label', el.dataset.enLabel); });
+    }
+  </script>
+</body>
+</html>
